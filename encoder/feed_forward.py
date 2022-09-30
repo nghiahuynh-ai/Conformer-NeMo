@@ -1,13 +1,13 @@
 import torch
 
 
-class ConformerFeedForward(torch.nn.Module):
+class FeedForward(torch.nn.Module):
     """
     feed-forward module of Conformer model.
     """
 
     def __init__(self, d_model, d_ff, dropout, activation=torch.nn.SiLU()):
-        super(ConformerFeedForward, self).__init__()
+        super(FeedForward, self).__init__()
         self.linear1 = torch.nn.Linear(d_model, d_ff)
         self.activation = activation
         self.dropout = torch.nn.Dropout(p=dropout)

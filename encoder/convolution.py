@@ -1,7 +1,7 @@
 import torch
 
 
-class ConformerConvolution(torch.nn.Module):
+class Convolution(torch.nn.Module):
     """The convolution module for the Conformer model.
     Args:
         d_model (int): hidden dimension
@@ -9,7 +9,7 @@ class ConformerConvolution(torch.nn.Module):
     """
 
     def __init__(self, d_model, kernel_size, norm_type='batch_norm'):
-        super(ConformerConvolution, self).__init__()
+        super(Convolution, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         self.d_model = d_model
 

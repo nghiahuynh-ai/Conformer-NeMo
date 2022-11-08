@@ -318,7 +318,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 logp = self._joint_step(f, g, log_normalize=None)[0, 0, 0, :]
 
                 del g
-                print(hidden_prime[0].shape, hidden_prime[1].shape)
+                # print(hidden_prime[0].shape, hidden_prime[1].shape)
                 # torch.max(0) op doesnt exist for FP 16.
                 if logp.dtype != torch.float32:
                     logp = logp.float()
@@ -326,8 +326,6 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 # get index k, of max prob
                 v, k = logp.max(0)
                 k = k.item()  # K is the label at timestep t_s in inner loop, s >= 0.
-                
-                # print(logp.shape, v, k)
 
                 if self.preserve_alignments:
                     # insert logits into last timestep

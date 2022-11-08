@@ -93,17 +93,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
         else:
             self.spec_augmentation = None
-            
-        if hasattr(self.cfg, 'gradient_mask') and self._cfg.gradient_mask.apply:
-            self.masked_batch = self._cfg.gradient_mask.masked_batch
-            self.gradient_mask = GradientMask(
-                num_masks=self._cfg.gradient_mask.num_masks,
-                mask_width=self._cfg.gradient_mask.mask_width,
-                mask_value=self._cfg.gradient_mask.value,
-            )
-        else:
-            self.masked_batch = []
-            self.gradient_mask = None
 
         # Setup decoding objects
         self.decoding = RNNTDecoding(
@@ -686,9 +675,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         print(transcript)
         raise
-        
-        self.batch_nb = batch_nb
-
+    
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)

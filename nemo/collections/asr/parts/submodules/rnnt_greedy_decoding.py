@@ -299,6 +299,8 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
             # Extract encoder embedding at timestep t
             # f = x[time_idx, :, :].unsqueeze(0)  # [1, 1, D]
             f = x.narrow(dim=0, start=time_idx, length=1)
+            print(f.shape)
+            raise
 
             # Setup exit flags and counter
             not_blank = True
@@ -327,7 +329,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 v, k = logp.max(0)
                 k = k.item()  # K is the label at timestep t_s in inner loop, s >= 0.
                 
-                print(logp.shape, v, k)
+                # print(logp.shape, v, k)
 
                 if self.preserve_alignments:
                     # insert logits into last timestep

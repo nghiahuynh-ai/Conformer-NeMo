@@ -160,7 +160,7 @@ class ConvSubsampling(torch.nn.Module):
         x = self.conv(x)
         b, c, t, f = x.size()
         x = self.out(x.transpose(1, 2).reshape(b, t, -1))
-        return x, self.feat_out
+        return x, torch.tensor(self.feat_out)
 
 
 class ResNetBlock(torch.nn.Module):

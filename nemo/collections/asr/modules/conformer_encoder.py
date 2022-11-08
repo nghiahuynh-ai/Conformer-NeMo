@@ -249,7 +249,7 @@ class ConformerEncoder(NeuralModule, Exportable):
 
         if isinstance(self.pre_encode, ConvSubsampling):
             audio_signal, length = self.pre_encode(audio_signal, length)
-            print('conformer block: ', length)
+            # print('conformer block: ', length)
         else:
             audio_signal = self.pre_encode(audio_signal)
         audio_signal, pos_emb = self.pos_enc(audio_signal)

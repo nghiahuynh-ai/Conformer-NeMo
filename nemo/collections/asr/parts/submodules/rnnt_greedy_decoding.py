@@ -295,8 +295,6 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
             hypothesis.alignments = [[]]
 
         # For timestep t in X_t
-        print(out_len)
-        raise
         for time_idx in range(out_len):
             # Extract encoder embedding at timestep t
             # f = x[time_idx, :, :].unsqueeze(0)  # [1, 1, D]

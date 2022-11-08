@@ -327,7 +327,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 v, k = logp.max(0)
                 k = k.item()  # K is the label at timestep t_s in inner loop, s >= 0.
                 
-                print(logp.shape, v.shape, k.shape, k)
+                print(logp.shape, v, k)
 
                 if self.preserve_alignments:
                     # insert logits into last timestep

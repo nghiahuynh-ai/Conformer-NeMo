@@ -314,9 +314,6 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                     last_label = label_collate([[hypothesis.last_token]])
 
                 # Perform prediction network and joint network steps.
-                print(hypothesis.dec_state.shape)
-                print(hypothesis.dec_state)
-                raise
                 g, hidden_prime = self._pred_step(last_label, hypothesis.dec_state)
                 logp = self._joint_step(f, g, log_normalize=None)[0, 0, 0, :]
 
@@ -329,6 +326,8 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 # get index k, of max prob
                 v, k = logp.max(0)
                 k = k.item()  # K is the label at timestep t_s in inner loop, s >= 0.
+                
+                print(logp.shape, v.shape, k.shape, k)
 
                 if self.preserve_alignments:
                     # insert logits into last timestep

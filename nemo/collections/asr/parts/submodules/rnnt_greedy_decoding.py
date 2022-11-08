@@ -299,8 +299,6 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
             # Extract encoder embedding at timestep t
             # f = x[time_idx, :, :].unsqueeze(0)  # [1, 1, D]
             f = x.narrow(dim=0, start=time_idx, length=1)
-            print(f.shape)
-            raise
 
             # Setup exit flags and counter
             not_blank = True
@@ -320,7 +318,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                 logp = self._joint_step(f, g, log_normalize=None)[0, 0, 0, :]
 
                 del g
-
+                print(hidden_prime[0].shape, hidden_prime[1].shape)
                 # torch.max(0) op doesnt exist for FP 16.
                 if logp.dtype != torch.float32:
                     logp = logp.float()

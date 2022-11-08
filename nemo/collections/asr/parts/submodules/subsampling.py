@@ -57,6 +57,8 @@ class ConvSubsampling(torch.nn.Module):
     def __init__(self, subsampling, subsampling_factor, feat_in, feat_out, conv_channels, activation=nn.ReLU()):
         super(ConvSubsampling, self).__init__()
         self._subsampling = subsampling
+        
+        self.feat_out = feat_out
 
         if subsampling_factor % 2 != 0:
             raise ValueError("Sampling factor should be a multiply of 2!")
@@ -158,7 +160,7 @@ class ConvSubsampling(torch.nn.Module):
         x = self.conv(x)
         b, c, t, f = x.size()
         x = self.out(x.transpose(1, 2).reshape(b, t, -1))
-        return x, lengths
+        return x, self.feat_out
 
 
 class ResNetBlock(torch.nn.Module):

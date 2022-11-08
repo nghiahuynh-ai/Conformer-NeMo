@@ -314,6 +314,9 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                     last_label = label_collate([[hypothesis.last_token]])
 
                 # Perform prediction network and joint network steps.
+                print(hypothesis.dec_state.shape)
+                print(hypothesis.dec_state)
+                raise
                 g, hidden_prime = self._pred_step(last_label, hypothesis.dec_state)
                 logp = self._joint_step(f, g, log_normalize=None)[0, 0, 0, :]
 

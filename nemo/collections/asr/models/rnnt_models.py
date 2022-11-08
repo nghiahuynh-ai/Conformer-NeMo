@@ -672,9 +672,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-        
-        print(transcript)
-        raise
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -949,29 +946,3 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
-
-
-class GradientMask(nn.Module, Typing):
-
-    def __init__(self, num_masks=10, mask_width=0.02, mask_value=0.0):
-        super().__init__()
-        self.num_masks = num_masks
-        self.mask_width = mask_width
-        self.mask_value = mask_value
-    
-    @torch.no_grad()
-    def forward(self, input_spec):
-        batch, freq, time = input_spec.shape
-        max_offset = max(1, int(time * self.mask_width))
-        mask = torch.ones(batch, time)
-        for batch_idx in range(batch):
-            offset = np.random.randint(1, max_offset)
-            masked_idx = np.random.choice(range(time - offset), size=self.num_masks, replace=False)
-            for idx in masked_idx:
-                mask[batch_idx, idx : idx + offset] = self.mask_value
-        mask = mask > 0
-        input_mask = mask.unsqueeze(1).expand(batch, freq, time)
-        input_spec = input_spec * input_mask.to(input_spec.device)
-        del input_mask
-        del mask
-        return input_spec

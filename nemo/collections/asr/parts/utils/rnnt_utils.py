@@ -47,8 +47,8 @@ class Hypothesis:
         `blank` tokens, and optionally merging word-pieces). Should be used as decoded string for
         Word Error Rate calculation.
 
-    timestep: (Optional) A list of integer indices representing at which index in the decoding
-        process did the token appear. Should be of same length as the number of non-blank tokens.
+        timestep: (Optional) A list of integer indices representing at which index in the decoding
+            process did the token appear. Should be of same length as the number of non-blank tokens.
 
     alignments: (Optional) Represents the CTC / RNNT token alignments as integer tokens along an axis of
         time T (for CTC) or Time x Target (TxU).

@@ -175,6 +175,7 @@ model:
 
   decoding:
     strategy: "greedy_batch" # can be greedy, greedy_batch, beam, tsd, alsd.
+    preserve_alignments: true
 
     # greedy strategy config
     greedy:

@@ -687,6 +687,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
+        print(transcript)
+        raise
+        
         self.batch_nb = batch_nb
 
         # forward() only performs encoder forward

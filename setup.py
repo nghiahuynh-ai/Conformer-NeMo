@@ -66,47 +66,47 @@ else:
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
 
-def req_file(filename, folder="requirements"):
-    with open(os.path.join(folder, filename), encoding='utf-8') as f:
-        content = f.readlines()
-    # you may also want to remove whitespace characters
-    # Example: `\n` at the end of each line
-    return [x.strip() for x in content]
+# def req_file(filename, folder="requirements"):
+#     with open(os.path.join(folder, filename), encoding='utf-8') as f:
+#         content = f.readlines()
+#     # you may also want to remove whitespace characters
+#     # Example: `\n` at the end of each line
+#     return [x.strip() for x in content]
 
 
-install_requires = req_file("requirements.txt")
+# install_requires = req_file("requirements.txt")
 
-extras_require = {
-    # User packages
-    'test': req_file("requirements_test.txt"),
-    # NeMo Tools
-    'text_processing': req_file("requirements_text_processing.txt"),
-    # Torch Packages
-    # 'torch_tts': req_file("requirements_torch_tts.txt"),  ## Removed in 1.7.0
-    # Lightning Collections Packages
-    'core': req_file("requirements_lightning.txt"),
-    'common': req_file('requirements_common.txt'),
-    'asr': req_file("requirements_asr.txt"),
-    'cv': req_file("requirements_cv.txt"),
-    'nlp': req_file("requirements_nlp.txt"),
-    'tts': req_file("requirements_tts.txt") + req_file("requirements_torch_tts.txt"),
-}
+# extras_require = {
+#     # User packages
+#     'test': req_file("requirements_test.txt"),
+#     # NeMo Tools
+#     'text_processing': req_file("requirements_text_processing.txt"),
+#     # Torch Packages
+#     # 'torch_tts': req_file("requirements_torch_tts.txt"),  ## Removed in 1.7.0
+#     # Lightning Collections Packages
+#     'core': req_file("requirements_lightning.txt"),
+#     'common': req_file('requirements_common.txt'),
+#     'asr': req_file("requirements_asr.txt"),
+#     'cv': req_file("requirements_cv.txt"),
+#     'nlp': req_file("requirements_nlp.txt"),
+#     'tts': req_file("requirements_tts.txt") + req_file("requirements_torch_tts.txt"),
+# }
 
 
-extras_require['all'] = list(chain(extras_require.values()))
+# extras_require['all'] = list(chain(extras_require.values()))
 
-# Add lightning requirements as needed
-extras_require['common'] = list(chain([extras_require['common'], extras_require['text_processing']]))
-extras_require['test'] = list(chain([extras_require['tts'], extras_require['core'], extras_require['common']]))
-extras_require['asr'] = list(chain([extras_require['asr'], extras_require['core'], extras_require['common']]))
-extras_require['cv'] = list(chain([extras_require['cv'], extras_require['core'], extras_require['common']]))
-extras_require['nlp'] = list(chain([extras_require['nlp'], extras_require['core'], extras_require['common']]))
-extras_require['tts'] = list(chain([extras_require['tts'], extras_require['core'], extras_require['common']]))
+# # Add lightning requirements as needed
+# extras_require['common'] = list(chain([extras_require['common'], extras_require['text_processing']]))
+# extras_require['test'] = list(chain([extras_require['tts'], extras_require['core'], extras_require['common']]))
+# extras_require['asr'] = list(chain([extras_require['asr'], extras_require['core'], extras_require['common']]))
+# extras_require['cv'] = list(chain([extras_require['cv'], extras_require['core'], extras_require['common']]))
+# extras_require['nlp'] = list(chain([extras_require['nlp'], extras_require['core'], extras_require['common']]))
+# extras_require['tts'] = list(chain([extras_require['tts'], extras_require['core'], extras_require['common']]))
 
-# TTS has extra dependencies
-extras_require['tts'] = list(chain([extras_require['tts'], extras_require['asr']]))
+# # TTS has extra dependencies
+# extras_require['tts'] = list(chain([extras_require['tts'], extras_require['asr']]))
 
-tests_requirements = extras_require["test"]
+# tests_requirements = extras_require["test"]
 
 
 ###############################################################################

@@ -52,9 +52,9 @@ RUN git clone https://github.com/NVIDIA/TensorRT.git && \
     rm -fr  /tmp/trt_build
 
 # install nemo dependencies
-WORKDIR /tmp/nemo
-COPY requirements .
-RUN for f in $(ls requirements*.txt); do pip install --disable-pip-version-check --no-cache-dir -r $f; done
+# WORKDIR /tmp/nemo
+# COPY requirements .
+# RUN for f in $(ls requirements*.txt); do pip install --disable-pip-version-check --no-cache-dir -r $f; done
 
 # install k2, skip if installation fails
 COPY scripts /tmp/nemo/scripts/

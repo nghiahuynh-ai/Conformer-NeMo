@@ -941,3 +941,4 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
+    

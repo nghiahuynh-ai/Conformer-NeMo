@@ -181,7 +181,7 @@ class ConformerEncoder(NeuralModule, Exportable):
                 xscale=self.xscale,
                 dropout_rate_emb=dropout_emb,
             )
-        elif self_attention_model == "abs_pos":
+        elif self_attention_model == "abs_pos" or self_attention_model == "dual":
             pos_bias_u = None
             pos_bias_v = None
             self.pos_enc = PositionalEncoding(

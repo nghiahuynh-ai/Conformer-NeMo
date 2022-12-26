@@ -129,6 +129,28 @@ class MultiHeadAttention(nn.Module):
         return self.forward_attention(v, scores, mask)
 
 
+class DualMultiHeadAttention(MultiHeadAttention):
+    def __init__(self, n_head, n_feat, dropout_rate):
+        super().__init__(n_head, n_feat, dropout_rate)
+    
+    def forward(self, query, key, value, mask, pos_emb=None):
+        batch, time, dim = value.shape
+        m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
+        m = m < 0.5
+        
+        print(m)
+        
+        query_, key_, value_ = m * query, m * key, m * value
+        _query, _key, _value = ~m * query, ~m * key, ~m * value
+        
+        q_, k_, v_ = self.forward_qkv(query_, key_, value_)
+        _q, _k, _v = self.forward_qkv(_query, _key, _value)
+        
+        scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
+        _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
+        
+        return self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
+
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.
     Paper: https://arxiv.org/abs/1901.02860

@@ -137,8 +137,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         batch, time, dim = value.shape
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = m < 0.5
-        
-        print(m)
+        m.to(value.device)
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value

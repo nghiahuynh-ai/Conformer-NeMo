@@ -78,16 +78,16 @@ class MultiHeadAttention(nn.Module):
             v (torch.Tensor): (batch, head, time2, size)
         """
         n_batch = query.size(0)
-        # q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-        # k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-        # v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        # q = q.transpose(1, 2)
-        # k = k.transpose(1, 2)
-        # v = v.transpose(1, 2)
+        q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
+        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
+        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
+        q = q.transpose(1, 2)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
         
-        q = self.linear_q(query).view(n_batch, self.h, -1, self.d_k)
-        k = self.linear_k(key).view(n_batch, self.h, -1, self.d_k)
-        v = self.linear_v(value).view(n_batch, self.h, -1, self.d_k)
+        # q = self.linear_q(query).view(n_batch, self.h, -1, self.d_k)
+        # k = self.linear_k(key).view(n_batch, self.h, -1, self.d_k)
+        # v = self.linear_v(value).view(n_batch, self.h, -1, self.d_k)
 
         return q, k, v
 

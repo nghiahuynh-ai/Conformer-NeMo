@@ -230,6 +230,47 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
         return self.forward_attention(v, scores, mask)
 
 
+class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
+    def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v):
+        super().__init__(n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v)
+        
+    def forward(self, query, key, value, mask, pos_emb):
+        batch, time, dim = value.shape
+        m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
+        m = (m < 0.5).to(value.device)
+        
+        query_, key_, value_ = m * query, m * key, m * value
+        _query, _key, _value = ~m * query, ~m * key, ~m * value
+        
+        q_, k_, v_ = self.forward_qkv(query_, key_, value_)
+        _q, _k, _v = self.forward_qkv(_query, _key, _value)
+        
+        _q = _q.transpose(1, 2)
+        q_ = q_.transpose(1, 2)
+
+        n_batch_pos = pos_emb.size(0)
+        p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
+        p = p.transpose(1, 2)
+
+        _q_with_bias_u = (_q + self.pos_bias_u).transpose(1, 2)
+        _q_with_bias_v = (_q + self.pos_bias_v).transpose(1, 2)
+        matrix_ac = torch.matmul(_q_with_bias_u, _k.transpose(-2, -1))
+        matrix_bd = torch.matmul(_q_with_bias_v, p.transpose(-2, -1))
+        matrix_bd = self.rel_shift(matrix_bd)
+        matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
+        _scores = (matrix_ac + matrix_bd) / self.s_d_k
+        
+        q__with_bias_u = (q_ + self.pos_bias_u).transpose(1, 2)
+        q__with_bias_v = (q_ + self.pos_bias_v).transpose(1, 2)
+        matrix_ac = torch.matmul(q__with_bias_u, k_.transpose(-2, -1))
+        matrix_bd = torch.matmul(q__with_bias_v, p.transpose(-2, -1))
+        matrix_bd = self.rel_shift(matrix_bd)
+        matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
+        scores_ = (matrix_ac + matrix_bd) / self.s_d_k
+
+        return self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
+
+
 class PositionalEncoding(torch.nn.Module):
     """Fixed sinusoidal positional encoding.
     Args:

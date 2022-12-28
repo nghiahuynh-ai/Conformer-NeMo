@@ -20,6 +20,7 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import (
     MultiHeadAttention,
     RelPositionMultiHeadAttention,
     DualMultiHeadAttention,
+    DualRelPosMultiHeadAttention,
 )
 from nemo.collections.asr.parts.utils.activations import Swish
 
@@ -73,6 +74,10 @@ class ConformerLayer(torch.nn.Module):
             )
         elif self_attention_model == 'dual':
             self.self_attn = DualMultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
+        elif self_attention_model == 'rel_dual':
+            self.self_attn = DualRelPosMultiHeadAttention(
+                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
+            )
         elif self_attention_model == 'abs_pos':
             self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
         else:
@@ -104,11 +109,11 @@ class ConformerLayer(torch.nn.Module):
         residual = residual + self.dropout(x) * self.fc_factor
 
         x = self.norm_self_att(residual)
-        if self.self_attention_model == 'rel_pos':
+        if self.self_attention_model in ['rel_pos', 'rel_dual']:
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
-        elif self.self_attention_model == 'dual':
-            x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
-        elif self.self_attention_model == 'abs_pos':
+        # elif self.self_attention_model == 'dual':
+        #     x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
+        elif self.self_attention_model in ['abs_pos', 'dual']:
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
             x = None

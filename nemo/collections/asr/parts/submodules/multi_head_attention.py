@@ -252,18 +252,18 @@ class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
         p = p.transpose(1, 2)
 
-        _q_with_bias_u = (_q + self.pos_bias_u).transpose(1, 2)
-        _q_with_bias_v = (_q + self.pos_bias_v).transpose(1, 2)
-        matrix_ac = torch.matmul(_q_with_bias_u, _k.transpose(-2, -1))
-        matrix_bd = torch.matmul(_q_with_bias_v, p.transpose(-2, -1))
+        q_with_bias_u = (_q + self.pos_bias_u).transpose(1, 2)
+        q_with_bias_v = (_q + self.pos_bias_v).transpose(1, 2)
+        matrix_ac = torch.matmul(q_with_bias_u, _k.transpose(-2, -1))
+        matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         matrix_bd = self.rel_shift(matrix_bd)
         matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
         _scores = (matrix_ac + matrix_bd) / self.s_d_k
         
-        q__with_bias_u = (q_ + self.pos_bias_u).transpose(1, 2)
-        q__with_bias_v = (q_ + self.pos_bias_v).transpose(1, 2)
-        matrix_ac = torch.matmul(q__with_bias_u, k_.transpose(-2, -1))
-        matrix_bd = torch.matmul(q__with_bias_v, p.transpose(-2, -1))
+        q_with_bias_u = (q_ + self.pos_bias_u).transpose(1, 2)
+        q_with_bias_v = (q_ + self.pos_bias_v).transpose(1, 2)
+        matrix_ac = torch.matmul(q_with_bias_u, k_.transpose(-2, -1))
+        matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         matrix_bd = self.rel_shift(matrix_bd)
         matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
         scores_ = (matrix_ac + matrix_bd) / self.s_d_k

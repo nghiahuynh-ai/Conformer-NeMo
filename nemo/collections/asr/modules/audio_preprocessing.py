@@ -286,7 +286,7 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
             variance = np.random.uniform(self.min_white_noise_var, self.max_white_noise_var)
             noise = np.random.normal(self.white_noise_mean, variance, size=input_signal.shape)
             noise = torch.from_numpy(noise).to(input_signal.device)
-            input_signal = input_signal + noise
+            input_signal = input_signal + noise.type(torch.FloatTensor)
         return self.featurizer(input_signal, length)
     
     @property

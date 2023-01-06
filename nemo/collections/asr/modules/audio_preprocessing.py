@@ -229,8 +229,11 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
         mag_power=2.0,
         rng=None,
         nb_augmentation_prob=0.0,
-        nb_max_freq=4000
-        
+        nb_max_freq=4000,
+        mix_white_noise=True,
+        white_noise_mean=0.0,
+        min_white_noise_var=0.0,
+        max_white_noise_var=0.05,
     ):
         super().__init__(n_window_size, n_window_stride)
 
@@ -689,6 +692,10 @@ class AudioToMelSpectrogramPreprocessorConfig:
     rng: Optional[str] = None
     nb_augmentation_prob: float = 0.0
     nb_max_freq: int = 4000
+    mix_white_noise: bool = True
+    white_noise_mean: float = 0.0
+    min_white_noise_var: float = 0.0
+    max_white_noise_var: float = 0.05
 
 
 @dataclass

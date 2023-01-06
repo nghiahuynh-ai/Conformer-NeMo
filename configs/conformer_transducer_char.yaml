@@ -99,6 +99,10 @@ model:
     frame_splicing: 1
     dither: 0.00001
     pad_to: 0
+    mix_white_noise: true
+    white_noise_mean: 0.0
+    min_white_noise_var: 0.0
+    max_white_noise_var: 0.05
 
   spec_augment:
     _target_: nemo.collections.asr.modules.SpectrogramAugmentation

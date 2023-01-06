@@ -275,8 +275,17 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
             nb_augmentation_prob=nb_augmentation_prob,
             nb_max_freq=nb_max_freq,
         )
+        
+        self.mix_white_noise = mix_white_noise,
+        self.white_noise_mean = white_noise_mean,
+        self.min_white_noise_var = min_white_noise_var,
+        self.max_white_noise_var = max_white_noise_var,
     
     def get_features(self, input_signal, length):
+        if self.mix_white_noise:
+            variance = np.random.uniform(self.min_white_noise_var, self.max_white_noise_var)
+            noise = np.random.normal(self.white_noise_mean, variance, size=input_signal.shape)
+            input_signal = input_signal + noise
         return self.featurizer(input_signal, length)
     
     @property

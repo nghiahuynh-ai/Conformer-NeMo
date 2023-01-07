@@ -132,8 +132,21 @@ class MultiHeadAttention(nn.Module):
 class DualMultiHeadAttention(MultiHeadAttention):
     def __init__(self, n_head, n_feat, dropout_rate):
         super().__init__(n_head, n_feat, dropout_rate)
-        self.proj_out = nn.Linear(n_feat, n_feat)
-        # self.act_out = nn.SiLU()
+        
+    def forward_attention(self, value, scores, mask):
+        n_batch = value.size(0)
+        if mask is not None:
+            mask = mask.unsqueeze(1)  # (batch, 1, time1, time2)
+            scores = scores.masked_fill(mask, -10000.0)
+            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)  # (batch, head, time1, time2)
+        else:
+            attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
+
+        p_attn = self.dropout(attn)
+        x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
+        x = x.transpose(1, 2).reshape(n_batch, -1, self.h * self.d_k)  # (batch, time1, d_model)
+
+        return x  # (batch, time1, d_model)
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = value.shape
@@ -149,8 +162,8 @@ class DualMultiHeadAttention(MultiHeadAttention):
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        out = self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
-        return self.proj_out(out)
+        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        return self.linear_out(out)
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.

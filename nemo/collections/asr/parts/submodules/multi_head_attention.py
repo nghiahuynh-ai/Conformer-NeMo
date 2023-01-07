@@ -133,7 +133,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
     def __init__(self, n_head, n_feat, dropout_rate):
         super().__init__(n_head, n_feat, dropout_rate)
         self.proj_out = nn.Linear(n_feat, n_feat)
-        self.act_out = nn.SiLU()
+        # self.act_out = nn.SiLU()
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = value.shape
@@ -150,7 +150,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
         out = self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
-        return self.act_out(self.proj_out(out))
+        return self.proj_out(out)
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.

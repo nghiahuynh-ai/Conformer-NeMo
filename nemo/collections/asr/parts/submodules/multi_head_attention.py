@@ -147,7 +147,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        return self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
+        return self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.

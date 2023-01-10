@@ -148,7 +148,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
         
         return self.proj_out(out)
 

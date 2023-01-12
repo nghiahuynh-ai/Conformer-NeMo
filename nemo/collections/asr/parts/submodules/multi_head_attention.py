@@ -236,6 +236,7 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
     def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v):
         super().__init__(n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v)
+        self.proj_out = nn.Linear(n_feat, n_feat)
         
     def forward(self, query, key, value, mask, pos_emb):
         batch, time, dim = value.shape
@@ -271,7 +272,8 @@ class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
         matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
         scores_ = (matrix_ac + matrix_bd) / self.s_d_k
 
-        return self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
+        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        return self.proj_out(out)
 
 
 class PositionalEncoding(torch.nn.Module):

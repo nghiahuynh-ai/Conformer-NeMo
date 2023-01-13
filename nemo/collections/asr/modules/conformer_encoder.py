@@ -164,7 +164,7 @@ class ConformerEncoder(NeuralModule, Exportable):
             self.pre_encode = nn.Linear(feat_in, d_model)
             self._feat_out = d_model
 
-        if not untie_biases and self_attention_model == "rel_pos":
+        if not untie_biases and self_attention_model in ["rel_pos", "rel_pos_dual"]:
             d_head = d_model // n_heads
             pos_bias_u = nn.Parameter(torch.Tensor(n_heads, d_head))
             pos_bias_v = nn.Parameter(torch.Tensor(n_heads, d_head))
@@ -175,7 +175,7 @@ class ConformerEncoder(NeuralModule, Exportable):
             pos_bias_v = None
 
         self.pos_emb_max_len = pos_emb_max_len
-        if self_attention_model == "rel_pos" or self_attention_model == "rel_dual":
+        if self_attention_model == "rel_pos" or self_attention_model == "rel_pos_dual":
             self.pos_enc = RelPositionalEncoding(
                 d_model=d_model,
                 dropout_rate=dropout,
@@ -183,7 +183,7 @@ class ConformerEncoder(NeuralModule, Exportable):
                 xscale=self.xscale,
                 dropout_rate_emb=dropout_emb,
             )
-        elif self_attention_model == "abs_pos" or self_attention_model == "dual":
+        elif self_attention_model == "abs_pos" or self_attention_model == "abs_pos_dual":
             pos_bias_u = None
             pos_bias_v = None
             self.pos_enc = PositionalEncoding(

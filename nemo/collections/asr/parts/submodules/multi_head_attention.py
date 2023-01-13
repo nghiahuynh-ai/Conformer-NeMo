@@ -130,7 +130,7 @@ class MultiHeadAttention(nn.Module):
 
 
 class DualMultiHeadAttention(MultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate, split_ratio=0.5, decay_ratio=0.1):
+    def __init__(self, n_head, n_feat, dropout_rate, split_ratio=0.5, decay_ratio=0.01):
         super().__init__(n_head, n_feat, dropout_rate)
         self.split_ratio = split_ratio
         self.decay_ratio = decay_ratio

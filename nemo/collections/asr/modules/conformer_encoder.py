@@ -130,7 +130,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         dropout_emb=0.1,
         dropout_att=0.0,
         split_ratio_att=0.5,
-        decay_ratio_att=0.1,
+        decay_ratio_att=0.01,
     ):
         super().__init__()
 

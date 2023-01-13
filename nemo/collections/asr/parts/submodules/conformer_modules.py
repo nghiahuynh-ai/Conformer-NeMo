@@ -52,7 +52,7 @@ class ConformerLayer(torch.nn.Module):
         pos_bias_u=None,
         pos_bias_v=None,
         split_ratio_att=0.5,
-        decay_ratio_att=0.1,
+        decay_ratio_att=0.01,
     ):
         super(ConformerLayer, self).__init__()
 

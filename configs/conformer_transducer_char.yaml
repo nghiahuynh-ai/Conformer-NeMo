@@ -141,7 +141,7 @@ model:
     dropout_att: 0.1 # The dropout for multi-headed attention modules
 
     split_ratio_att: 0.5
-    decay_ratio_att: 0.1
+    decay_ratio_att: 0.01
 
   decoder:
     _target_: nemo.collections.asr.modules.RNNTDecoder

@@ -129,6 +129,8 @@ class ConformerEncoder(NeuralModule, Exportable):
         dropout=0.1,
         dropout_emb=0.1,
         dropout_att=0.0,
+        split_ratio_att=0.5,
+        decay_ratio_att=0.1,
     ):
         super().__init__()
 
@@ -203,6 +205,8 @@ class ConformerEncoder(NeuralModule, Exportable):
                 dropout_att=dropout_att,
                 pos_bias_u=pos_bias_u,
                 pos_bias_v=pos_bias_v,
+                split_ratio=split_ratio_att,
+                decay_ratio=decay_ratio_att,
             )
             self.layers.append(layer)
 

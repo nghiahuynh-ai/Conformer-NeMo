@@ -51,6 +51,8 @@ class ConformerLayer(torch.nn.Module):
         dropout_att=0.1,
         pos_bias_u=None,
         pos_bias_v=None,
+        split_ratio_att=0.5,
+        decay_ratio_att=0.1,
     ):
         super(ConformerLayer, self).__init__()
 
@@ -72,18 +74,20 @@ class ConformerLayer(torch.nn.Module):
             self.self_attn = RelPositionMultiHeadAttention(
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
             )
-        elif self_attention_model == 'dual':
-            self.self_attn = DualMultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
-        elif self_attention_model == 'rel_dual':
+        elif self_attention_model == 'abs_pos':
+            self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
+        elif self_attention_model == 'rel_pos_dual':
             self.self_attn = DualRelPosMultiHeadAttention(
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, pos_bias_u=pos_bias_u, pos_bias_v=pos_bias_v
             )
-        elif self_attention_model == 'abs_pos':
-            self.self_attn = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
+        elif self_attention_model == 'abs_pos_dual':
+            self.self_attn = DualMultiHeadAttention(
+                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
+            )
         else:
             raise ValueError(
                 f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "
-                f"valid values can be from ['rel_pos', 'abs_pos']"
+                f"valid values can be from ['rel_pos', 'abs_pos', 'rel_pos_dual', 'abs_pos_dual']"
             )
 
         # second feed forward module
@@ -109,11 +113,11 @@ class ConformerLayer(torch.nn.Module):
         residual = residual + self.dropout(x) * self.fc_factor
 
         x = self.norm_self_att(residual)
-        if self.self_attention_model in ['rel_pos', 'rel_dual']:
+        if self.self_attention_model in ['rel_pos', 'rel_pos_dual']:
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
         # elif self.self_attention_model == 'dual':
         #     x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
-        elif self.self_attention_model in ['abs_pos', 'dual']:
+        elif self.self_attention_model in ['abs_pos', 'abs_pos_dual']:
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
             x = None

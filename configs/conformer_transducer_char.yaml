@@ -140,6 +140,9 @@ model:
     dropout_emb: 0.0 # The dropout used for embeddings
     dropout_att: 0.1 # The dropout for multi-headed attention modules
 
+    split_ratio_att: 0.5
+    decay_ratio_att: 0.1
+
   decoder:
     _target_: nemo.collections.asr.modules.RNNTDecoder
     normalization_mode: null # Currently only null is supported for export.

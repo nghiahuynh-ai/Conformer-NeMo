@@ -130,25 +130,37 @@ class MultiHeadAttention(nn.Module):
 
 
 class DualMultiHeadAttention(MultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head, n_feat, dropout_rate, split_ratio=0.5, decay_ratio=0.1):
         super().__init__(n_head, n_feat, dropout_rate)
+        self.split_ratio = split_ratio
+        self.decay_ratio = decay_ratio
         self.proj_out = nn.Linear(n_feat, n_feat)
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = value.shape
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
-        m = (m < 0.5).to(value.device)
+        m = (m < self.split_ratio).to(value.device)
+        m_ = torch.abs(-(1.0 + self.decay_ratio) * m + 1.0)
+        _m = torch.abs(-(1.0 + self.decay_ratio) * ~m + 1.0)
         
-        query_, key_, value_ = m * query, m * key, m * value
-        _query, _key, _value = ~m * query, ~m * key, ~m * value
+        query_, key_, value_ = m_ * query, m_ * key, m_ * value
+        _query, _key, _value = _m * query, _m * key, _m * value
+        
+        del m, m_, _m
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
         
+        del query_, key_, value_, _query, _key, _value
+        
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
+        del q_, k_, _q, _k
+        
         out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        
+        del v_, _v, scores_, _scores
         
         return self.proj_out(out)
 

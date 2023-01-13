@@ -205,8 +205,8 @@ class ConformerEncoder(NeuralModule, Exportable):
                 dropout_att=dropout_att,
                 pos_bias_u=pos_bias_u,
                 pos_bias_v=pos_bias_v,
-                split_ratio=split_ratio_att,
-                decay_ratio=decay_ratio_att,
+                split_ratio_att=split_ratio_att,
+                decay_ratio_att=decay_ratio_att,
             )
             self.layers.append(layer)
 

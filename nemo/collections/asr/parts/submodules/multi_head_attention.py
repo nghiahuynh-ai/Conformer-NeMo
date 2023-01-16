@@ -33,7 +33,9 @@ Part of this code is adopted from https://github.com/espnet/espnet
 """
 
 import math
-
+from torchvision.utils import save_image
+import torch
+import torchvision
 import torch
 import torch.nn as nn
 
@@ -139,8 +141,14 @@ class DualMultiHeadAttention(MultiHeadAttention):
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = (m < 0.5).to(value.device)
         
+        input_img = query.numpy()
+        save_image(input_img, 'input.png')
+        
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
+        
+        input_mask_img = query_.numpy()
+        save_image(input_mask_img, 'input_mask.png')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -148,9 +156,14 @@ class DualMultiHeadAttention(MultiHeadAttention):
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        out = self.proj_out(self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask))
         
-        return self.proj_out(out)
+        output = out.numpy()
+        save_image(output, 'output.png')
+        
+        raise
+        
+        return out
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.

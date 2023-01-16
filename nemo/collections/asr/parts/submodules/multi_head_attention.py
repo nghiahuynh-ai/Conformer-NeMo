@@ -139,17 +139,8 @@ class DualMultiHeadAttention(MultiHeadAttention):
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = (m < 0.5).to(value.device)
         
-        ts = datetime.datetime.now()
-        # save_image(query[0], f'att/input_{ts}.png')
-        torch.save(query[0], f'att/input_{ts}.pt')
-        
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
-        
-        # save_image(query_[0], f'att/mask_left_{ts}.png')
-        # save_image(_query[0], f'att/mask_right_{ts}.png')
-        torch.save(query_[0], f'att/mask_right_{ts}.pt')
-        torch.save(_query[0], f'att/mask_left_{ts}.pt')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -157,15 +148,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        # save_image(query_[0], f'att/mask_left_{ts}.png')
-        # save_image(_query[0], f'att/mask_right_{ts}.png')
-        torch.save(scores_[0], f'att/score_right_{ts}.pt')
-        torch.save(_scores[0], f'att/score_left_{ts}.pt')
-        
         out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
-        
-        # save_image(output[0], f'att/output_{ts}.png')
-        torch.save(out[0], f'att/output_{ts}.pt')
         
         return self.proj_out(out)
 
@@ -253,6 +236,7 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
     def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v):
         super().__init__(n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v)
+        self.proj_out = nn.Linear(n_feat, n_feat)
         
     def forward(self, query, key, value, mask, pos_emb):
         batch, time, dim = value.shape
@@ -288,7 +272,8 @@ class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
         matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
         scores_ = (matrix_ac + matrix_bd) / self.s_d_k
 
-        return self.forward_attention(_v, scores_, mask) * self.forward_attention(v_, _scores, mask)
+        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        return self.proj_out(out)
 
 
 class PositionalEncoding(torch.nn.Module):

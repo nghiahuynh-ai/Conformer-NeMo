@@ -141,13 +141,13 @@ class DualMultiHeadAttention(MultiHeadAttention):
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = (m < 0.5).to(value.device)
         
-        input_img = query.numpy()
+        input_img = query.cpu().numpy()
         save_image(input_img, 'input.png')
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
         
-        input_mask_img = query_.numpy()
+        input_mask_img = query_.cpu().numpy()
         save_image(input_mask_img, 'input_mask.png')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
@@ -158,10 +158,8 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         out = self.proj_out(self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask))
         
-        output = out.numpy()
+        output = out.cpu().numpy()
         save_image(output, 'output.png')
-        
-        raise
         
         return out
 

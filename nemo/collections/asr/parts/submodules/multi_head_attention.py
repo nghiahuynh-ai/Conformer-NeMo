@@ -158,7 +158,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         del q_, k_, _q, _k
         
-        out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
+        out = torch.nn.SiLU(self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask))
         
         del v_, _v, scores_, _scores
         

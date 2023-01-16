@@ -36,7 +36,7 @@ import math
 from torchvision.utils import save_image
 import torch
 import torchvision
-import time as tt
+import datetime
 import torch
 import torch.nn as nn
 
@@ -141,17 +141,19 @@ class DualMultiHeadAttention(MultiHeadAttention):
         batch, time, dim = value.shape
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = (m < 0.5).to(value.device)
-        
-        input_img = query
-        ts = tt.time()
-        save_image(input_img[0], f'input_{ts}.png')
+
+        ts = datetime.datetime.now()
+        # save_image(query[0], f'att/input_{ts}.png')
+        torch.save(query[0], f'input_{ts}.pt')
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
         
-        input_mask_img = query_
-        ts = tt.time()
-        save_image(input_mask_img[0], f'input_mask_{ts}.png')
+        ts = datetime.datetime.now()
+        # save_image(query_[0], f'att/mask_left_{ts}.png')
+        # save_image(_query[0], f'att/mask_right_{ts}.png')
+        torch.save(query_[0], f'mask_right_{ts}.pt')
+        torch.save(_query[0], f'mask_left_{ts}.pt')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -161,9 +163,9 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         out = self.proj_out(self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask))
         
-        output = out
-        ts = tt.time()
-        save_image(output[0], f'output_{ts}.png')
+        ts = datetime.datetime.now()
+        # save_image(output[0], f'att/output_{ts}.png')
+        torch.save(out[0], f'output_{ts}.pt')
         
         return out
 

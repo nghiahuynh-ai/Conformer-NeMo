@@ -146,7 +146,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         query_, key_, value_ = m_ * query, m_ * key, m_ * value
         _query, _key, _value = _m * query, _m * key, _m * value
         
-        del m, m_, _m
+        del m, m_, _m, query, key, value
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)

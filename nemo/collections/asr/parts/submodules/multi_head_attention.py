@@ -142,13 +142,13 @@ class DualMultiHeadAttention(MultiHeadAttention):
         m = (m < 0.5).to(value.device)
         
         input_img = query
-        save_image(input_img, 'input.png')
+        save_image(input_img[0], 'input.png')
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
         
         input_mask_img = query_
-        save_image(input_mask_img, 'input_mask.png')
+        save_image(input_mask_img[0], 'input_mask.png')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -159,7 +159,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         out = self.proj_out(self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask))
         
         output = out
-        save_image(output, 'output.png')
+        save_image(output[0], 'output.png')
         
         return out
 

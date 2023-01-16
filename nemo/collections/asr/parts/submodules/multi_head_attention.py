@@ -144,7 +144,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
 
         ts = datetime.datetime.now()
         # save_image(query[0], f'att/input_{ts}.png')
-        torch.save(query[0], f'input_{ts}.pt')
+        torch.save(query[0], f'att/input_{ts}.pt')
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
@@ -152,8 +152,8 @@ class DualMultiHeadAttention(MultiHeadAttention):
         ts = datetime.datetime.now()
         # save_image(query_[0], f'att/mask_left_{ts}.png')
         # save_image(_query[0], f'att/mask_right_{ts}.png')
-        torch.save(query_[0], f'mask_right_{ts}.pt')
-        torch.save(_query[0], f'mask_left_{ts}.pt')
+        torch.save(query_[0], f'att/mask_right_{ts}.pt')
+        torch.save(_query[0], f'att/mask_left_{ts}.pt')
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -165,7 +165,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         ts = datetime.datetime.now()
         # save_image(output[0], f'att/output_{ts}.png')
-        torch.save(out[0], f'output_{ts}.pt')
+        torch.save(out[0], f'att/output_{ts}.pt')
         
         return out
 

@@ -148,8 +148,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         query_, key_, value_ = m * query, m * key, m * value
         _query, _key, _value = ~m * query, ~m * key, ~m * value
-        
-        ts = datetime.datetime.now()
+
         # save_image(query_[0], f'att/mask_left_{ts}.png')
         # save_image(_query[0], f'att/mask_right_{ts}.png')
         torch.save(query_[0], f'att/mask_right_{ts}.pt')
@@ -160,10 +159,14 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
+
+        # save_image(query_[0], f'att/mask_left_{ts}.png')
+        # save_image(_query[0], f'att/mask_right_{ts}.png')
+        torch.save(scores_[0], f'att/score_right_{ts}.pt')
+        torch.save(_scores[0], f'att/score_left_{ts}.pt')
         
         out = self.proj_out(self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask))
-        
-        ts = datetime.datetime.now()
+
         # save_image(output[0], f'att/output_{ts}.png')
         torch.save(out[0], f'att/output_{ts}.pt')
         

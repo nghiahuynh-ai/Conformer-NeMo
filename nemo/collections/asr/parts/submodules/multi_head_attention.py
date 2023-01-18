@@ -138,38 +138,45 @@ class DualMultiHeadAttention(MultiHeadAttention):
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = value.shape
-        m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
-        m = (m < self.split_ratio).to(value.device)
-        m_ = torch.abs(-(1.0 + self.decay_ratio) * m + 1.0)
-        _m = torch.abs(-(1.0 + self.decay_ratio) * ~m + 1.0)
+        # m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
+        # m = (m < self.split_ratio).to(value.device)
+        # m_ = torch.abs(-(1.0 + self.decay_ratio) * m + 1.0)
+        # _m = torch.abs(-(1.0 + self.decay_ratio) * ~m + 1.0)
         
         ts = datetime.datetime.now()
         torch.save(query[0], f'att/input_{ts}.pt')
         
-        query_, key_, value_ = m_ * query, m_ * key, m_ * value
-        _query, _key, _value = _m * query, _m * key, _m * value
+        # query_, key_, value_ = m_ * query, m_ * key, m_ * value
+        # _query, _key, _value = _m * query, _m * key, _m * value
         
-        torch.save(query_[0], f'att/mask_right_{ts}.pt')
-        torch.save(_query[0], f'att/mask_left_{ts}.pt')
+        # torch.save(query_[0], f'att/mask_right_{ts}.pt')
+        # torch.save(_query[0], f'att/mask_left_{ts}.pt')
         
-        del m, m_, _m
+        # del m, m_, _m
         
-        q_, k_, v_ = self.forward_qkv(query_, key_, value_)
-        _q, _k, _v = self.forward_qkv(_query, _key, _value)
+        # q_, k_, v_ = self.forward_qkv(query_, key_, value_)
+        # _q, _k, _v = self.forward_qkv(_query, _key, _value)
         
-        del query_, key_, value_, _query, _key, _value
+        # del query_, key_, value_, _query, _key, _value
         
-        scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
-        _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
+        # scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
+        # _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        torch.save(scores_[0], f'att/score_right_{ts}.pt')
-        torch.save(_scores[0], f'att/score_left_{ts}.pt')
+        # torch.save(scores_[0], f'att/score_right_{ts}.pt')
+        # torch.save(_scores[0], f'att/score_left_{ts}.pt')
         
-        del q_, k_, _q, _k
+        # del q_, k_, _q, _k
         
-        out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
+        # out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
         
-        del v_, _v, scores_, _scores
+        q, k, v = self.forward_qkv(query, key, value)
+        scores = torch.matmul(q, k.transpose(-2, -1)) / self.s_d_k
+        
+        torch.save(scores[0], f'att/score_{ts}.pt')
+        
+        out = self.forward_attention(v, scores, mask)
+        
+        # del v_, _v, scores_, _scores
         
         torch.save(out[0], f'att/output_{ts}.pt')
         

@@ -671,6 +671,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
+        if batch_nb==1:
+            raise
+        
         signal, signal_len, transcript, transcript_len = batch
     
         # forward() only performs encoder forward

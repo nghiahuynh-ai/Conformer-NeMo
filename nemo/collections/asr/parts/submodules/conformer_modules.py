@@ -21,6 +21,7 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import (
     RelPositionMultiHeadAttention,
     DualMultiHeadAttention,
     DualRelPosMultiHeadAttention,
+    AnglewiseMultiHeadAttention,
 )
 from nemo.collections.asr.parts.utils.activations import Swish
 
@@ -82,6 +83,10 @@ class ConformerLayer(torch.nn.Module):
             )
         elif self_attention_model == 'abs_pos_dual':
             self.self_attn = DualMultiHeadAttention(
+                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
+            )
+        elif self_attention_model == 'abs_pos_anglewise':
+            self.self_attn = AnglewiseMultiHeadAttention(
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
             )
         else:

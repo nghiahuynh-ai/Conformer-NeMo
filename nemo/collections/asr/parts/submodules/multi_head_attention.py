@@ -127,17 +127,6 @@ class MultiHeadAttention(nn.Module):
         q, k, v = self.forward_qkv(query, key, value)
         scores = torch.matmul(q, k.transpose(-2, -1)) / self.s_d_k
         return self.forward_attention(v, scores, mask)
-    
-
-class AnglewiseMultiHeadAttention(MultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate):
-        super().__init__(n_head, n_feat, dropout_rate)
-        
-    def forward(self, query, key, value, mask, pos_emb=None):
-        q, k, v = self.forward_qkv(query, key, value)
-        scores = torch.matmul(q, k.transpose(-2, -1))
-        scores = scores / torch.matmul((q*q).sum(2).sqrt() + (k*k).transpose(-2, -1).sum(1).sqrt())
-        return self.forward_attention(v, scores, mask)
 
 
 class DualMultiHeadAttention(MultiHeadAttention):

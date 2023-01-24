@@ -86,9 +86,7 @@ class ConformerLayer(torch.nn.Module):
                 n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
             )
         elif self_attention_model == 'abs_pos_anglewise':
-            self.self_attn = AnglewiseMultiHeadAttention(
-                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
-            )
+            self.self_attn = AnglewiseMultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)
         else:
             raise ValueError(
                 f"'{self_attention_model}' is not not a valid value for 'self_attention_model', "

@@ -122,7 +122,7 @@ class ConformerLayer(torch.nn.Module):
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask, pos_emb=pos_emb)
         # elif self.self_attention_model == 'dual':
         #     x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
-        elif self.self_attention_model in ['abs_pos', 'abs_pos_dual']:
+        elif self.self_attention_model in ['abs_pos', 'abs_pos_dual', 'abs_pos_anglewise']:
             x = self.self_attn(query=x, key=x, value=x, mask=att_mask)
         else:
             x = None

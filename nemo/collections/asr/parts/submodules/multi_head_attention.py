@@ -135,14 +135,9 @@ class AnglewiseMultiHeadAttention(MultiHeadAttention):
         
     def forward(self, query, key, value, mask, pos_emb=None):
         q, k, v = self.forward_qkv(query, key, value)
-        print(q.shape)
-        _k = k.transpose(-2, -1)
-        print(_k)
-        
-        scores = torch.matmul(q, _k)
-        _q = (q*q).sum(3).sqrt()
-        _k = (k*k).sum(3).sqrt().transpose(-2, -1)
-        
+        scores = torch.matmul(q, k.transpose(-2, -1))
+        _q = (q*q).sum(3).sqrt().unsqueeze(-1)
+        _k = (k*k).sum(3).sqrt().unsqueeze(-2)
         print(_q.shape)
         print(_k.shape)
         scores = scores / torch.matmul(_q, _k)

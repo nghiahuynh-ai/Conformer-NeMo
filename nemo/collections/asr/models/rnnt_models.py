@@ -91,6 +91,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         if hasattr(self.cfg, 'pseudo_labeling'):
             self.pseudo_batch = self._cfg.pseudo_batch
+        else:
+            self.pseudo_batch = None
             
         if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
@@ -684,7 +686,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary
-        if batch_nb not in self.pseudo_batch:
+        if self.pseudo_batch is not None and batch_nb not in self.pseudo_batch:
             decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
         else:
             with torch.no_grad():

@@ -690,7 +690,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
         else:
             with torch.no_grad():
-                print(batch_nb)
+                print(batch_nb, signal.shape)
                 decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
         
         if hasattr(self, '_trainer') and self._trainer is not None:

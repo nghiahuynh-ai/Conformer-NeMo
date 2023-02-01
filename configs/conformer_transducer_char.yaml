@@ -48,6 +48,9 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
+  pseudo_labeling:
+    pseudo_batch: []
+
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
     pred_hidden: 640
@@ -57,7 +60,7 @@ model:
     manifest_filepath: ???
     sample_rate: ${model.sample_rate}
     batch_size: 16 # you may increase batch_size if your memory allows
-    shuffle: true
+    shuffle: false
     num_workers: 8
     pin_memory: true
     trim_silence: false

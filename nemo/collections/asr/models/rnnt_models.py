@@ -90,7 +90,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         )
 
         if hasattr(self.cfg, 'pseudo_labeling'):
-            self.pseudo_batch = self._cfg.pseudo_batch
+            self.pseudo_batch = self._cfg.pseudo_labeling.pseudo_batch
         else:
             self.pseudo_batch = None
             

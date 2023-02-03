@@ -686,11 +686,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary
-        if self.pseudo_batch is not None and batch_nb not in self.pseudo_batch:
-            decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
-        else:
-            with torch.no_grad():
-                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+        decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
         
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps

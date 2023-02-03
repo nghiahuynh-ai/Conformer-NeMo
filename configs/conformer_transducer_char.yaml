@@ -50,6 +50,7 @@ model:
 
   pseudo_labeling:
     pseudo_batch: []
+    gradient_tuned_factor: 0.1
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

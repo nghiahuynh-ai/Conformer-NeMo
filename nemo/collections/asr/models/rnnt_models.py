@@ -91,8 +91,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         if hasattr(self.cfg, 'pseudo_labeling'):
             self.pseudo_batch = self._cfg.pseudo_labeling.pseudo_batch
+            self.pseudo_neural = PseudoNeural(self._cfg.pseudo_labeling.gradient_tuned_factor)
         else:
             self.pseudo_batch = None
+            self.pseudo_neural = None
             
         if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
@@ -686,11 +688,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary
-        if self.pseudo_batch is not None and batch_nb not in self.pseudo_batch:
-            decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
-        else:
-            with torch.no_grad():
-                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+        decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+        if self.pseudo_batch is not None and batch_nb in self.pseudo_batch:
+            decoder = self.pseudo_neural(decoder)
         
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
@@ -950,4 +950,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
+
+
+class PseudoNeural(nn.Module):
+    def __init__(self, gradient_tuned_factor):
+        super(PseudoNeural, self).__init__()
+        self.gradient_tuned_factor = gradient_tuned_factor
+        
+    def hook(self, grad):
+        return self.gradient_tuned_factor * grad
     
+    def forward(self, x):
+        x.register_hook(self.hook)
+        return x

@@ -142,6 +142,8 @@ model:
 
     ub_split_ratio_att: 0.7
     lb_split_ratio_att: 0.3
+    ub_decay_ratio_att: 0.9
+    lb_decay_ratio_att: 0.1
 
   decoder:
     _target_: nemo.collections.asr.modules.RNNTDecoder

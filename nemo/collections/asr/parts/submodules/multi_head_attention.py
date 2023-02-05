@@ -146,45 +146,58 @@ class AnglewiseMultiHeadAttention(MultiHeadAttention):
 
 
 class DualMultiHeadAttention(MultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate, ub_split_ratio_att=0.7, lb_split_ratio_att=0.3):
+    def __init__(
+        self, 
+        n_head, 
+        n_feat, 
+        dropout_rate, 
+        ub_split_ratio_att=0.7, 
+        lb_split_ratio_att=0.3,
+        ub_decay_ratio_att=0.9, 
+        lb_decay_ratio_att=0.1,
+        ):
+        
         super().__init__(n_head, n_feat, dropout_rate)
         self.ub_split_ratio_att = ub_split_ratio_att
         self.lb_split_ratio_att = lb_split_ratio_att
+        self.ub_decay_ratio_att = ub_decay_ratio_att
+        self.lb_decay_ratio_att = lb_decay_ratio_att
         self.proj_out = nn.Linear(n_feat, n_feat)
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = query.shape
         split_ratio = random.uniform(self.lb_split_ratio_att, self.ub_split_ratio_att)
+        # decay_ratio = random.uniform(self.lb_decay_ratio_att, self.ub_decay_ratio_att)
         
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
-        m = (m < split_ratio).to(query.device)
+        split_mask = (m < split_ratio).to(query.device)
+        m_ = ((self.lb_decay_ratio_att - self.ub_decay_ratio_att) * m + self.ub_decay_ratio_att) * split_mask + ~split_mask
+        _m = ((self.lb_decay_ratio_att - self.ub_decay_ratio_att) * m + self.ub_decay_ratio_att) * ~split_mask + split_mask
         
         # query = key = value
-        x = query
-        d = (x * x).sum(-1).sqrt().unsqueeze(-1).expand(batch, time, dim)
-        m_ = m * d + ~m
-        x_ = x / m_
-        _m = ~m * d + m
-        _x = x / _m
+        # x = query
+        # d = (x * x).sum(-1).sqrt().unsqueeze(-1).expand(batch, time, dim)
+        # m_ = m * d + ~m
+        # x_ = x / m_
+        # _m = ~m * d + m
+        # _x = x / _m
         
-        # query_, key_, value_ = x_, x_, x_
-        # _query, _key, _value = _x, _x, _x
+        query_, key_, value_ = m_ * query, m_ * key, m_ * value
+        _query, _key, _value = _m * query, _m * key, _m * value
         
-        del m, m_, _m, d
+        # del m, m_, _m, split_mask
         
-        q_, k_, v_ = self.forward_qkv(x_, x_, x_)
-        _q, _k, _v = self.forward_qkv(_x, _x, _x)
-        
-        del x_, _x
+        q_, k_, v_ = self.forward_qkv(query_, key_, value_)
+        _q, _k, _v = self.forward_qkv(_query, _key, _value)
         
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k
         
-        del q_, k_, _q, _k
+        # del q_, k_, _q, _k
         
         out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
         
-        del v_, _v, scores_, _scores
+        # del v_, _v, scores_, _scores
         
         return self.proj_out(out)
 

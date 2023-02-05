@@ -33,6 +33,7 @@ Part of this code is adopted from https://github.com/espnet/espnet
 """
 
 import math
+import random
 
 import torch
 import torch.nn as nn
@@ -145,28 +146,36 @@ class AnglewiseMultiHeadAttention(MultiHeadAttention):
 
 
 class DualMultiHeadAttention(MultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate, split_ratio=0.5, decay_ratio=0.01):
+    def __init__(self, n_head, n_feat, dropout_rate, ub_split_ratio_att=0.7, lb_split_ratio_att=0.3):
         super().__init__(n_head, n_feat, dropout_rate)
-        self.split_ratio = split_ratio
-        self.decay_ratio = decay_ratio
+        self.ub_split_ratio_att = ub_split_ratio_att
+        self.lb_split_ratio_att = lb_split_ratio_att
         self.proj_out = nn.Linear(n_feat, n_feat)
     
     def forward(self, query, key, value, mask, pos_emb=None):
-        batch, time, dim = value.shape
+        batch, time, dim = query.shape
+        split_ratio = random.uniform(self.lb_split_ratio_att, self.ub_split_ratio_att)
+        
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
-        m = (m < self.split_ratio).to(value.device)
-        m_ = torch.abs(-(1.0 + self.decay_ratio) * m + 1.0)
-        _m = torch.abs(-(1.0 + self.decay_ratio) * ~m + 1.0)
+        m = (m < split_ratio).to(query.device)
         
-        query_, key_, value_ = m_ * query, m_ * key, m_ * value
-        _query, _key, _value = _m * query, _m * key, _m * value
+        # query = key = value
+        x = query
+        d = (x * x).sum(-1).sqrt().unsqueeze(-1).expand(batch, time, dim)
+        m_ = m * d + ~m
+        x_ = x / m_
+        _m = ~m * d + m
+        _x = x / _m
         
-        del m, m_, _m, query, key, value
+        # query_, key_, value_ = x_, x_, x_
+        # _query, _key, _value = _x, _x, _x
         
-        q_, k_, v_ = self.forward_qkv(query_, key_, value_)
-        _q, _k, _v = self.forward_qkv(_query, _key, _value)
+        del m, m_, _m, d
         
-        del query_, key_, value_, _query, _key, _value
+        q_, k_, v_ = self.forward_qkv(x_, x_, x_)
+        _q, _k, _v = self.forward_qkv(_x, _x, _x)
+        
+        del x_, _x
         
         scores_ = torch.matmul(_q, _k.transpose(-2, -1)) / self.s_d_k
         _scores = torch.matmul(q_, k_.transpose(-2, -1)) / self.s_d_k

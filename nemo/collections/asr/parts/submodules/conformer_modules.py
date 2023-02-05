@@ -52,8 +52,8 @@ class ConformerLayer(torch.nn.Module):
         dropout_att=0.1,
         pos_bias_u=None,
         pos_bias_v=None,
-        split_ratio_att=0.5,
-        decay_ratio_att=0.01,
+        ub_split_ratio_att=0.7,
+        lb_split_ratio_att=0.3,
     ):
         super(ConformerLayer, self).__init__()
 
@@ -83,7 +83,11 @@ class ConformerLayer(torch.nn.Module):
             )
         elif self_attention_model == 'abs_pos_dual':
             self.self_attn = DualMultiHeadAttention(
-                n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att, split_ratio=split_ratio_att, decay_ratio=decay_ratio_att
+                n_head=n_heads, 
+                n_feat=d_model, 
+                dropout_rate=dropout_att, 
+                ub_split_ratio_att=ub_split_ratio_att, 
+                lb_split_ratio_att=lb_split_ratio_att
             )
         elif self_attention_model == 'abs_pos_anglewise':
             self.self_attn = AnglewiseMultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout_att)

@@ -169,7 +169,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         split_ratio = random.uniform(self.lb_split_ratio_att, self.ub_split_ratio_att)
         # decay_ratio = random.uniform(self.lb_decay_ratio_att, self.ub_decay_ratio_att)
         
-        m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
+        m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim).to(query.device)
         split_mask = (m < split_ratio).to(query.device)
         m_ = ((self.lb_decay_ratio_att - self.ub_decay_ratio_att) * m + self.ub_decay_ratio_att) * split_mask + ~split_mask
         _m = ((self.lb_decay_ratio_att - self.ub_decay_ratio_att) * m + self.ub_decay_ratio_att) * ~split_mask + split_mask

@@ -49,7 +49,8 @@ model:
     "z"]
 
   pseudo_labeling:
-    pseudo_batch: []
+    apply: false
+    freezed_encblock_idxs: []
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

@@ -89,10 +89,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             num_classes=self.joint.num_classes_with_blank - 1, loss_name=loss_name, loss_kwargs=loss_kwargs
         )
 
-        if hasattr(self.cfg, 'pseudo_labeling'):
-            self.pseudo_batch = self._cfg.pseudo_labeling.pseudo_batch
-        else:
-            self.pseudo_batch = None
+        if hasattr(self.cfg, 'pseudo_labeling') and self._cfg.pseudo_labeling.apply:
+            self.freezed_encblock_idxs = self._cfg.pseudo_labeling.freezed_encblock_idxs
+            for ith, cfm_layer in enumerate(self.encoder.layers):
+                if ith in self.freezed_encblock_idxs:
+                    for param in cfm_layer.parameters():
+                        param.requires_grad = False
+            for param in self.decoder.parameters():
+                param.requires_grad = False
             
         if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)

@@ -50,7 +50,8 @@ model:
 
   pseudo_labeling:
     apply: false
-    freezed_encblock_idxs: []
+    pseudo_batch: []
+    freezed_encblock_idx: []
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

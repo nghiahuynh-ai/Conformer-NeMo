@@ -685,11 +685,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 if ith in self.freezed_encblock_idx:
                     for param in cfm_layer.parameters():
                         param.requires_grad = False
+            for param in self.decoder.parameters():
+                param.requires_grad = False 
         else:
             for ith, cfm_layer in enumerate(self.encoder.layers):
                 if ith in self.freezed_encblock_idx:
                     for param in cfm_layer.parameters():
                         param.requires_grad = True
+            for param in self.decoder.parameters():
+                param.requires_grad = True 
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -699,11 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary
-        if batch_nb in self.pseudo_batch:
-            with torch.no_grad():
-                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
-        else:
-            decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+        decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
         
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps

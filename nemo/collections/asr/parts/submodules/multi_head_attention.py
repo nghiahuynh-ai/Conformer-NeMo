@@ -155,8 +155,6 @@ class DualMultiHeadAttention(MultiHeadAttention):
         batch, time, dim = value.shape
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
         m = (m < self.split_ratio).to(value.device)
-        # m_ = torch.abs(-(1.0 + self.decay_ratio) * m + 1.0)
-        # _m = torch.abs(-(1.0 + self.decay_ratio) * ~m + 1.0)
         m_ = m + self.decay_ratio * ~m
         _m = ~m + self.decay_ratio * m
         

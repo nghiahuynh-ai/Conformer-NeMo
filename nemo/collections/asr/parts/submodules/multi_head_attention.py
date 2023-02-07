@@ -261,17 +261,21 @@ class RelPositionMultiHeadAttention(MultiHeadAttention):
 
 
 class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
-    def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v):
+    def __init__(self, n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v, split_ratio=0.5, decay_ratio=0.1):
         super().__init__(n_head, n_feat, dropout_rate, pos_bias_u, pos_bias_v)
+        self.split_ratio = split_ratio
+        self.decay_ratio = decay_ratio
         self.proj_out = nn.Linear(n_feat, n_feat)
         
     def forward(self, query, key, value, mask, pos_emb):
         batch, time, dim = value.shape
         m = torch.rand(batch, time).unsqueeze(2).expand(batch, time, dim)
-        m = (m < 0.5).to(value.device)
+        m = (m < self.split_ratio).to(value.device)
+        m_ = m + self.decay_ratio * ~m
+        _m = ~m + self.decay_ratio * m
         
-        query_, key_, value_ = m * query, m * key, m * value
-        _query, _key, _value = ~m * query, ~m * key, ~m * value
+        query_, key_, value_ = m_ * query, m_ * key, m_ * value
+        _query, _key, _value = _m * query, _m * key, _m * value
         
         q_, k_, v_ = self.forward_qkv(query_, key_, value_)
         _q, _k, _v = self.forward_qkv(_query, _key, _value)
@@ -299,7 +303,7 @@ class DualRelPosMultiHeadAttention(RelPositionMultiHeadAttention):
         matrix_bd = matrix_bd[:, :, :, : matrix_ac.size(-1)]
         scores_ = (matrix_ac + matrix_bd) / self.s_d_k
 
-        out = self.forward_attention(_v, scores_, mask) + self.forward_attention(v_, _scores, mask)
+        out = self.forward_attention(v_, scores_, mask) + self.forward_attention(_v, _scores, mask)
         return self.proj_out(out)
 
 

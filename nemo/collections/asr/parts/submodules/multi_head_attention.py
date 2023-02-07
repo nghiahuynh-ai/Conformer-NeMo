@@ -149,7 +149,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         super().__init__(n_head, n_feat, dropout_rate)
         self.split_ratio = split_ratio
         self.decay_ratio = decay_ratio
-        self.proj_out = nn.Linear(n_feat, n_feat)
+        self.norm_out = nn.LayerNorm(n_feat)
     
     def forward(self, query, key, value, mask, pos_emb=None):
         batch, time, dim = value.shape
@@ -179,7 +179,7 @@ class DualMultiHeadAttention(MultiHeadAttention):
         
         del v_, _v, scores_, _scores
         
-        return self.proj_out(out)
+        return self.norm_out(out)
 
 class RelPositionMultiHeadAttention(MultiHeadAttention):
     """Multi-Head Attention layer of Transformer-XL with support of relative positional encoding.

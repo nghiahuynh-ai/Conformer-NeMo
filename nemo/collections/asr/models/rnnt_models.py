@@ -40,6 +40,7 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
+from nemo.collections.asr.parts.submodules.conformer_modules import ConformerLayer
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -93,6 +94,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
         else:
             self.spec_augmentation = None
+
+        self.emb = nn.Embedding(len(self._cfg.labels), self._cfg.encoder.d_model)
 
         # Setup decoding objects
         self.decoding = RNNTDecoding(
@@ -673,12 +676,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
     
+        emb_transcript = self.emb(transcript)
+        
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=emb_transcript, processed_signal_length=transcript_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        del signal
+            encoded, encoded_len = self.forward(input_signal=emb_transcript, input_signal_length=transcript_len)
+        del signal, emb_transcript
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -941,4 +946,3 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
-    

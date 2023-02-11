@@ -131,8 +131,13 @@ class ConformerEncoder(NeuralModule, Exportable):
         dropout_att=0.0,
         split_ratio_att=0.5,
         decay_ratio_att=0.01,
+        task='speech2text',
     ):
         super().__init__()
+        
+        self.task = task
+        if task == 'text2text':
+            self.emb = nn.Embedding(len(self._cfg.labels), self._cfg.encoder.d_model)
 
         d_ff = d_model * ff_expansion_factor
         self.d_model = d_model
@@ -150,7 +155,7 @@ class ConformerEncoder(NeuralModule, Exportable):
 
         if subsampling_conv_channels == -1:
             subsampling_conv_channels = d_model
-        if subsampling and subsampling_factor > 1:
+        if subsampling and subsampling_factor > 1 and task == 'speech2text':
             self.pre_encode = ConvSubsampling(
                 subsampling=subsampling,
                 subsampling_factor=subsampling_factor,
@@ -216,53 +221,64 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             self.out_proj = None
             self._feat_out = d_model
-        self.set_max_audio_length(self.pos_emb_max_len)
+        self.set_max_input_length(self.pos_emb_max_len)
         self.use_pad_mask = True
 
-    def set_max_audio_length(self, max_audio_length):
+    def set_max_input_length(self, max_input_length):
         """ Sets maximum input length.
             Pre-calculates internal seq_range mask.
         """
-        self.max_audio_length = max_audio_length
+        self.max_input_length = max_input_length
         device = next(self.parameters()).device
-        seq_range = torch.arange(0, self.max_audio_length, device=device)
+        seq_range = torch.arange(0, self.max_input_length, device=device)
         if hasattr(self, 'seq_range'):
             self.seq_range = seq_range
         else:
             self.register_buffer('seq_range', seq_range, persistent=False)
-        self.pos_enc.extend_pe(max_audio_length, device)
+        self.pos_enc.extend_pe(max_input_length, device)
 
     @typecheck()
-    def forward(self, audio_signal, length=None):
-        self.update_max_seq_length(seq_length=audio_signal.size(2), device=audio_signal.device)
-        return self.forward_for_export(audio_signal=audio_signal, length=length)
+    def forward(self, input, length=None):
+        if self.task == 'speech2text':
+            seq_length = input.size(2)
+        else:
+            seq_length = input.size(1)
+        self.update_max_seq_length(seq_length=seq_length, device=input.device)
+        return self.forward_for_export(input=input, length=length)
 
     @typecheck()
-    def forward_for_export(self, audio_signal, length):
-        max_audio_length: int = audio_signal.size(-1)
+    def forward_for_export(self, input, length):
+        if self.task == 'speech2text':
+            max_input_length: int = input.size(-1)
+        else:
+            max_input_length: int = input.size(-2)
 
-        if max_audio_length > self.max_audio_length:
-            self.set_max_audio_length(max_audio_length)
+        if max_input_length > self.max_input_length:
+            self.set_max_input_length(max_input_length)
 
         if length is None:
-            length = audio_signal.new_full(
-                audio_signal.size(0), max_audio_length, dtype=torch.int32, device=self.seq_range.device
+            length = input.new_full(
+                input.size(0), max_input_length, dtype=torch.int32, device=self.seq_range.device
             )
 
-        audio_signal = torch.transpose(audio_signal, 1, 2)
+        if self.task == 'speech2text':
+            input = torch.transpose(input, 1, 2)
+            
+        if self.task == 'text2text':
+            x = self.emb(input)
 
         if isinstance(self.pre_encode, ConvSubsampling):
-            audio_signal, length = self.pre_encode(audio_signal, length)
+            x, length = self.pre_encode(x, length)
             # print('conformer block: ', length)
         else:
-            audio_signal = self.pre_encode(audio_signal)
-        audio_signal, pos_emb = self.pos_enc(audio_signal)
+            x = self.pre_encode(x)
+        x, pos_emb = self.pos_enc(x)
         # adjust size
-        max_audio_length = audio_signal.size(1)
+        max_input_length = x.size(1)
         # Create the self-attention and padding masks
 
-        pad_mask = self.make_pad_mask(max_audio_length, length)
-        att_mask = pad_mask.unsqueeze(1).repeat([1, max_audio_length, 1])
+        pad_mask = self.make_pad_mask(max_input_length, length)
+        att_mask = pad_mask.unsqueeze(1).repeat([1, max_input_length, 1])
         att_mask = torch.logical_and(att_mask, att_mask.transpose(1, 2))
         if self.att_context_size[0] >= 0:
             att_mask = att_mask.triu(diagonal=-self.att_context_size[0])
@@ -276,13 +292,15 @@ class ConformerEncoder(NeuralModule, Exportable):
             pad_mask = None
 
         for lth, layer in enumerate(self.layers):
-            audio_signal = layer(x=audio_signal, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
+            x = layer(x=x, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
 
         if self.out_proj is not None:
-            audio_signal = self.out_proj(audio_signal)
+            x = self.out_proj(x)
 
-        audio_signal = torch.transpose(audio_signal, 1, 2)
-        return audio_signal, length
+        if self.task == 'speech2text':
+            x = torch.transpose(x, 1, 2)
+            
+        return x, length
 
     def update_max_seq_length(self, seq_length: int, device):
         # Find global max audio length across all nodes
@@ -294,12 +312,12 @@ class ConformerEncoder(NeuralModule, Exportable):
 
             seq_length = global_max_len.int().item()
 
-        if seq_length > self.max_audio_length:
-            self.set_max_audio_length(seq_length)
+        if seq_length > self.max_input_length:
+            self.set_max_input_length(seq_length)
 
-    def make_pad_mask(self, max_audio_length, seq_lens):
+    def make_pad_mask(self, max_input_length, seq_lens):
         """Make masking for padding."""
-        mask = self.seq_range[:max_audio_length].expand(seq_lens.size(0), -1) < seq_lens.unsqueeze(-1)
+        mask = self.seq_range[:max_input_length].expand(seq_lens.size(0), -1) < seq_lens.unsqueeze(-1)
         return mask
 
     def enable_pad_mask(self, on=True):

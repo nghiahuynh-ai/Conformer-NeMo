@@ -111,6 +111,9 @@ model:
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
+
+    task: ${model.task}
+
     feat_in: ${model.preprocessor.features}
     feat_out: -1 # you may set it if you need different output size other than the default d_model
     n_layers: 17

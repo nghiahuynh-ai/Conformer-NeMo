@@ -678,7 +678,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return encoded, encoded_len
     
     def forward(self, input, input_length):
-        encoded, encoded_len = self.encoder(audio_signal=input, length=input_length)
+        encoded, encoded_len = self.encoder(input=input, length=input_length)
         return encoded, encoded_len
 
     # PTL-specific methods

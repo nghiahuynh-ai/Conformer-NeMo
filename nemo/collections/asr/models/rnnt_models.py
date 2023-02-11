@@ -665,16 +665,20 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
         
-        if not has_processed_signal:
+        if not has_processed_signal and self.task == 'speech2text':
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
         
         # Spec augment is not applied during evaluation/testing
-        if (self.spec_augmentation is not None) and self.training:
+        if (self.spec_augmentation is not None) and self.task == 'speech2text' and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        return encoded, encoded_len
+    
+    def forward(self, input, input_length):
+        encoded, encoded_len = self.encoder(audio_signal=input, length=input_length)
         return encoded, encoded_len
 
     # PTL-specific methods
@@ -689,7 +693,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
             del signal
         else:
-            encoded, encoded_len = self.forward(input_signal=transcript, input_signal_length=transcript_len)
+            encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

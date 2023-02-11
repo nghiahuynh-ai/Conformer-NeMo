@@ -86,27 +86,27 @@ class ConformerEncoder(NeuralModule, Exportable):
         input_example_length = torch.randint(1, max_dim, (max_batch,)).to(dev)
         return tuple([input_example, input_example_length])
 
-    @property
-    def input_types(self):
-        """Returns definitions of module input ports.
-        """
-        return OrderedDict(
-            {
-                "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
-                "length": NeuralType(tuple('B'), LengthsType()),
-            }
-        )
+    # @property
+    # def input_types(self):
+    #     """Returns definitions of module input ports.
+    #     """
+    #     return OrderedDict(
+    #         {
+    #             "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+    #             "length": NeuralType(tuple('B'), LengthsType()),
+    #         }
+    #     )
 
-    @property
-    def output_types(self):
-        """Returns definitions of module output ports.
-        """
-        return OrderedDict(
-            {
-                "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-                "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-            }
-        )
+    # @property
+    # def output_types(self):
+    #     """Returns definitions of module output ports.
+    #     """
+    #     return OrderedDict(
+    #         {
+    #             "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+    #             "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+    #         }
+    #     )
 
     def __init__(
         self,

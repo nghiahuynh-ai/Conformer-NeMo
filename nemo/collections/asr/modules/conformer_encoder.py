@@ -113,6 +113,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         feat_in,
         n_layers,
         d_model,
+        num_emb,
         feat_out=-1,
         subsampling='striding',
         subsampling_factor=4,
@@ -137,7 +138,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         
         self.task = task
         if task == 'text2text':
-            self.emb = nn.Embedding(len(self._cfg.labels), self._cfg.encoder.d_model)
+            self.emb = nn.Embedding(num_emb, d_model)
 
         d_ff = d_model * ff_expansion_factor
         self.d_model = d_model

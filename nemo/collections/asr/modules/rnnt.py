@@ -800,7 +800,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable):
     ) -> Union[torch.Tensor, List[Optional[torch.Tensor]]]:
         # encoder = (B, D, T)
         # decoder = (B, D, U) if passed, else None
-        encoder_outputs = encoder_outputs.transpose(1, 2)  # (B, T, D)
+        # encoder_outputs = encoder_outputs.transpose(1, 2)  # (B, T, D)
 
         if decoder_outputs is not None:
             decoder_outputs = decoder_outputs.transpose(1, 2)  # (B, U, D)

@@ -104,8 +104,8 @@ class MultiHeadAttention(nn.Module):
         if mask is not None:
             mask = mask.unsqueeze(1)  # (batch, 1, time1, time2)
             
-            print(mask.shape)
-            print(scores.shape)
+            # print(mask.shape)
+            # print(scores.shape)
             
             scores = scores.masked_fill(mask, -10000.0)
             attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)  # (batch, head, time1, time2)

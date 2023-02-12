@@ -250,7 +250,7 @@ class ConformerEncoder(NeuralModule, Exportable):
 
     @typecheck()
     def forward_for_export(self, input, length):
-        max_input_length: int = input.size(-2)
+        max_input_length: int = input.size(-1)
 
         if max_input_length > self.max_input_length:
             self.set_max_input_length(max_input_length)

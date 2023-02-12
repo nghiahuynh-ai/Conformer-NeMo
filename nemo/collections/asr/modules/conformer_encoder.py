@@ -290,6 +290,8 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             pad_mask = None
 
+        print(att_mask.shape)
+        
         for lth, layer in enumerate(self.layers):
             x = layer(x=x, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
 

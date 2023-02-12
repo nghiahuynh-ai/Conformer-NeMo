@@ -811,7 +811,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable):
                     "decoder_outputs passed is None, and `fuse_loss_wer` is not set. "
                     "decoder_outputs can only be None for fused step!"
                 )
-
+            print(encoder_outputs.shape)
             out = self.joint(encoder_outputs, decoder_outputs)  # [B, T, U, V + 1]
             return out
 
@@ -979,6 +979,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable):
             Logits / log softmaxed tensor of shape (B, T, U, V + 1).
         """
         # f = [B, T, H1]
+        print(f.shape)
         f = self.enc(f)
         f.unsqueeze_(dim=2)  # (B, T, 1, H)
 

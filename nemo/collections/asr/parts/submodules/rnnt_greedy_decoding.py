@@ -430,7 +430,7 @@ class GreedyBatchedRNNTInfer(_GreedyRNNTInfer):
 
         with torch.no_grad():
             # Apply optional preprocessing
-            encoder_output = encoder_output.transpose(1, 2)  # (B, T, D)
+            # encoder_output = encoder_output.transpose(1, 2)  # (B, T, D)
             logitlen = encoded_lengths
 
             self.decoder.eval()

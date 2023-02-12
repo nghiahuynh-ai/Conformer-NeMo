@@ -801,7 +801,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 )
 
                 tensorboard_logs['val_loss'] = loss_value
-
+            
             self.wer.update(encoded, encoded_len, transcript, transcript_len)
             wer, wer_num, wer_denom = self.wer.compute()
             self.wer.reset()

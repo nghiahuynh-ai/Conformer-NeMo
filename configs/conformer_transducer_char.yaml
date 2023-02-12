@@ -47,8 +47,6 @@ model:
     "v", "w", "x", 
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
-  
-  # task: text2text
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
@@ -112,7 +110,6 @@ model:
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
 
-    # task: ${model.task}
     num_emb: 94
 
     feat_in: ${model.preprocessor.features}

@@ -979,7 +979,7 @@ class RNNTJoint(rnnt_abstract.AbstractRNNTJoint, Exportable):
             Logits / log softmaxed tensor of shape (B, T, U, V + 1).
         """
         # f = [B, T, H1]
-        print(f.shape)
+        # print(f.shape)
         f = self.enc(f)
         f.unsqueeze_(dim=2)  # (B, T, 1, H)
 

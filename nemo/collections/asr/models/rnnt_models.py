@@ -66,14 +66,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         super().__init__(cfg=cfg, trainer=trainer)
         
-        assert self._cfg.task in ['speech2text', 'text2text']
-        self.task = self._cfg.task
+        # assert self._cfg.task in ['speech2text', 'text2text']
+        # self.task = self._cfg.task
 
         # Initialize components
-        if self.task == 'speech2text':
-            self.preprocessor = EncDecRNNTModel.from_config_dict(self.cfg.preprocessor)
-        else:
-            self.preprocessor = None
+        # if self.task == 'speech2text':
+        #     self.preprocessor = EncDecRNNTModel.from_config_dict(self.cfg.preprocessor)
+        # else:
+        #     self.preprocessor = None
             
         self.encoder = EncDecRNNTModel.from_config_dict(self.cfg.encoder)
 
@@ -97,10 +97,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             num_classes=self.joint.num_classes_with_blank - 1, loss_name=loss_name, loss_kwargs=loss_kwargs
         )
 
-        if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
-            self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
-        else:
-            self.spec_augmentation = None
+        # if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
+        #     self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
+        # else:
+        #     self.spec_augmentation = None
 
         # Setup decoding objects
         self.decoding = RNNTDecoding(
@@ -626,56 +626,56 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     #     }
 
     # @typecheck()
-    def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
-    ):
-        """
-        Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
-        and this method only performs the first step - forward of the acoustic model.
+    # def forward(
+    #     self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+    # ):
+    #     """
+    #     Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
+    #     and this method only performs the first step - forward of the acoustic model.
 
-        Please refer to the `training_step` in order to see the full `forward` step for training - which
-        performs the forward of the acoustic model, the prediction network and then the joint network.
-        Finally, it computes the loss and possibly compute the detokenized text via the `decoding` step.
+    #     Please refer to the `training_step` in order to see the full `forward` step for training - which
+    #     performs the forward of the acoustic model, the prediction network and then the joint network.
+    #     Finally, it computes the loss and possibly compute the detokenized text via the `decoding` step.
 
-        Please refer to the `validation_step` in order to see the full `forward` step for inference - which
-        performs the forward of the acoustic model, the prediction network and then the joint network.
-        Finally, it computes the decoded tokens via the `decoding` step and possibly compute the batch metrics.
+    #     Please refer to the `validation_step` in order to see the full `forward` step for inference - which
+    #     performs the forward of the acoustic model, the prediction network and then the joint network.
+    #     Finally, it computes the decoded tokens via the `decoding` step and possibly compute the batch metrics.
 
-        Args:
-            input_signal: Tensor that represents a batch of raw audio signals,
-                of shape [B, T]. T here represents timesteps, with 1 second of audio represented as
-                `self.sample_rate` number of floating point values.
-            input_signal_length: Vector of length B, that contains the individual lengths of the audio
-                sequences.
-            processed_signal: Tensor that represents a batch of processed audio signals,
-                of shape (B, D, T) that has undergone processing via some DALI preprocessor.
-            processed_signal_length: Vector of length B, that contains the individual lengths of the
-                processed audio sequences.
+    #     Args:
+    #         input_signal: Tensor that represents a batch of raw audio signals,
+    #             of shape [B, T]. T here represents timesteps, with 1 second of audio represented as
+    #             `self.sample_rate` number of floating point values.
+    #         input_signal_length: Vector of length B, that contains the individual lengths of the audio
+    #             sequences.
+    #         processed_signal: Tensor that represents a batch of processed audio signals,
+    #             of shape (B, D, T) that has undergone processing via some DALI preprocessor.
+    #         processed_signal_length: Vector of length B, that contains the individual lengths of the
+    #             processed audio sequences.
 
-        Returns:
-            A tuple of 2 elements -
-            1) The log probabilities tensor of shape [B, T, D].
-            2) The lengths of the acoustic sequence after propagation through the encoder, of shape [B].
-        """
-        has_input_signal = input_signal is not None and input_signal_length is not None
-        has_processed_signal = processed_signal is not None and processed_signal_length is not None
-        if (has_input_signal ^ has_processed_signal) is False:
-            raise ValueError(
-                f"{self} Arguments ``input_signal`` and ``input_signal_length`` are mutually exclusive "
-                " with ``processed_signal`` and ``processed_signal_len`` arguments."
-            )
+    #     Returns:
+    #         A tuple of 2 elements -
+    #         1) The log probabilities tensor of shape [B, T, D].
+    #         2) The lengths of the acoustic sequence after propagation through the encoder, of shape [B].
+    #     """
+    #     has_input_signal = input_signal is not None and input_signal_length is not None
+    #     has_processed_signal = processed_signal is not None and processed_signal_length is not None
+    #     if (has_input_signal ^ has_processed_signal) is False:
+    #         raise ValueError(
+    #             f"{self} Arguments ``input_signal`` and ``input_signal_length`` are mutually exclusive "
+    #             " with ``processed_signal`` and ``processed_signal_len`` arguments."
+    #         )
         
-        if not has_processed_signal and self.task == 'speech2text':
-            processed_signal, processed_signal_length = self.preprocessor(
-                input_signal=input_signal, length=input_signal_length,
-            )
+    #     if not has_processed_signal and self.task == 'speech2text':
+    #         processed_signal, processed_signal_length = self.preprocessor(
+    #             input_signal=input_signal, length=input_signal_length,
+    #         )
         
-        # Spec augment is not applied during evaluation/testing
-        if (self.spec_augmentation is not None) and self.task == 'speech2text' and self.training:
-            processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+    #     # Spec augment is not applied during evaluation/testing
+    #     if (self.spec_augmentation is not None) and self.task == 'speech2text' and self.training:
+    #         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
-        encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        return encoded, encoded_len
+    #     encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+    #     return encoded, encoded_len
     
     def forward(self, input, input_length):
         encoded, encoded_len = self.encoder(input=input, length=input_length)
@@ -686,13 +686,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         signal, signal_len, transcript, transcript_len = batch
         
         # forward() only performs encoder forward
-        if self.task == 'speech2text':
-            if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-                encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-            else:
-                encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        else:
-            encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
+        # if self.task == 'speech2text':
+        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
+        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+        #     else:
+        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        # else:
+        encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary
@@ -757,13 +757,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         signal, signal_len, transcript, transcript_len, sample_id = batch
 
         # forward() only performs encoder forward
-        if self.task == 'speech2text':
-            if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-                encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-            else:
-                encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        else:
-            encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
+        # if self.task == 'speech2text':
+        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
+        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+        #     else:
+        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        # else:
+        encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
 
         best_hyp_text, all_hyp_text = self.decoding.rnnt_decoder_predictions_tensor(
@@ -777,13 +777,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         signal, signal_len, transcript, transcript_len = batch
 
         # forward() only performs encoder forward
-        if self.task == 'speech2text':
-            if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-                encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-            else:
-                encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        else:
-            encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
+        # if self.task == 'speech2text':
+        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
+        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+        #     else:
+        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        # else:
+        encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
 
         tensorboard_logs = {}

@@ -132,13 +132,10 @@ class ConformerEncoder(NeuralModule, Exportable):
         dropout_att=0.0,
         split_ratio_att=0.5,
         decay_ratio_att=0.01,
-        task='speech2text',
     ):
         super().__init__()
         
-        self.task = task
-        if task == 'text2text':
-            self.emb = nn.Embedding(num_emb, d_model)
+        self.emb = nn.Embedding(num_emb, d_model)
 
         d_ff = d_model * ff_expansion_factor
         self.d_model = d_model
@@ -154,25 +151,25 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             self.xscale = None
 
-        if task == 'speech2text':
-            if subsampling_conv_channels == -1:
-                subsampling_conv_channels = d_model
-            if subsampling and subsampling_factor > 1:
-                self.pre_encode = ConvSubsampling(
-                    subsampling=subsampling,
-                    subsampling_factor=subsampling_factor,
-                    feat_in=feat_in,
-                    feat_out=d_model,
-                    conv_channels=subsampling_conv_channels,
-                    activation=nn.ReLU(),
-                )
-                self._feat_out = d_model
-            else:
-                self.pre_encode = nn.Linear(feat_in, d_model)
-                self._feat_out = d_model
-        else:
-            self.pre_encode = nn.Linear(d_model, d_model)
-            self._feat_out = d_model
+        # if task == 'speech2text':
+        #     if subsampling_conv_channels == -1:
+        #         subsampling_conv_channels = d_model
+        #     if subsampling and subsampling_factor > 1:
+        #         self.pre_encode = ConvSubsampling(
+        #             subsampling=subsampling,
+        #             subsampling_factor=subsampling_factor,
+        #             feat_in=feat_in,
+        #             feat_out=d_model,
+        #             conv_channels=subsampling_conv_channels,
+        #             activation=nn.ReLU(),
+        #         )
+        #         self._feat_out = d_model
+        #     else:
+        #         self.pre_encode = nn.Linear(feat_in, d_model)
+        #         self._feat_out = d_model
+        # else:
+        self.pre_encode = nn.Linear(d_model, d_model)
+        # self._feat_out = d_model
 
         if not untie_biases and self_attention_model in ["rel_pos", "rel_pos_dual"]:
             d_head = d_model // n_heads
@@ -220,12 +217,15 @@ class ConformerEncoder(NeuralModule, Exportable):
             )
             self.layers.append(layer)
 
-        if feat_out > 0 and feat_out != self._feat_out:
-            self.out_proj = nn.Linear(self._feat_out, feat_out)
-            self._feat_out = feat_out
-        else:
-            self.out_proj = None
-            self._feat_out = d_model
+        # if feat_out > 0 and feat_out != self._feat_out:
+        #     self.out_proj = nn.Linear(self._feat_out, feat_out)
+        #     self._feat_out = feat_out
+        # else:
+        #     self.out_proj = None
+        #     self._feat_out = d_model
+        
+        self.out_proj = nn.Linear(d_model, d_model)
+        
         self.set_max_input_length(self.pos_emb_max_len)
         self.use_pad_mask = True
 
@@ -244,19 +244,13 @@ class ConformerEncoder(NeuralModule, Exportable):
 
     @typecheck()
     def forward(self, input, length=None):
-        if self.task == 'speech2text':
-            seq_length = input.size(2)
-        else:
-            seq_length = input.size(1)
+        seq_length = input.size(1)
         self.update_max_seq_length(seq_length=seq_length, device=input.device)
         return self.forward_for_export(input=input, length=length)
 
     @typecheck()
     def forward_for_export(self, input, length):
-        if self.task == 'speech2text':
-            max_input_length: int = input.size(-1)
-        else:
-            max_input_length: int = input.size(-2)
+        max_input_length: int = input.size(-2)
 
         if max_input_length > self.max_input_length:
             self.set_max_input_length(max_input_length)
@@ -266,20 +260,20 @@ class ConformerEncoder(NeuralModule, Exportable):
                 input.size(0), max_input_length, dtype=torch.int32, device=self.seq_range.device
             )
 
-        if self.task == 'speech2text':
-            input = torch.transpose(input, 1, 2)
+        # if self.task == 'speech2text':
+        #     input = torch.transpose(input, 1, 2)
             
-        if self.task == 'text2text':
-            x = self.emb(input)
+        # if self.task == 'text2text':
+        x = self.emb(input)
 
-        if isinstance(self.pre_encode, ConvSubsampling):
-            x, length = self.pre_encode(x, length)
-            # print('conformer block: ', length)
-        else:
-            x = self.pre_encode(x)
+        # if isinstance(self.pre_encode, ConvSubsampling):
+        #     x, length = self.pre_encode(x, length)
+        #     # print('conformer block: ', length)
+        # else:
+        x = self.pre_encode(x)
         x, pos_emb = self.pos_enc(x)
         # adjust size
-        max_input_length = x.size(1)
+        # max_input_length = x.size(1)
         # Create the self-attention and padding masks
 
         pad_mask = self.make_pad_mask(max_input_length, length)
@@ -299,11 +293,11 @@ class ConformerEncoder(NeuralModule, Exportable):
         for lth, layer in enumerate(self.layers):
             x = layer(x=x, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
 
-        if self.out_proj is not None:
-            x = self.out_proj(x)
+        # if self.out_proj is not None:
+        x = self.out_proj(x)
 
-        if self.task == 'speech2text':
-            x = torch.transpose(x, 1, 2)
+        # if self.task == 'speech2text':
+        #     x = torch.transpose(x, 1, 2)
             
         return x, length
 

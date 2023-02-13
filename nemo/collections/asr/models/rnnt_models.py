@@ -19,9 +19,11 @@ import os
 import tempfile
 from math import ceil
 from typing import Dict, List, Optional, Union
+from nemo.collections.common.parts.preprocessing import parsers
 
 import torch
 import torch.nn as nn
+from torch.utils.data import Dataset
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from tqdm.auto import tqdm
@@ -65,15 +67,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.world_size = trainer.world_size
 
         super().__init__(cfg=cfg, trainer=trainer)
-        
-        # assert self._cfg.task in ['speech2text', 'text2text']
-        # self.task = self._cfg.task
-
-        # Initialize components
-        # if self.task == 'speech2text':
-        #     self.preprocessor = EncDecRNNTModel.from_config_dict(self.cfg.preprocessor)
-        # else:
-        #     self.preprocessor = None
             
         self.encoder = EncDecRNNTModel.from_config_dict(self.cfg.encoder)
 
@@ -225,7 +218,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     @torch.no_grad()
     def transcribe(
         self,
-        paths2audio_files: List[str],
+        text_in: List[str],
         batch_size: int = 4,
         return_hypotheses: bool = False,
         partial_hypothesis: Optional[List['Hypothesis']] = None,
@@ -236,7 +229,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         Args:
 
-            paths2audio_files: (a list) of paths to audio files. \
+            text_in: a list of input text. \
         Recommended length per file is between 5 and 25 seconds. \
         But it is possible to pass a few hours long file if enough GPU memory is available.
             batch_size: (int) batch size to use during inference. \
@@ -248,7 +241,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         Returns:
             A list of transcriptions in the same order as paths2audio_files. Will also return
         """
-        if paths2audio_files is None or len(paths2audio_files) == 0:
+        if text_in is None or len(text_in) == 0:
             return {}
         # We will store transcriptions here
         hypotheses = []
@@ -256,8 +249,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Model's mode and device
         mode = self.training
         device = next(self.parameters()).device
-        dither_value = self.preprocessor.featurizer.dither
-        pad_to_value = self.preprocessor.featurizer.pad_to
 
         if num_workers is None:
             num_workers = min(batch_size, os.cpu_count() - 1)
@@ -274,45 +265,29 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.joint.freeze()
             logging_level = logging.get_verbosity()
             logging.set_verbosity(logging.WARNING)
-            # Work in tmp directory - will store manifest file there
-            with tempfile.TemporaryDirectory() as tmpdir:
-                with open(os.path.join(tmpdir, 'manifest.json'), 'w', encoding='utf-8') as fp:
-                    for audio_file in paths2audio_files:
-                        entry = {'audio_filepath': audio_file, 'duration': 100000, 'text': ''}
-                        fp.write(json.dumps(entry) + '\n')
-
-                config = {
-                    'paths2audio_files': paths2audio_files,
-                    'batch_size': batch_size,
-                    'temp_dir': tmpdir,
-                    'num_workers': num_workers,
-                }
-
-                temporary_datalayer = self._setup_transcribe_dataloader(config)
-                for test_batch in tqdm(temporary_datalayer, desc="Transcribing"):
-                    encoded, encoded_len = self.forward(
-                        input_signal=test_batch[0].to(device), input_signal_length=test_batch[1].to(device)
-                    )
-                    best_hyp, all_hyp = self.decoding.rnnt_decoder_predictions_tensor(
-                        encoded,
-                        encoded_len,
-                        return_hypotheses=return_hypotheses,
-                        partial_hypotheses=partial_hypothesis,
+            
+            for sample in tqdm(text_in, desc="Transcribing"):
+                encoded, encoded_len = self.forward(
+                    input=sample.to(device), input_length=len(sample).to(device)
+                )
+                best_hyp, all_hyp = self.decoding.rnnt_decoder_predictions_tensor(
+                    encoded,
+                    encoded_len,
+                    return_hypotheses=return_hypotheses,
+                    partial_hypotheses=partial_hypothesis,
                     )
 
-                    hypotheses += best_hyp
-                    if all_hyp is not None:
-                        all_hypotheses += all_hyp
-                    else:
-                        all_hypotheses += best_hyp
+                hypotheses += best_hyp
+                if all_hyp is not None:
+                    all_hypotheses += all_hyp
+                else:
+                    all_hypotheses += best_hyp
 
-                    del encoded
-                    del test_batch
+                del encoded
+                del sample
         finally:
             # set mode back to its original value
             self.train(mode=mode)
-            self.preprocessor.featurizer.dither = dither_value
-            self.preprocessor.featurizer.pad_to = pad_to_value
 
             logging.set_verbosity(logging_level)
             if mode is True:
@@ -603,79 +578,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self._update_dataset_config(dataset_name='test', config=test_data_config)
 
         self._test_dl = self._setup_dataloader_from_config(config=test_data_config)
-
-    # @property
-    # def input_types(self) -> Optional[Dict[str, NeuralType]]:
-    #     if hasattr(self.preprocessor, '_sample_rate'):
-    #         input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
-    #     else:
-    #         input_signal_eltype = AudioSignal()
-
-    #     return {
-    #         "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
-    #         "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-    #         "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
-    #         "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-    #     }
-
-    # @property
-    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
-    #     return {
-    #         "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-    #         "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-    #     }
-
-    # @typecheck()
-    # def forward(
-    #     self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
-    # ):
-    #     """
-    #     Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
-    #     and this method only performs the first step - forward of the acoustic model.
-
-    #     Please refer to the `training_step` in order to see the full `forward` step for training - which
-    #     performs the forward of the acoustic model, the prediction network and then the joint network.
-    #     Finally, it computes the loss and possibly compute the detokenized text via the `decoding` step.
-
-    #     Please refer to the `validation_step` in order to see the full `forward` step for inference - which
-    #     performs the forward of the acoustic model, the prediction network and then the joint network.
-    #     Finally, it computes the decoded tokens via the `decoding` step and possibly compute the batch metrics.
-
-    #     Args:
-    #         input_signal: Tensor that represents a batch of raw audio signals,
-    #             of shape [B, T]. T here represents timesteps, with 1 second of audio represented as
-    #             `self.sample_rate` number of floating point values.
-    #         input_signal_length: Vector of length B, that contains the individual lengths of the audio
-    #             sequences.
-    #         processed_signal: Tensor that represents a batch of processed audio signals,
-    #             of shape (B, D, T) that has undergone processing via some DALI preprocessor.
-    #         processed_signal_length: Vector of length B, that contains the individual lengths of the
-    #             processed audio sequences.
-
-    #     Returns:
-    #         A tuple of 2 elements -
-    #         1) The log probabilities tensor of shape [B, T, D].
-    #         2) The lengths of the acoustic sequence after propagation through the encoder, of shape [B].
-    #     """
-    #     has_input_signal = input_signal is not None and input_signal_length is not None
-    #     has_processed_signal = processed_signal is not None and processed_signal_length is not None
-    #     if (has_input_signal ^ has_processed_signal) is False:
-    #         raise ValueError(
-    #             f"{self} Arguments ``input_signal`` and ``input_signal_length`` are mutually exclusive "
-    #             " with ``processed_signal`` and ``processed_signal_len`` arguments."
-    #         )
-        
-    #     if not has_processed_signal and self.task == 'speech2text':
-    #         processed_signal, processed_signal_length = self.preprocessor(
-    #             input_signal=input_signal, length=input_signal_length,
-    #         )
-        
-    #     # Spec augment is not applied during evaluation/testing
-    #     if (self.spec_augmentation is not None) and self.task == 'speech2text' and self.training:
-    #         processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
-        
-    #     encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-    #     return encoded, encoded_len
     
     def forward(self, input, input_length):
         encoded, encoded_len = self.encoder(input=input, length=input_length)
@@ -685,17 +587,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
-        # forward() only performs encoder forward
-        # if self.task == 'speech2text':
-        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-        #     else:
-        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        # else:
         encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
-        
-        # print(encoded.shape)
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -758,13 +651,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, sample_id = batch
 
-        # forward() only performs encoder forward
-        # if self.task == 'speech2text':
-        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-        #     else:
-        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        # else:
         encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
 
@@ -778,13 +664,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len = batch
 
-        # forward() only performs encoder forward
-        # if self.task == 'speech2text':
-        #     if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-        #         encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
-        #     else:
-        #         encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        # else:
         encoded, encoded_len = self.forward(input=transcript, input_length=transcript_len)
         del signal
 
@@ -964,3 +843,68 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
+    
+
+class T2TDataset(Dataset):
+    def __init__(self, manifest_filepath, vocab, adjust_ratio=0.2):
+        super().__init__()
+        
+        with open(manifest_filepath, "r") as manifest:
+            manifest = list(manifest)
+            
+        self.manifest_filepath = manifest_filepath
+        self.adjust_ratio = adjust_ratio
+        self.parser = parsers.CharParser(vocab)
+        self._len = len(manifest)
+        del manifest
+        
+    def __len__(self):
+        return self._len
+    
+    def _adjust(self, text):
+        
+        text = text.split()
+        tuned_idx = np.random.choice(range(len(text)), size=int(self.adjust_ratio*len(text)))
+        
+        for idx in tuned_idx:
+            text[idx] = tune(text[idx])
+        
+        return text
+    
+    def __getitem__(self, index):
+        with open(self.manifest_filepath, "r") as manifest:
+            manifest = list(manifest)
+            
+        label = torch.tensor(self.parser(manifest[index])).long()
+        instance = torch.tensor(self.parser(self._adjust(label))).long()
+        
+        return instance, torch.tensor(instance.shape[0]).long(), label, torch.tensor(label.shape[0]).long()
+    
+    def collate_fn(self, batch):
+        packed_batch = list(zip(*batch))
+        _, instance_len, _, label_len = packed_batch
+        
+        max_instance_len = max(instance_len).item()
+        max_label_len = max(label_len).item()
+        
+        instance, label = [], []
+        for b in batch:
+            instance_i, instance_len_i, label_i, label_len_i = b
+            
+            if instance_len_i < max_instance_len:
+                pad = (0, max_instance_len - instance_len_i)
+                instance_i = torch.nn.functional.pad(instance_i, pad, value=0)
+                
+            if label_len_i < max_label_len:
+                pad = (0, max_label_len - label_len_i)
+                label_i = torch.nn.functional.pad(label_i, pad, value=0)
+            
+            instance.append(instance_i)
+            label.append(label_i)
+        
+        instance = torch.stack(instance)
+        instance_len = torch.stack(instance_len)
+        label = torch.stack(label)
+        label_len = torch.stack(label_len)
+        
+        return instance, instance_len, label, label_len

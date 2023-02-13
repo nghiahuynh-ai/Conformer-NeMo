@@ -249,7 +249,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
 
         with torch.no_grad():
             # Apply optional preprocessing
-            encoder_output = encoder_output.transpose(1, 2)  # (B, T, D)
+            # encoder_output = encoder_output.transpose(1, 2)  # (B, T, D)
 
             self.decoder.eval()
             self.joint.eval()
@@ -867,7 +867,7 @@ class ONNXGreedyBatchedRNNTInfer:
         with torch.no_grad():
             # Apply optional preprocessing
             encoder_output, encoded_lengths = self.run_encoder(audio_signal=audio_signal, length=length)
-            encoder_output = encoder_output.transpose([0, 2, 1])  # (B, T, D)
+            # encoder_output = encoder_output.transpose([0, 2, 1])  # (B, T, D)
             logitlen = encoded_lengths
 
             inseq = encoder_output  # [B, T, D]

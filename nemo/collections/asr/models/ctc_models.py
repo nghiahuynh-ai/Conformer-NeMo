@@ -590,7 +590,15 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        
+        print('encoded shape: ', encoded.shape)
+        
         log_probs = self.decoder(encoder_output=encoded)
+        
+        print('log_probs shape: ', log_probs.shape)
+        
+        raise
+        
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
 
         return log_probs, encoded_len, greedy_predictions
@@ -604,10 +612,6 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
             )
         else:
             log_probs, encoded_len, predictions = self.forward(input_signal=signal, input_signal_length=signal_len)
-        
-        print('log_probs shape: ', log_probs.shape)
-        print('predictions shape: ', predictions.shape)
-        
         
         loss_value = self.loss(
             log_probs=log_probs, targets=transcript, input_lengths=encoded_len, target_lengths=transcript_len

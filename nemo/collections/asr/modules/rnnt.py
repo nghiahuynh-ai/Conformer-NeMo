@@ -139,6 +139,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         normalization_mode: Optional[str] = None,
         random_state_sampling: bool = False,
         blank_as_pad: bool = True,
+        t2t_apply: bool = False,
+        t2t_out_dim: int = 512,
     ):
         # Required arguments
         self.pred_hidden = prednet['pred_hidden']
@@ -167,6 +169,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             hidden_hidden_bias_scale=hidden_hidden_bias_scale,
             dropout=dropout,
             rnn_hidden_size=prednet.get("rnn_hidden_size", -1),
+            t2t_apply=t2t_apply,
+            t2t_out_dim=t2t_out_dim,
         )
         self._rnnt_export = False
 
@@ -294,6 +298,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         hidden_hidden_bias_scale,
         dropout,
         rnn_hidden_size,
+        t2t_apply,
+        t2t_out_dim,
     ):
         """
         Prepare the trainable parameters of the Prediction Network.
@@ -312,10 +318,13 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             dropout: Whether to apply dropout to RNN.
             rnn_hidden_size: the hidden size of the RNN, if not specified, pred_n_hidden would be used
         """
-        if self.blank_as_pad:
-            embed = torch.nn.Embedding(vocab_size + 1, pred_n_hidden, padding_idx=self.blank_idx)
+        if not t2t_apply:
+            if self.blank_as_pad:
+                embed = torch.nn.Embedding(vocab_size + 1, pred_n_hidden, padding_idx=self.blank_idx)
+            else:
+                embed = torch.nn.Embedding(vocab_size, pred_n_hidden)
         else:
-            embed = torch.nn.Embedding(vocab_size, pred_n_hidden)
+            embed = torch.nn.Linear(t2t_out_dim, pred_n_hidden)
 
         layers = torch.nn.ModuleDict(
             {

@@ -723,6 +723,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             print('--------------------------------------------------------------')
             print(perturb_transcript[0])
             
+            raise
+            
             embed = self.embed(transcript)
             t2t_output, loss_t2t = self.t2t_model(embed, transcript)
             transcript_len = torch.tensor(t2t_output.shape[1]).long()

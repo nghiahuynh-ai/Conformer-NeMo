@@ -837,7 +837,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 tensorboard_logs['val_loss_rnnt'] = loss_rnnt
                 if self.t2t_model is not None:
                     tensorboard_logs['val_loss_t2t'] = loss_t2t
-
+                print('------------------------------------------')
             self.wer.update(encoded, encoded_len, transcript, transcript_len)
             wer, wer_num, wer_denom = self.wer.compute()
             self.wer.reset()

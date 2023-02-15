@@ -702,21 +702,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
         
-        
-        perturbed_transcript = perturb_transcript(
-                transcript,
-                transcript_len,
-                word_start_idx,
-                word_length,
-                0.2,
-            )
-            
-        print(transcript[0])
-        print('--------------------------------------------------------------')
-        print(perturbed_transcript[0])
-            
-        raise
-        
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
@@ -726,17 +711,17 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
         # During training, loss must be computed, so decoder forward is necessary
         if self.t2t_model is not None:
-            # perturb_transcript = perturb_transcript(
-            #     transcript,
-            #     transcript_len,
-            #     word_start_idx,
-            #     word_length,
-            #     self.mask_ratio,
-            # )
-            
+            perturbed_transcript = perturb_transcript(
+                transcript,
+                transcript_len,
+                word_start_idx,
+                word_length,
+                self.mask_ratio,
+            )
+            perturbed_embed = self.embed(perturbed_transcript)
             embed = self.embed(transcript)
-            t2t_output, loss_t2t = self.t2t_model(embed, transcript)
-            transcript_len = torch.tensor(t2t_output.shape[1]).long()
+            t2t_output, loss_t2t = self.t2t_model(perturbed_embed, embed)
+            # transcript_len = torch.tensor(t2t_output.shape[1]).long()
             decoder, target_length, states = self.decoder(targets=t2t_output, target_length=transcript_len)
         else:
             decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -833,6 +818,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # If experimental fused Joint-Loss-WER is not used
         if not self.joint.fuse_loss_wer:
             if self.compute_eval_loss:
+                if self.t2t_model is not None:
+                    transcript = self.embed(transcript)
+                    transcript, loss_t2t = self.t2t_model(transcript, transcript)
                 decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
                 joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
 
@@ -840,7 +828,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
                 )
 
-                tensorboard_logs['val_loss'] = loss_rnnt
+                tensorboard_logs['val_loss_rnnt'] = loss_rnnt
+                tensorboard_logs['val_loss_ce'] = loss_t2t
 
             self.wer.update(encoded, encoded_len, transcript, transcript_len)
             wer, wer_num, wer_denom = self.wer.compute()
@@ -1015,7 +1004,7 @@ def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, 
         
         n_words = len(word_start_idx[b])
         perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)
-        print(perturb_word_idx)
+        
         t = transcript[b].detach().clone()
         for word_idx in perturb_word_idx:
             start = word_start_idx[b][word_idx]

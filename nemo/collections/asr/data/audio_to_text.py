@@ -54,13 +54,14 @@ def _speech_collate_fn(batch, pad_id):
                assumes the signals are 1d torch tensors (i.e. mono audio).
     """
     packed_batch = list(zip(*batch))
-    if len(packed_batch) == 5:
-        _, audio_lengths, _, tokens_lengths, sample_ids = packed_batch
-    elif len(packed_batch) == 4:
+    if len(packed_batch) == 7:
+        _, audio_lengths, _, tokens_lengths, word_start_idx, word_length, sample_ids = packed_batch
+    elif len(packed_batch) == 6:
         sample_ids = None
-        _, audio_lengths, _, tokens_lengths = packed_batch
+        _, audio_lengths, _, tokens_lengths, word_start_idx, word_length = packed_batch
     else:
-        raise ValueError("Expects 4 or 5 tensors in the batch!")
+        raise ValueError("Expects 6 or 7 tensors in the batch!")
+    
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
     if has_audio:
@@ -69,16 +70,18 @@ def _speech_collate_fn(batch, pad_id):
 
     audio_signal, tokens = [], []
     for b in batch:
-        if len(b) == 5:
-            sig, sig_len, tokens_i, tokens_i_len, _ = b
+        if len(b) == 7:
+            sig, sig_len, tokens_i, tokens_i_len, _, _, _ = b
         else:
-            sig, sig_len, tokens_i, tokens_i_len = b
+            sig, sig_len, tokens_i, tokens_i_len, _, _ = b
+            
         if has_audio:
             sig_len = sig_len.item()
             if sig_len < max_audio_len:
                 pad = (0, max_audio_len - sig_len)
                 sig = torch.nn.functional.pad(sig, pad)
             audio_signal.append(sig)
+            
         tokens_i_len = tokens_i_len.item()
         if tokens_i_len < max_tokens_len:
             pad = (0, max_tokens_len - tokens_i_len)
@@ -90,13 +93,18 @@ def _speech_collate_fn(batch, pad_id):
         audio_lengths = torch.stack(audio_lengths)
     else:
         audio_signal, audio_lengths = None, None
+        
     tokens = torch.stack(tokens)
     tokens_lengths = torch.stack(tokens_lengths)
+    
+    word_start_idx = torch.stack(word_start_idx)
+    word_length = torch.stack(word_length)
+    
     if sample_ids is None:
-        return audio_signal, audio_lengths, tokens, tokens_lengths
+        return audio_signal, audio_lengths, tokens, tokens_lengths, word_start_idx, word_length
     else:
         sample_ids = torch.tensor(sample_ids, dtype=torch.int32)
-        return audio_signal, audio_lengths, tokens, tokens_lengths, sample_ids
+        return audio_signal, audio_lengths, tokens, tokens_lengths, word_start_idx, word_length, sample_ids
 
 
 class ASRManifestProcessor:
@@ -156,7 +164,7 @@ class ASRManifestProcessor:
 
     def process_text_by_sample(self, sample: collections.ASRAudioText.OUTPUT_TYPE) -> (List[int], int):
         t, tl = sample.text_tokens, len(sample.text_tokens)
-
+        
         if self.bos_id is not None:
             t = [self.bos_id] + t
             tl += 1
@@ -301,11 +309,13 @@ class _AudioTextDataset(Dataset):
         f, fl = features, torch.tensor(features.shape[0]).long()
 
         t, tl = self.manifest_processor.process_text_by_sample(sample=sample)
+        
+        word_start_idx, word_length = sample.word_start_idx, sample.word_length
 
         if self.return_sample_id:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), index
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), word_start_idx, word_length, index
         else:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long()
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), word_start_idx, word_length
 
         return output
 

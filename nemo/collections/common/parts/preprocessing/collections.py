@@ -105,6 +105,8 @@ class AudioText(_Collection):
         speakers: List[Optional[int]],
         orig_sampling_rates: List[Optional[int]],
         langs: List[Optional[str]],
+        word_start_idxs: List[int],
+        word_lengths: List[int],
         parser: parsers.CharParser,
         min_duration: Optional[float] = None,
         max_duration: Optional[float] = None,
@@ -136,8 +138,8 @@ class AudioText(_Collection):
         if index_by_file_id:
             self.mapping = {}
 
-        for id_, audio_file, duration, offset, text, speaker, orig_sr, lang in zip(
-            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, langs
+        for id_, audio_file, duration, offset, text, speaker, orig_sr, lang, word_start_idx, word_length in zip(
+            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, langs, word_start_idxs, word_lengths
         ):
             # Duration filters.
             if min_duration is not None and duration < min_duration:
@@ -168,7 +170,7 @@ class AudioText(_Collection):
 
             total_duration += duration
 
-            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, speaker, orig_sr, lang))
+            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, speaker, orig_sr, lang, word_start_idx, word_length))
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
                 self.mapping[file_id] = len(data) - 1
@@ -202,7 +204,7 @@ class ASRAudioText(AudioText):
             **kwargs: Kwargs to pass to `AudioText` constructor.
         """
 
-        ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs = [], [], [], [], [], [], [], []
+        ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, word_start_idx, word_length = [], [], [], [], [], [], [], [], [], []
         for item in manifest.item_iter(manifests_files):
             ids.append(item['id'])
             audio_files.append(item['audio_file'])
@@ -212,8 +214,10 @@ class ASRAudioText(AudioText):
             speakers.append(item['speaker'])
             orig_srs.append(item['orig_sr'])
             langs.append(item['lang'])
+            word_start_idx.append(item['word_start_idx'])
+            word_length.append(item['word_length'])
 
-        super().__init__(ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, *args, **kwargs)
+        super().__init__(ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, word_start_idx, word_length, *args, **kwargs)
 
 
 class SpeechLabel(_Collection):

@@ -94,13 +94,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if self._cfg.decoder.blank_as_pad:
                 self.embed = torch.nn.Embedding(
                     num_embeddings=len(self._cfg.labels) + 1,
-                    embedding_dim=self._cfg.model_defaults.pred_hidden, 
-                    padding_idx=self.blank_idx,
+                    embedding_dim=self._cfg.t2t_model.d_model, 
+                    padding_idx=len(self._cfg.labels),
                     )
             else:
                 self.embed = torch.nn.Embedding(
                     num_embeddings=len(self._cfg.labels), 
-                    embedding_dim=self._cfg.model_defaults.pred_hidden,
+                    embedding_dim=self._cfg.t2t_model.d_model,
                     )
 
             self.t2t_model = Text2Text(
@@ -108,7 +108,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 n_heads=self._cfg.t2t_model.n_heads,
                 n_encoder_layers=self._cfg.t2t_model.n_encoder_layers,
                 n_decoder_layers=self._cfg.t2t_model.n_decoder_layers,
-                vocab_size=len(self._cfg.labels)
             )
             
             self.mask_ratio = self._cfg.t2t_model.mask_ratio
@@ -701,7 +700,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
-        signal, signal_len, transcript, transcript_len = batch
+        signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
+        
+        print(word_start_idx)
+        print('--------------------------------------------------------------------------')
+        print(word_length)
+        raise
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -982,4 +986,3 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
-    

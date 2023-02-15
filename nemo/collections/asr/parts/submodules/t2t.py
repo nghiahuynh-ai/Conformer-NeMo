@@ -9,7 +9,6 @@ class Text2Text(nn.Module):
         n_heads=8,
         n_encoder_layers=4,
         n_decoder_layers=4,
-        vocab_size=-1,
         ):
         super().__init__()
         
@@ -22,21 +21,25 @@ class Text2Text(nn.Module):
             batch_first=True,
             )
         
-        self.loss = nn.CTCLoss(blank=vocab_size)
+        self.t2t_out = nn.Linear(d_model, d_model)
+        
+        self.loss = nn.CrossEntropyLoss()
         
     def forward(self, input, target, grad=True):
+        
+        batch_size = target.shape[0]
+        tgt_len = target.shape[1]
+        tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size, tgt_len, tgt_len)
+        
         if grad:
-            output = self.t2t_model(input, target)
+            output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+            output = self.t2t_out(output)
         else:
             with torch.no_grad():
-                output = self.t2t_model(input, target)
+                output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+                output = self.t2t_out(output)
         
-        logits = torch.nn.functional.log_softmax(output.transpose(1, 0), dim=-1)
-        
-        target_lengths = torch.tensor(target.shape[1]).long()
-        logits_lengths = torch.tensor(logits.shape[0]).long()
-        
-        loss = self.loss(logits, logits_lengths, target, target_lengths)
+        loss = self.loss(output, target)
         
         return output, loss
     

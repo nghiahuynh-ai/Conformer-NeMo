@@ -703,7 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
         
         
-        perturb_transcript = perturb_transcript(
+        perturbed_transcript = perturb_transcript(
                 transcript,
                 transcript_len,
                 word_start_idx,
@@ -713,7 +713,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
         print(transcript[0])
         print('--------------------------------------------------------------')
-        print(perturb_transcript[0])
+        print(perturbed_transcript[0])
             
         raise
         

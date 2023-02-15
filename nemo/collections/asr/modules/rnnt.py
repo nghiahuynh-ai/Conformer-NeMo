@@ -263,6 +263,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 y_origin = self.prediction["proj_in"](y_origin)
                 y = self.prediction["proj_in"](y)
                 y, loss_t2t = self.prediction["t2t"](y, y_origin)
+                y = self.prediction["proj_out"](y)
                 
                 del y_origin
         else:
@@ -349,6 +350,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 pred_dim=pred_n_hidden,
             )
             
+            proj_out = torch.nn.Linear(t2tnet['d_model'], pred_n_hidden)
+            
         dec_rnn = rnn.rnn(
             input_size=pred_n_hidden,
             hidden_size=rnn_hidden_size if rnn_hidden_size > 0 else pred_n_hidden,
@@ -363,7 +366,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         )
         
         if self.t2t_apply:
-            layers = torch.nn.ModuleDict({"embed": embed, "proj_in": proj_in, "t2t": t2t, "dec_rnn": dec_rnn})
+            layers = torch.nn.ModuleDict({"embed": embed, "proj_in": proj_in, "t2t": t2t, "proj_out": proj_out, "dec_rnn": dec_rnn})
         else:
             layers = torch.nn.ModuleDict({"embed": embed, "dec_rnn": dec_rnn})
         return layers

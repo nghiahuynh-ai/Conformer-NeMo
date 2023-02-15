@@ -40,7 +40,6 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
-from nemo.collections.asr.parts.submodules.t2t import Text2Text
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -90,33 +89,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             num_classes=self.joint.num_classes_with_blank - 1, loss_name=loss_name, loss_kwargs=loss_kwargs
         )
         
-        if hasattr(self.cfg, 't2t_model') and self._cfg.t2t_model.apply:
-            if self._cfg.decoder.blank_as_pad:
-                self.embed = torch.nn.Embedding(
-                    num_embeddings=len(self._cfg.labels) + 1,
-                    embedding_dim=self._cfg.t2t_model.d_model, 
-                    padding_idx=len(self._cfg.labels),
-                    )
-            else:
-                self.embed = torch.nn.Embedding(
-                    num_embeddings=len(self._cfg.labels), 
-                    embedding_dim=self._cfg.t2t_model.d_model,
-                    )
-
-            self.t2t_model = Text2Text(
-                d_model=self._cfg.t2t_model.d_model,
-                n_heads=self._cfg.t2t_model.n_heads,
-                n_encoder_layers=self._cfg.t2t_model.n_encoder_layers,
-                n_decoder_layers=self._cfg.t2t_model.n_decoder_layers,
-            )
-            
-            self.mask_ratio = self._cfg.t2t_model.mask_ratio
-            # self.t2t_out = nn.Linear(self._cfg.t2t_model.d_model, self._cfg.model_defaults.pred_hidden)
+        if hasattr(self.cfg, 't2tnet') and self._cfg.t2tnet.apply:
+            self.t2t_perturb_ratio = self._cfg.t2t_model.perturb_ratio
         else:
-            self.embed = None
-            self.t2t_model = None
-            self.mask_ratio = 0.0
-            # self.t2t_out = None
+            self.t2t_perturb_ratio = 0.0
 
         if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
@@ -708,23 +684,21 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
-            
-        # During training, loss must be computed, so decoder forward is necessary
-        if self.t2t_model is not None:
+        
+        if self.t2t_perturb_ratio > 0.0:
             perturbed_transcript = perturb_transcript(
-                transcript,
-                transcript_len,
-                word_start_idx,
-                word_length,
-                self.mask_ratio,
+                transcript=transcript,
+                transcript_len=transcript_len,
+                word_start_idx=word_length,
+                word_length=word_length,
+                perturb_ratio=self.t2t_perturb_ratio,
             )
-            perturbed_embed = self.embed(perturbed_transcript)
-            embed = self.embed(transcript)
-            t2t_output, loss_t2t = self.t2t_model(perturbed_embed, embed)
-            # transcript_len = torch.tensor(t2t_output.shape[1]).long()
-            decoder, target_length, states = self.decoder(targets=t2t_output, target_length=transcript_len)
-        else:
-            decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+            
+        decoder, target_length, states = self.decoder(
+            targets=transcript, 
+            target_length=transcript_len, 
+            perturbed_transcript=perturbed_transcript
+            )
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
@@ -742,10 +716,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
             )
 
-            if self.t2t_model is not None:
-                tensorboard_logs = {'rnnt_loss': loss_rnnt, 't2t_loss': loss_t2t, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-            else:
-                tensorboard_logs = {'rnnt_loss': loss_rnnt, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            # if self.t2t_model is not None:
+            #     tensorboard_logs = {'rnnt_loss': loss_rnnt, 't2t_loss': loss_t2t, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            # else:
+            tensorboard_logs = {'rnnt_loss': loss_rnnt, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
             if (sample_id + 1) % log_every_n_steps == 0:
                 self.wer.update(encoded, encoded_len, transcript, transcript_len)
@@ -770,10 +744,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 compute_wer=compute_wer,
             )
             
-            if self.t2t_model is not None:
-                tensorboard_logs = {'train_loss': loss_rnnt, 't2t_loss': loss_t2t, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-            else:
-                tensorboard_logs = {'train_loss': loss_rnnt, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            # if self.t2t_model is not None:
+            #     tensorboard_logs = {'train_loss': loss_rnnt, 't2t_loss': loss_t2t, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            # else:
+            tensorboard_logs = {'train_loss': loss_rnnt, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
             if compute_wer:
                 tensorboard_logs.update({'training_batch_wer': wer})
@@ -785,12 +759,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
 
-        if self.t2t_model is not None:
-            loss = loss_rnnt + loss_t2t
-        else:
-            loss = loss_rnnt
+        # if self.t2t_model is not None:
+        #     loss = loss_rnnt + loss_t2t
+        # else:
+        #     loss = loss_rnnt
             
-        return {'loss': loss}
+        return {'loss': loss_rnnt}
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, _, _, sample_id = batch
@@ -824,10 +798,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # If experimental fused Joint-Loss-WER is not used
         if not self.joint.fuse_loss_wer:
             if self.compute_eval_loss:
-                if self.t2t_model is not None:
-                    embed = self.embed(transcript)
-                    t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
-                decoder, target_length, states = self.decoder(targets=t2t_ouput, target_length=transcript_len)
+                # if self.t2t_model is not None:
+                #     embed = self.embed(transcript)
+                #     t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
+                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
                 joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
 
                 loss_rnnt = self.loss(
@@ -835,9 +809,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 )
 
                 tensorboard_logs['val_loss_rnnt'] = loss_rnnt
-                if self.t2t_model is not None:
-                    tensorboard_logs['val_loss_t2t'] = loss_t2t
-                print('------------------------------------------')
+                # if self.t2t_model is not None:
+                #     tensorboard_logs['val_loss_t2t'] = loss_t2t
+                
             self.wer.update(encoded, encoded_len, transcript, transcript_len)
             wer, wer_num, wer_denom = self.wer.compute()
             self.wer.reset()
@@ -851,10 +825,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             compute_wer = True
 
             if self.compute_eval_loss:
-                if self.t2t_model is not None:
-                    embed = self.embed(transcript)
-                    t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
-                decoded, target_len, states = self.decoder(targets=t2t_ouput, target_length=transcript_len)
+                # if self.t2t_model is not None:
+                #     embed = self.embed(transcript)
+                #     t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
+                decoded, target_len, states = self.decoder(targets=transcript, target_length=transcript_len)
             else:
                 decoded = None
                 target_len = transcript_len
@@ -871,8 +845,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             if loss_rnnt is not None:
                 tensorboard_logs['val_loss'] = loss_rnnt
-            if self.t2t_model is not None:
-                tensorboard_logs['val_loss_t2t'] = loss_t2t
+            # if self.t2t_model is not None:
+            #     tensorboard_logs['val_loss_t2t'] = loss_t2t
 
             tensorboard_logs['val_wer_num'] = wer_num
             tensorboard_logs['val_wer_denom'] = wer_denom

@@ -48,13 +48,9 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
-  t2t_model:
-    apply: true
-    d_model: 512
-    n_heads: 8
-    n_encoder_layers: 4
-    n_decoder_layers: 4
-    mask_ratio: 0.2
+  t2t:
+    apply: ${model.decoder.t2tnet.apply}
+    perturb_ratio: ${model.decoder.t2tnet.perturbed_ratio}
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
@@ -164,6 +160,15 @@ model:
       pred_rnn_layers: 1
       t_max: null
       dropout: 0.1
+
+    t2tnet:
+      apply: true
+      d_model: 512
+      n_heads: 8
+      n_encoder_layers: 4
+      n_decoder_layers: 4
+      perturb_ratio: 0.2
+      require_grad: true
 
   joint:
     _target_: nemo.collections.asr.modules.RNNTJoint

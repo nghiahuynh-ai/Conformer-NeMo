@@ -9,6 +9,7 @@ class Text2Text(nn.Module):
         n_heads=8,
         n_encoder_layers=4,
         n_decoder_layers=4,
+        pred_dim=320,
         ):
         super().__init__()
         
@@ -21,7 +22,7 @@ class Text2Text(nn.Module):
             batch_first=True,
             )
         
-        self.t2t_out = nn.Linear(d_model, d_model)
+        self.t2t_out = nn.Linear(d_model, pred_dim)
         
         self.loss = nn.CrossEntropyLoss()
         

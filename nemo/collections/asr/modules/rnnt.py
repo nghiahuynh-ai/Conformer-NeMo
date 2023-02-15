@@ -46,6 +46,7 @@ from nemo.core.neural_types import (
     NeuralType,
 )
 from nemo.utils import logging
+from nemo.collections.asr.parts.submodules.t2t import Text2Text
 
 
 class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
@@ -92,25 +93,25 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             Therefore, it is not recommended to disable this flag.
     """
 
-    @property
-    def input_types(self):
-        """Returns definitions of module input ports.
-        """
-        return {
-            "targets": NeuralType(('B', 'T'), LabelsType()),
-            "target_length": NeuralType(tuple('B'), LengthsType()),
-            "states": [NeuralType(('D', 'B', 'D'), ElementType(), optional=True)],  # must always be last
-        }
+    # @property
+    # def input_types(self):
+    #     """Returns definitions of module input ports.
+    #     """
+    #     return {
+    #         "targets": NeuralType(('B', 'T'), LabelsType()),
+    #         "target_length": NeuralType(tuple('B'), LengthsType()),
+    #         "states": [NeuralType(('D', 'B', 'D'), ElementType(), optional=True)],  # must always be last
+    #     }
 
-    @property
-    def output_types(self):
-        """Returns definitions of module output ports.
-        """
-        return {
-            "outputs": NeuralType(('B', 'D', 'T'), EmbeddedTextType()),
-            "prednet_lengths": NeuralType(tuple('B'), LengthsType()),
-            "states": [NeuralType((('D', 'B', 'D')), ElementType(), optional=True)],  # must always be last
-        }
+    # @property
+    # def output_types(self):
+    #     """Returns definitions of module output ports.
+    #     """
+    #     return {
+    #         "outputs": NeuralType(('B', 'D', 'T'), EmbeddedTextType()),
+    #         "prednet_lengths": NeuralType(tuple('B'), LengthsType()),
+    #         "states": [NeuralType((('D', 'B', 'D')), ElementType(), optional=True)],  # must always be last
+    #     }
 
     def input_example(self, max_batch=1, max_dim=1):
         """
@@ -135,12 +136,11 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
     def __init__(
         self,
         prednet: Dict[str, Any],
+        t2tnet: Dict[str, Any],
         vocab_size: int,
         normalization_mode: Optional[str] = None,
         random_state_sampling: bool = False,
         blank_as_pad: bool = True,
-        t2t_apply: bool = False,
-        t2t_dim: int = 512,
     ):
         # Required arguments
         self.pred_hidden = prednet['pred_hidden']
@@ -169,13 +169,12 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             hidden_hidden_bias_scale=hidden_hidden_bias_scale,
             dropout=dropout,
             rnn_hidden_size=prednet.get("rnn_hidden_size", -1),
-            t2t_apply=t2t_apply,
-            t2t_dim=t2t_dim,
+            t2tnet=t2tnet,
         )
         self._rnnt_export = False
 
     @typecheck()
-    def forward(self, targets, target_length, states=None):
+    def forward(self, targets, target_length, states=None, perturbed_transcript=None):
         # y: (B, U)
         y = rnn.label_collate(targets)
 
@@ -186,7 +185,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         else:
             add_sos = True
 
-        g, states = self.predict(y, state=states, add_sos=add_sos)  # (B, U, D)
+        g, states = self.predict(y, state=states, add_sos=add_sos, y_perturbed=perturbed_transcript)  # (B, U, D)
         g = g.transpose(1, 2)  # (B, D, U)
 
         return g, target_length, states
@@ -197,6 +196,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         state: Optional[List[torch.Tensor]] = None,
         add_sos: bool = True,
         batch_size: Optional[int] = None,
+        y_perturbed: Optional[torch.Tensor] = None,
     ) -> (torch.Tensor, List[torch.Tensor]):
         """
         Stateful prediction of scores and state for a (possibly null) tokenset.
@@ -254,6 +254,14 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
 
             # (B, U) -> (B, U, H)
             y = self.prediction["embed"](y)
+            
+            if self.t2t_apply:
+                y_origin = y
+                y= self.prediction["embed"](y_perturbed)
+                y = self.prediction["proj_in"](y)
+                y, loss_t2t = self.prediction["t2t"](y, y_origin)
+                
+                del y_origin
         else:
             # Y is not provided, assume zero tensor with shape [B, 1, H] is required
             # Emulates output of embedding of pad token.
@@ -284,7 +292,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         g = g.transpose(0, 1)  # (B, U + 1, H)
 
         del y, start, state
-        return g, hid
+        return g, hid, loss_t2t
 
     def _predict_modules(
         self,
@@ -298,8 +306,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         hidden_hidden_bias_scale,
         dropout,
         rnn_hidden_size,
-        t2t_apply,
-        t2t_dim,
+        t2tnet: Dict[str, Any] = None
     ):
         """
         Prepare the trainable parameters of the Prediction Network.
@@ -318,31 +325,44 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             dropout: Whether to apply dropout to RNN.
             rnn_hidden_size: the hidden size of the RNN, if not specified, pred_n_hidden would be used
         """
-        if not t2t_apply:
-            if self.blank_as_pad:
-                embed = torch.nn.Embedding(vocab_size + 1, pred_n_hidden, padding_idx=self.blank_idx)
-            else:
-                embed = torch.nn.Embedding(vocab_size, pred_n_hidden)
+        if self.blank_as_pad:
+            embed = torch.nn.Embedding(vocab_size + 1, pred_n_hidden, padding_idx=self.blank_idx)
         else:
-            embed = torch.nn.Linear(t2t_dim, pred_n_hidden)
+            embed = torch.nn.Embedding(vocab_size, pred_n_hidden)
 
-        layers = torch.nn.ModuleDict(
-            {
-                "embed": embed,
-                "dec_rnn": rnn.rnn(
-                    input_size=pred_n_hidden,
-                    hidden_size=rnn_hidden_size if rnn_hidden_size > 0 else pred_n_hidden,
-                    num_layers=pred_rnn_layers,
-                    norm=norm,
-                    forget_gate_bias=forget_gate_bias,
-                    t_max=t_max,
-                    dropout=dropout,
-                    weights_init_scale=weights_init_scale,
-                    hidden_hidden_bias_scale=hidden_hidden_bias_scale,
-                    proj_size=pred_n_hidden if pred_n_hidden < rnn_hidden_size else 0,
-                ),
-            }
+        self.t2t_apply = t2tnet['apply']
+        
+        if t2tnet['apply']:
+            self.perturb_ratio = t2tnet['perturb_ratio']
+            self.t2t_require_grad = t2tnet['require_grad']
+            
+            proj_in = torch.nn.Linear(pred_n_hidden, t2tnet['d_model'])
+            
+            t2t = Text2Text(
+                d_model=t2tnet['d_model'],
+                n_heads=t2tnet['n_heads'],
+                n_encoder_layers=t2tnet['n_encoder_layers'],
+                n_decoder_layers=t2tnet['n_decoder_layers'],
+                pred_dim=pred_n_hidden,
+            )
+            
+        dec_rnn = rnn.rnn(
+            input_size=pred_n_hidden,
+            hidden_size=rnn_hidden_size if rnn_hidden_size > 0 else pred_n_hidden,
+            num_layers=pred_rnn_layers,
+            norm=norm,
+            forget_gate_bias=forget_gate_bias,
+            t_max=t_max,
+            dropout=dropout,
+            weights_init_scale=weights_init_scale,
+            hidden_hidden_bias_scale=hidden_hidden_bias_scale,
+            proj_size=pred_n_hidden if pred_n_hidden < rnn_hidden_size else 0,
         )
+        
+        if self.t2t_apply:
+            layers = torch.nn.ModuleDict({"embed": embed, "proj_in": proj_in, "t2t": t2t, "dec_rnn": dec_rnn})
+        else:
+            layers = torch.nn.ModuleDict({"embed": embed, "dec_rnn": dec_rnn})
         return layers
 
     def initialize_state(self, y: torch.Tensor) -> List[torch.Tensor]:

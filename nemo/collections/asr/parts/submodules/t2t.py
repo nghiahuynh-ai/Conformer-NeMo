@@ -13,6 +13,12 @@ class Text2Text(nn.Module):
         ):
         super().__init__()
         
+        self.d_model = d_model
+        self.n_heads = n_heads
+        self.n_encoder_layers = n_encoder_layers
+        self.n_decoder_layers = n_decoder_layers
+        self.pred_dim = pred_dim
+        
         self.t2t_model = nn.Transformer(
             d_model=d_model, 
             nhead=n_heads, 
@@ -30,7 +36,7 @@ class Text2Text(nn.Module):
         
         batch_size = target.shape[0]
         tgt_len = target.shape[1]
-        tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size, tgt_len, tgt_len)
+        tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size, self.n_heads, tgt_len, tgt_len)
         
         if grad:
             print(input.shape)

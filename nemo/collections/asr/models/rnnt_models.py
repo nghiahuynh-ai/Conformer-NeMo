@@ -90,7 +90,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         )
         
         if hasattr(self.cfg, 't2tnet') and self._cfg.t2tnet.apply:
-            self.t2t_perturb_ratio = self._cfg.t2t_model.perturb_ratio
+            self.t2t_perturb_ratio = self._cfg.t2tnet.perturb_ratio
         else:
             self.t2t_perturb_ratio = 0.0
 

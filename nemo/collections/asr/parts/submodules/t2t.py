@@ -39,8 +39,6 @@ class Text2Text(nn.Module):
         tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
         
         if grad:
-            print(input.shape)
-            print(target.shape)
             output = self.t2t_model(input, target, tgt_mask=tgt_mask)
             output = self.t2t_out(output)
         else:

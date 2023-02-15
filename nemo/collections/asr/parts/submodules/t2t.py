@@ -34,6 +34,7 @@ class Text2Text(nn.Module):
         
         if grad:
             print(input.shape)
+            print(target.shape)
             output = self.t2t_model(input, target, tgt_mask=tgt_mask)
             output = self.t2t_out(output)
         else:

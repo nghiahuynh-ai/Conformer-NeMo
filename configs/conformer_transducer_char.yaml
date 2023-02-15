@@ -50,7 +50,7 @@ model:
 
   t2t:
     apply: ${model.decoder.t2tnet.apply}
-    perturb_ratio: ${model.decoder.t2tnet.perturbed_ratio}
+    perturb_ratio: ${model.decoder.t2tnet.perturb_ratio}
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

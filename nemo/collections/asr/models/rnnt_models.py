@@ -1011,7 +1011,7 @@ def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, 
     perturb_transcript_list = []
     max_transcript_len = 0
     
-    for b in transcript.shape[0]:
+    for b in transcript:
         
         n_words = len(word_start_idx[b])
         perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)

@@ -702,11 +702,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
         
-        print(word_start_idx)
-        print('--------------------------------------------------------------------------')
-        print(word_length)
-        raise
-    
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
@@ -716,6 +711,18 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
         # During training, loss must be computed, so decoder forward is necessary
         if self.t2t_model is not None:
+            perturb_transcript = perturb_transcript(
+                transcript,
+                transcript_len,
+                word_start_idx,
+                word_length,
+                self.mask_ratio,
+            )
+            
+            print(transcript[0])
+            print('--------------------------------------------------------------')
+            print(perturb_transcript[0])
+            
             embed = self.embed(transcript)
             t2t_output, loss_t2t = self.t2t_model(embed, transcript)
             transcript_len = torch.tensor(t2t_output.shape[1]).long()
@@ -986,3 +993,30 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
+    
+
+def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, perturb_ratio):
+    
+    perturb_transcript_list = []
+    max_transcript_len = 0
+    
+    for b in transcript.shape[0]:
+        
+        n_words = len(word_start_idx[b])
+        perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)
+        
+        t = transcript[b]
+        for word_idx in perturb_word_idx:
+            start = word_start_idx[b][word_idx]
+            end = min(start + word_length[b][word_idx] + 1, transcript_len[b])
+            t[start: end] = -1
+        t = t[t != -1]
+        
+        max_transcript_len = max(max_transcript_len, t.shape[0])
+        perturb_transcript_list.append(t)
+        
+    for t in perturb_transcript_list:
+        if t.shape[0] < max_transcript_len:
+            t = torch.nn.functional.pad(t, (0, max_transcript_len - t.shape[0]), value=0)
+    
+    return torch.stack(perturb_transcript_list)

@@ -825,9 +825,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if not self.joint.fuse_loss_wer:
             if self.compute_eval_loss:
                 if self.t2t_model is not None:
-                    transcript = self.embed(transcript)
-                    transcript, loss_t2t = self.t2t_model(transcript, transcript)
-                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+                    embed = self.embed(transcript)
+                    t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
+                decoder, target_length, states = self.decoder(targets=t2t_ouput, target_length=transcript_len)
                 joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
 
                 loss_rnnt = self.loss(
@@ -852,9 +852,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
             if self.compute_eval_loss:
                 if self.t2t_model is not None:
-                    transcript = self.embed(transcript)
-                    transcript, loss_t2t = self.t2t_model(transcript, transcript)
-                decoded, target_len, states = self.decoder(targets=transcript, target_length=transcript_len)
+                    embed = self.embed(transcript)
+                    t2t_ouput, loss_t2t = self.t2t_model(embed, embed)
+                decoded, target_len, states = self.decoder(targets=t2t_ouput, target_length=transcript_len)
             else:
                 decoded = None
                 target_len = transcript_len

@@ -248,17 +248,17 @@ class _AudioTextDataset(Dataset):
         return_sample_id (bool): whether to return the sample_id as a part of each sample
     """
 
-    @property
-    def output_types(self) -> Optional[Dict[str, NeuralType]]:
-        """Returns definitions of module output ports.
-               """
-        return {
-            'audio_signal': NeuralType(('B', 'T'), AudioSignal()),
-            'a_sig_length': NeuralType(tuple('B'), LengthsType()),
-            'transcripts': NeuralType(('B', 'T'), LabelsType()),
-            'transcript_length': NeuralType(tuple('B'), LengthsType()),
-            'sample_id': NeuralType(tuple('B'), LengthsType(), optional=True),
-        }
+    # @property
+    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     """Returns definitions of module output ports.
+    #            """
+    #     return {
+    #         'audio_signal': NeuralType(('B', 'T'), AudioSignal()),
+    #         'a_sig_length': NeuralType(tuple('B'), LengthsType()),
+    #         'transcripts': NeuralType(('B', 'T'), LabelsType()),
+    #         'transcript_length': NeuralType(tuple('B'), LengthsType()),
+    #         'sample_id': NeuralType(tuple('B'), LengthsType(), optional=True),
+    #     }
 
     def __init__(
         self,
@@ -357,17 +357,17 @@ class AudioToCharDataset(_AudioTextDataset):
         return_sample_id (bool): whether to return the sample_id as a part of each sample
     """
 
-    @property
-    def output_types(self) -> Optional[Dict[str, NeuralType]]:
-        """Returns definitions of module output ports.
-               """
-        return {
-            'audio_signal': NeuralType(('B', 'T'), AudioSignal()),
-            'a_sig_length': NeuralType(tuple('B'), LengthsType()),
-            'transcripts': NeuralType(('B', 'T'), LabelsType()),
-            'transcript_length': NeuralType(tuple('B'), LengthsType()),
-            'sample_id': NeuralType(tuple('B'), LengthsType(), optional=True),
-        }
+    # @property
+    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     """Returns definitions of module output ports.
+    #            """
+    #     return {
+    #         'audio_signal': NeuralType(('B', 'T'), AudioSignal()),
+    #         'a_sig_length': NeuralType(tuple('B'), LengthsType()),
+    #         'transcripts': NeuralType(('B', 'T'), LabelsType()),
+    #         'transcript_length': NeuralType(tuple('B'), LengthsType()),
+    #         'sample_id': NeuralType(tuple('B'), LengthsType(), optional=True),
+    #     }
 
     def __init__(
         self,

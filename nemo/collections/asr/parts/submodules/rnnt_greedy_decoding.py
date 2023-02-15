@@ -161,7 +161,7 @@ class _GreedyRNNTInfer(Typing):
             label = label_collate([[label]])
 
         # output: [B, 1, K]
-        return self.decoder.predict(label, hidden, add_sos=add_sos, batch_size=batch_size)
+        return self.decoder.predict(label, hidden, add_sos=add_sos, batch_size=batch_size, y_perturbed=label)
 
     def _joint_step(self, enc, pred, log_normalize: Optional[bool] = None):
         """

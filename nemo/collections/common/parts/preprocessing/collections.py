@@ -92,7 +92,7 @@ class AudioText(_Collection):
 
     OUTPUT_TYPE = collections.namedtuple(
         typename='AudioTextEntity',
-        field_names='id audio_file duration text_tokens offset text_raw speaker orig_sr lang',
+        field_names='id audio_file duration text_tokens offset text_raw speaker orig_sr lang word_start_idx word_length',
     )
 
     def __init__(

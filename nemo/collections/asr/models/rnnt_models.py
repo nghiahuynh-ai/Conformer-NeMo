@@ -684,8 +684,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
-        
-        print(self.t2t_perturb_ratio)        
+           
         if self.t2t_perturb_ratio > 0.0:
             perturbed_transcript = perturb_transcript(
                 transcript=transcript,

@@ -48,7 +48,7 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
-  t2t:
+  t2tnet:
     apply: ${model.decoder.t2tnet.apply}
     perturb_ratio: ${model.decoder.t2tnet.perturb_ratio}
 

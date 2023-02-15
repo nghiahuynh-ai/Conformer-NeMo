@@ -1015,7 +1015,7 @@ def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, 
         
         n_words = len(word_start_idx[b])
         perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)
-        
+        print(perturb_word_idx)
         t = transcript[b]
         for word_idx in perturb_word_idx:
             start = word_start_idx[b][word_idx]

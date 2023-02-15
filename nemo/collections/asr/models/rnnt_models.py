@@ -708,7 +708,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 transcript_len,
                 word_start_idx,
                 word_length,
-                self.mask_ratio,
+                0.2,
             )
             
         print(transcript[0])

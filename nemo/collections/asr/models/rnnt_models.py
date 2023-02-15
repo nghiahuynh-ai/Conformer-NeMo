@@ -732,7 +732,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             log_every_n_steps = 1
             sample_id = batch_nb
-
+        print(loss_t2t)
         # If experimental fused Joint-Loss-WER is not used
         if not self.joint.fuse_loss_wer:
             # Compute full joint and loss

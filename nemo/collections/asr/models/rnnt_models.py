@@ -702,6 +702,21 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
         
+        
+        perturb_transcript = perturb_transcript(
+                transcript,
+                transcript_len,
+                word_start_idx,
+                word_length,
+                self.mask_ratio,
+            )
+            
+        print(transcript[0])
+        print('--------------------------------------------------------------')
+        print(perturb_transcript[0])
+            
+        raise
+        
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
@@ -711,19 +726,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
         # During training, loss must be computed, so decoder forward is necessary
         if self.t2t_model is not None:
-            perturb_transcript = perturb_transcript(
-                transcript,
-                transcript_len,
-                word_start_idx,
-                word_length,
-                self.mask_ratio,
-            )
-            
-            print(transcript[0])
-            print('--------------------------------------------------------------')
-            print(perturb_transcript[0])
-            
-            raise
+            # perturb_transcript = perturb_transcript(
+            #     transcript,
+            #     transcript_len,
+            #     word_start_idx,
+            #     word_length,
+            #     self.mask_ratio,
+            # )
             
             embed = self.embed(transcript)
             t2t_output, loss_t2t = self.t2t_model(embed, transcript)

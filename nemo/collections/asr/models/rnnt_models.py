@@ -766,7 +766,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             loss = loss_rnnt
             
-        return {'loss_rnnt': loss_rnnt, 'loss_t2t': loss_t2t}
+        return {'loss': loss}
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, _, _, sample_id = batch

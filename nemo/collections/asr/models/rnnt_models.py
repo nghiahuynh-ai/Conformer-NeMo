@@ -994,11 +994,15 @@ def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, 
         
         max_transcript_len = max(max_transcript_len, t.shape[0])
         perturb_transcript_list.append(t)
-    print(max_transcript_len)
-    for t in perturb_transcript_list:
-        t_len = t.shape[0]
-        print(t_len)
+    # print(max_transcript_len)
+    for ith in range(len(perturb_transcript_list)):
+        t_len = perturb_transcript_list[ith].shape[0]
+        # print(t_len)
         if t_len < max_transcript_len:
-            t = torch.nn.functional.pad(t, (0, max_transcript_len - t_len), value=0)
-        print(t.shape[0])
+            perturb_transcript_list[ith] = torch.nn.functional.pad(
+                perturb_transcript_list[ith], 
+                (0, max_transcript_len - t_len), 
+                value=0
+            )
+        # print(t.shape[0])
     return torch.stack(perturb_transcript_list)

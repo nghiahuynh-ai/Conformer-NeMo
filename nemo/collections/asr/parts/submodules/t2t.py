@@ -52,7 +52,7 @@ class Text2Text(nn.Module):
         
         loss = self.loss(output, target)
         
-        print(loss)
+        # print(loss)
         
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)

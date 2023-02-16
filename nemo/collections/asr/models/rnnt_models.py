@@ -699,6 +699,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             target_length=transcript_len, 
             perturbed_transcript=perturbed_transcript
             )
+        
+        print(loss_t2t)
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
@@ -764,7 +766,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             loss = loss_rnnt
             
-        return {'loss': loss}
+        return {'loss_rnnt': loss_rnnt, 'loss_t2t': loss_t2t}
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, _, _, sample_id = batch

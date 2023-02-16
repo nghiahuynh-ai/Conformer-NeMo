@@ -994,7 +994,7 @@ def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, 
         
         max_transcript_len = max(max_transcript_len, t.shape[0])
         perturb_transcript_list.append(t)
-        
+    print(max_transcript_len)
     for t in perturb_transcript_list:
         t_len = t.shape[0]
         if t_len < max_transcript_len:

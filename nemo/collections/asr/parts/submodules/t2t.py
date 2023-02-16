@@ -46,7 +46,14 @@ class Text2Text(nn.Module):
                 output = self.t2t_model(input, target, tgt_mask=tgt_mask)
                 output = self.t2t_out(output)
         
+        # (B, t, D) -> (B, D, T)
+        output = output.transpose(-1, -2)
+        target = target.transpose(-1, -2)
+        
         loss = self.loss(output, target)
+        
+        # (B, D, T) -> (B, T, D)
+        output = output.transpose(-1, -2)
         
         return output, loss
     

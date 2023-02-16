@@ -28,7 +28,7 @@ class Text2Text(nn.Module):
             batch_first=True,
             )
         
-        self.t2t_out = nn.Linear(d_model, d_model)
+        self.t2t_out = nn.Linear(d_model, pred_dim)
         
         self.loss = nn.CrossEntropyLoss()
         

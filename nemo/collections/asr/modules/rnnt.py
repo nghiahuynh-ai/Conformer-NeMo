@@ -259,8 +259,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             
             if self.t2t_apply:
                 y_origin = y
-                y= self.prediction["embed"](y_perturbed)
-                y_origin = self.prediction["proj_in"](y_origin)
+                y = self.prediction["embed"](y_perturbed)
+                # y_origin = self.prediction["proj_in"](y_origin)
                 y = self.prediction["proj_in"](y)
                 y, loss_t2t = self.prediction["t2t"](y, y_origin)
                 y = self.prediction["proj_out"](y)

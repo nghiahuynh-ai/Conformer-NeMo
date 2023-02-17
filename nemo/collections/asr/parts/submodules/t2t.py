@@ -48,11 +48,9 @@ class Text2Text(nn.Module):
         
         # (B, t, D) -> (B, D, T)
         output = output.transpose(-1, -2)
-        target = target.transpose(-1, -2)
+        target = target.transpose(-1, -2).softmax(dim=-2)
         
         loss = self.loss(output, target)
-        
-        # print(loss)
         
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)

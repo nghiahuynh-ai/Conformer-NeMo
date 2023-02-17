@@ -699,7 +699,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             target_length=transcript_len, 
             perturbed_transcript=perturbed_transcript
             )
-        
+
         print(loss_t2t)
 
         if hasattr(self, '_trainer') and self._trainer is not None:

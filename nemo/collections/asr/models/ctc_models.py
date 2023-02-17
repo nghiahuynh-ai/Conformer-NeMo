@@ -591,13 +591,13 @@ class EncDecCTCModel(ASRModel, ExportableEncDecModel, ASRModuleMixin):
 
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         
-        print('encoded shape: ', encoded.shape)
+        # print('encoded shape: ', encoded.shape)
         
         log_probs = self.decoder(encoder_output=encoded)
         
-        print('log_probs shape: ', log_probs.shape)
+        # print('log_probs shape: ', log_probs.shape)
         
-        raise
+        # raise
         
         greedy_predictions = log_probs.argmax(dim=-1, keepdim=False)
 

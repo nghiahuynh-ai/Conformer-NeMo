@@ -36,7 +36,12 @@ class Text2Text(nn.Module):
         
         batch_size = target.shape[0]
         tgt_len = target.shape[1]
-        tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
+        # tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
+        
+        tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
+        tgt_mask = tgt_mask.float()
+        tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf')) # Convert zeros to -inf
+        tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0)) # Convert ones to 0
         
         if grad:
             output = self.t2t_model(input, target, tgt_mask=tgt_mask)

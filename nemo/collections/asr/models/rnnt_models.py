@@ -700,8 +700,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             perturbed_transcript=perturbed_transcript
             )
 
-        print(loss_t2t)
-
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
             sample_id = self._trainer.global_step

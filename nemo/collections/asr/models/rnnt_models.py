@@ -697,7 +697,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         decoder, target_length, states, loss_t2t = self.decoder(
             targets=transcript, 
             target_length=transcript_len, 
-            perturbed_transcript=perturbed_transcript
+            perturbed_transcript=perturbed_transcript,
+            training=True,
             )
 
         if hasattr(self, '_trainer') and self._trainer is not None:

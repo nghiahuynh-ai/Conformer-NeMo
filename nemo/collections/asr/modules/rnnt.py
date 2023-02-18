@@ -174,7 +174,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         self._rnnt_export = False
 
     @typecheck()
-    def forward(self, targets, target_length, states=None, perturbed_transcript=None):
+    def forward(self, targets, target_length, states=None, perturbed_transcript=None, training=False):
         # y: (B, U)
         y = rnn.label_collate(targets)
 
@@ -185,7 +185,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         else:
             add_sos = True
 
-        g, states, loss_t2t = self.predict(y, state=states, add_sos=add_sos, y_perturbed=perturbed_transcript)  # (B, U, D)
+        g, states, loss_t2t = self.predict(y, state=states, add_sos=add_sos, y_perturbed=perturbed_transcript, training=training)  # (B, U, D)
         g = g.transpose(1, 2)  # (B, D, U)
 
         return g, target_length, states, loss_t2t
@@ -197,6 +197,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         add_sos: bool = True,
         batch_size: Optional[int] = None,
         y_perturbed: Optional[torch.Tensor] = None,
+        training: bool = False,
     ) -> (torch.Tensor, List[torch.Tensor]):
         """
         Stateful prediction of scores and state for a (possibly null) tokenset.
@@ -262,7 +263,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 y = self.prediction["embed"](y_perturbed)
                 y_origin = self.prediction["proj_in"](y_origin)
                 y = self.prediction["proj_in"](y)
-                y, loss_t2t = self.prediction["t2t"](y, y_origin)
+                if training:
+                    y, loss_t2t = self.prediction["t2t"](y, y_origin)
                 y = self.prediction["proj_out"](y)
                 
                 del y_origin

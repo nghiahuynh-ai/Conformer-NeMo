@@ -260,7 +260,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
 
             y = torch.zeros((B, 1, self.pred_hidden), device=device, dtype=dtype)
         
-        y = self.prediction["att"](y)
+        for att_layer in self.prediction["att"]:
+            y = att_layer(y)
         
         # Prepend blank "start of sequence" symbol (zero tensor)
         if add_sos:

@@ -259,7 +259,9 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 B = batch_size
 
             y = torch.zeros((B, 1, self.pred_hidden), device=device, dtype=dtype)
-
+        
+        y = self.prediction["att"](y)
+        
         # Prepend blank "start of sequence" symbol (zero tensor)
         if add_sos:
             B, U, H = y.shape
@@ -316,10 +318,19 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             embed = torch.nn.Embedding(vocab_size + 1, pred_n_hidden, padding_idx=self.blank_idx)
         else:
             embed = torch.nn.Embedding(vocab_size, pred_n_hidden)
+            
+        att = torch.nn.ModuleList()
+        for _ in range(4):
+            att.append(torch.nn.TransformerEncoderLayer(
+                    d_model=pred_n_hidden,
+                    nhead=8,
+                    batch_first=True,
+            ))
 
         layers = torch.nn.ModuleDict(
             {
                 "embed": embed,
+                "att": att,
                 "dec_rnn": rnn.rnn(
                     input_size=pred_n_hidden,
                     hidden_size=rnn_hidden_size if rnn_hidden_size > 0 else pred_n_hidden,

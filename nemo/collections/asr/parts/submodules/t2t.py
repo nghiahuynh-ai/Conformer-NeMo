@@ -34,16 +34,9 @@ class Text2Text(nn.Module):
         
     def forward(self, input, target, grad=True):
         
-        # batch_size = target.shape[0]
-        # tgt_len = target.shape[1]
-
-        # tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
-        # tgt_mask = tgt_mask.float()
-        # tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
-        # tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))\
         tgt_input = target[:,:-1,:]
         tgt_expect = target[:,1:,:]
-        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(target.device)
+        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(input.device)
          
         if grad:
             output = self.t2t_model(input, tgt_input, tgt_mask=tgt_mask)

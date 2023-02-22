@@ -44,18 +44,18 @@ class Text2Text(nn.Module):
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))
         
         if grad:
-            output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+            output = self.t2t_model(input, target[:,:-1,:], tgt_mask=tgt_mask)
             output = self.t2t_out(output)
         else:
             with torch.no_grad():
-                output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+                output = self.t2t_model(input, target[:,:-1,:], tgt_mask=tgt_mask)
                 output = self.t2t_out(output)
         
         # (B, t, D) -> (B, D, T)
         output = output.transpose(-1, -2)
         target = target.transpose(-1, -2).softmax(dim=-2)
         
-        loss = self.loss(output, target)
+        loss = self.loss(output, target[:,1:,:])
         
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)

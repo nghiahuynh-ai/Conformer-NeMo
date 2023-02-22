@@ -36,7 +36,7 @@ class Text2Text(nn.Module):
         
         tgt_input = target[:,:-1,:]
         tgt_expect = target[:,1:,:]
-        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(input.device)
+        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(target.device)
          
         if grad:
             output = self.t2t_model(input, tgt_input, tgt_mask=tgt_mask)
@@ -64,6 +64,7 @@ class Text2Text(nn.Module):
         tgt_mask = tgt_mask.float()
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))
+        return tgt_mask
     
     def decode(self):
         pass

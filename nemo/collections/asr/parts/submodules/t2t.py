@@ -35,32 +35,42 @@ class Text2Text(nn.Module):
     def forward(self, input, target, grad=True):
         
         # batch_size = target.shape[0]
-        tgt_len = target.shape[1]
-        # tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
-        
-        tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
-        tgt_mask = tgt_mask.float()
-        tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
-        tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))
+        # tgt_len = target.shape[1]
+
+        # tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
+        # tgt_mask = tgt_mask.float()
+        # tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
+        # tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))\
+        tgt_input = target[:,:-1,:]
+        tgt_expect = target[:,1:,:]
+        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(target.device)
          
         if grad:
-            output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+            output = self.t2t_model(input, tgt_input, tgt_mask=tgt_mask)
             output = self.t2t_out(output)
         else:
             with torch.no_grad():
-                output = self.t2t_model(input, target, tgt_mask=tgt_mask)
+                output = self.t2t_model(input, tgt_input, tgt_mask=tgt_mask)
                 output = self.t2t_out(output)
         
         # (B, t, D) -> (B, D, T)
         output = output.transpose(-1, -2)
-        target = target.transpose(-1, -2).softmax(dim=-2)
+        tgt_expect = tgt_expect.transpose(-1, -2)
         
-        loss = self.loss(output, target)
+        loss = self.loss(output, tgt_expect)
+        
+        del tgt_input, tgt_expect, tgt_mask
         
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)
         
-        return output, loss
+        return output[:,:-1,:], loss
+    
+    def get_tgt_mask(self, tgt_size):
+        tgt_mask = torch.tril(torch.ones(tgt_size, tgt_size) == 1)
+        tgt_mask = tgt_mask.float()
+        tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
+        tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))
     
     def decode(self):
         pass

@@ -38,7 +38,7 @@ class Text2Text(nn.Module):
         tgt_len = target.shape[1]
         # tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
         
-        tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
+        tgt_mask = torch.tril(torch.ones(tgt_len - 1, tgt_len - 1) == 1).to(target.device)
         tgt_mask = tgt_mask.float()
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))

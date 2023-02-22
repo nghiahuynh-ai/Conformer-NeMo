@@ -34,28 +34,28 @@ class Text2Text(nn.Module):
         
     def forward(self, input, target, grad=True):
         
-        batch_size = target.shape[0]
+        # batch_size = target.shape[0]
         tgt_len = target.shape[1]
         # tgt_mask = torch.tril(torch.ones((tgt_len, tgt_len))).expand(batch_size * self.n_heads, tgt_len, tgt_len).to(target.device)
         
-        tgt_mask = torch.tril(torch.ones(tgt_len - 1, tgt_len - 1) == 1).to(target.device)
+        tgt_mask = torch.tril(torch.ones(tgt_len, tgt_len) == 1).to(target.device)
         tgt_mask = tgt_mask.float()
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 0, float('-inf'))
         tgt_mask = tgt_mask.masked_fill(tgt_mask == 1, float(0.0))
-        
+         
         if grad:
-            output = self.t2t_model(input, target[:,:-1,:], tgt_mask=tgt_mask)
+            output = self.t2t_model(input, target, tgt_mask=tgt_mask)
             output = self.t2t_out(output)
         else:
             with torch.no_grad():
-                output = self.t2t_model(input, target[:,:-1,:], tgt_mask=tgt_mask)
+                output = self.t2t_model(input, target, tgt_mask=tgt_mask)
                 output = self.t2t_out(output)
         
         # (B, t, D) -> (B, D, T)
         output = output.transpose(-1, -2)
         target = target.transpose(-1, -2).softmax(dim=-2)
         
-        loss = self.loss(output, target[:,1:,:])
+        loss = self.loss(output, target)
         
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)

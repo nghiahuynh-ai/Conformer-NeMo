@@ -677,7 +677,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
-        
+        print(transcript.shape)
+        sos = torch.tensor([len(self.cfg.labels)] * transcript.shape[0]).unsqueeze(1)
+        eos = torch.tensor([len(self.cfg.labels) + 1] * transcript.shape[0]).unsqueeze(1)
+        transcript = torch.cat((sos, transcript, eos), dim=1)
+        print(transcript.shape)
+        raise
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)

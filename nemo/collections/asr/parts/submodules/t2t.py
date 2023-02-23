@@ -31,7 +31,7 @@ class Text2Text(nn.Module):
         self.t2t_out = nn.Linear(d_model, d_model)
         
         self.loss_fn = nn.CrossEntropyLoss()
-        self.loss_value = torch.float('inf')
+        self.loss_value = torch.tensor(float('inf'))
         
     def forward(self, input, target, grad=True):
         

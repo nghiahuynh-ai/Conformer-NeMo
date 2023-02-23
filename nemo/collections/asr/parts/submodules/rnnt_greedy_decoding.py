@@ -314,7 +314,7 @@ class GreedyRNNTInfer(_GreedyRNNTInfer):
                     last_label = label_collate([[hypothesis.last_token]])
 
                 # Perform prediction network and joint network steps.
-                g, hidden_prime, _ = self._pred_step(last_label, hypothesis.dec_state)
+                g, hidden_prime = self._pred_step(last_label, hypothesis.dec_state)
                 logp = self._joint_step(f, g, log_normalize=None)[0, 0, 0, :]
 
                 del g
@@ -515,10 +515,10 @@ class GreedyBatchedRNNTInfer(_GreedyRNNTInfer):
                     # If very first prediction step, submit SOS tag (blank) to pred_step.
                     # This feeds a zero tensor as input to AbstractRNNTDecoder to prime the state
                     if time_idx == 0 and symbols_added == 0 and hidden is None:
-                        g, hidden_prime, _ = self._pred_step(self._SOS, hidden, batch_size=batchsize)
+                        g, hidden_prime = self._pred_step(self._SOS, hidden, batch_size=batchsize)
                     else:
                         # Perform batch step prediction of decoder, getting new states and scores ("g")
-                        g, hidden_prime, _ = self._pred_step(last_label, hidden, batch_size=batchsize)
+                        g, hidden_prime = self._pred_step(last_label, hidden, batch_size=batchsize)
 
                     # Batched joint step - Output = [B, V + 1]
                     logp = self._joint_step(f, g, log_normalize=None)[:, 0, 0, :]
@@ -679,7 +679,7 @@ class GreedyBatchedRNNTInfer(_GreedyRNNTInfer):
                     # If very first prediction step, submit SOS tag (blank) to pred_step.
                     # This feeds a zero tensor as input to AbstractRNNTDecoder to prime the state
                     if time_idx == 0 and symbols_added == 0 and hidden is None:
-                        g, hidden_prime, _ = self._pred_step(self._SOS, hidden, batch_size=batchsize)
+                        g, hidden_prime = self._pred_step(self._SOS, hidden, batch_size=batchsize)
                     else:
                         # Set a dummy label for the blank value
                         # This value will be overwritten by "blank" again the last label update below
@@ -691,7 +691,7 @@ class GreedyBatchedRNNTInfer(_GreedyRNNTInfer):
                         ]
 
                         # Perform batch step prediction of decoder, getting new states and scores ("g")
-                        g, hidden_prime, _ = self._pred_step(last_label_without_blank, hidden, batch_size=batchsize)
+                        g, hidden_prime = self._pred_step(last_label_without_blank, hidden, batch_size=batchsize)
 
                     # Batched joint step - Output = [B, V + 1]
                     logp = self._joint_step(f, g, log_normalize=None)[:, 0, 0, :]

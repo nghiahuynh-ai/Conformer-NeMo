@@ -700,12 +700,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 perturb_ratio=self.t2t_perturb_ratio,
             )
             
-        decoder, target_length, states, loss_t2t = self.decoder(
+        decoder, target_length, states = self.decoder(
             targets=transcript, 
             target_length=transcript_len, 
             perturbed_transcript=perturbed_transcript,
             training=True,
             )
+        
+        loss_t2t = self.decoder.prediction['t2t'].get_loss()
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps
@@ -809,7 +811,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # If experimental fused Joint-Loss-WER is not used
         if not self.joint.fuse_loss_wer:
             if self.compute_eval_loss:
-                decoder, target_length, states, loss_t2t = self.decoder(targets=transcript, target_length=transcript_len)
+                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+                loss_t2t = self.decoder.prediction['t2t'].get_loss()
+                
                 joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
 
                 loss_rnnt = self.loss(
@@ -833,7 +837,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             compute_wer = True
 
             if self.compute_eval_loss:
-                decoded, target_len, states, loss_t2t = self.decoder(targets=transcript, target_length=transcript_len)
+                decoded, target_len, states = self.decoder(targets=transcript, target_length=transcript_len)
+                loss_t2t = self.decoder.prediction['t2t'].get_loss()
             else:
                 decoded = None
                 target_len = transcript_len

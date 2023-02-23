@@ -185,10 +185,10 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         else:
             add_sos = True
 
-        g, states, loss_t2t = self.predict(y, state=states, add_sos=add_sos, y_perturbed=perturbed_transcript, training=training)  # (B, U, D)
+        g, states = self.predict(y, state=states, add_sos=add_sos, y_perturbed=perturbed_transcript, training=training)  # (B, U, D)
         g = g.transpose(1, 2)  # (B, D, U)
 
-        return g, target_length, states, loss_t2t
+        return g, target_length, states
 
     def predict(
         self,
@@ -247,8 +247,6 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         _p = next(self.parameters())
         device = _p.device
         dtype = _p.dtype
-        
-        loss_t2t = None
 
         # If y is not None, it is of shape [B, U] with dtype long.
         if y is not None:
@@ -264,7 +262,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 y_origin = self.prediction["proj_in"](y_origin)
                 y = self.prediction["proj_in"](y)
                 if training:
-                    y, loss_t2t = self.prediction["t2t"](y, y_origin)
+                    y = self.prediction["t2t"](y, y_origin)
                 y = self.prediction["proj_out"](y)
                 
                 del y_origin
@@ -298,7 +296,7 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
         g = g.transpose(0, 1)  # (B, U + 1, H)
 
         del y, start, state
-        return g, hid, loss_t2t
+        return g, hid
 
     def _predict_modules(
         self,

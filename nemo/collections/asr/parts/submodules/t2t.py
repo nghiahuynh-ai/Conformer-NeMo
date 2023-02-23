@@ -57,7 +57,7 @@ class Text2Text(nn.Module):
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)
         
-        return output[:,:-1,:], loss
+        return output[:,:-1,:].contiguous(), loss
     
     def get_tgt_mask(self, tgt_size):
         tgt_mask = torch.tril(torch.ones(tgt_size, tgt_size) == 1)

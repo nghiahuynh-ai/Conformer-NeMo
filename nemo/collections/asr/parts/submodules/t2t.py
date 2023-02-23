@@ -58,7 +58,8 @@ class Text2Text(nn.Module):
         # (B, D, T) -> (B, T, D)
         output = output.transpose(-1, -2)
         
-        return output[:,:-1,:]
+        # return output[:,:-1,:]
+        return output
     
     def get_loss(self):
         return self._loss_value

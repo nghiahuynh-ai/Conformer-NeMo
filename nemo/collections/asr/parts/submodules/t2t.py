@@ -61,7 +61,7 @@ class Text2Text(nn.Module):
         
         # (B, D, T) -> (T, D, B) -> (B, D, T) -> (B, T, D)
         output = output.transpose(-1, 0)
-        output = output[:-1].tranpose(-1, 0)
+        output = output[:-1].transpose(-1, 0)
         output = output.transpose(-1, -2)
 
         return output

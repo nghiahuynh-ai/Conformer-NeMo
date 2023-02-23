@@ -31,7 +31,7 @@ class Text2Text(nn.Module):
         self.t2t_out = nn.Linear(d_model, d_model)
         
         self.loss_fn = nn.CrossEntropyLoss()
-        self._loss_value = torch.float('inf')
+        self.loss_value = torch.float('inf')
         
     def forward(self, input, target, grad=True):
         
@@ -51,7 +51,7 @@ class Text2Text(nn.Module):
         output = output.transpose(-1, -2)
         tgt_expect = tgt_expect.transpose(-1, -2)
         
-        self._loss_value = self.loss_fn(output, tgt_expect)
+        self.loss_value = self.loss_fn(output, tgt_expect)
         
         del tgt_input, tgt_expect, tgt_mask
         
@@ -62,7 +62,7 @@ class Text2Text(nn.Module):
         return output
     
     def get_loss(self):
-        return self._loss_value
+        return self.loss_value
     
     def get_tgt_mask(self, tgt_size):
         tgt_mask = torch.tril(torch.ones(tgt_size, tgt_size) == 1)

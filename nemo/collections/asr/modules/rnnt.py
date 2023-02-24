@@ -253,19 +253,31 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
             if y.device != device:
                 y = y.to(device)
 
-            # (B, U) -> (B, U, H)
-            y = self.prediction["embed"](y)
-            
             if self.t2t_apply:
-                y_origin = y
-                y = self.prediction["embed"](y_perturbed)
-                y_origin = self.prediction["proj_in"](y_origin)
-                y = self.prediction["proj_in"](y)
-                if training:
-                    y = self.prediction["t2t"](y, y_origin)
-                y = self.prediction["proj_out"](y)
+                sos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
+                eos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
+                src = torch.cat((sos, y_perturbed, eos), dim=1)
+                tgt_input = torch.cat((sos, y), dim=1)
+                tgt_expect = torch.cat((y, eos), dim=1)
+
+                src = self.prediction["embed"](src)
+                tgt_input = self.prediction["embed"](tgt_input)
+                tgt_expect = self.prediction["embed"](tgt_expect)
                 
-                del y_origin
+                src = self.prediction["proj_in"](src)
+                tgt_input = self.prediction["proj_in"](tgt_input)
+                tgt_expect = self.prediction["proj_in"](tgt_expect)
+                
+                if training:
+                    t2t_out = self.prediction["t2t"](src, tgt_input, tgt_expect)
+                    
+                y = self.prediction["proj_out"](t2t_out)
+                
+                del src, tgt_input, tgt_expect
+                
+            else:
+                # (B, U) -> (B, U, H)
+                y = self.prediction["embed"](y)
         else:
             # Y is not provided, assume zero tensor with shape [B, 1, H] is required
             # Emulates output of embedding of pad token.

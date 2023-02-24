@@ -33,15 +33,9 @@ class Text2Text(nn.Module):
         self.loss_fn = nn.CrossEntropyLoss()
         self.loss_value = torch.tensor(float('inf'))
         
-    def forward(self, src, tgt, grad=True):
+    def forward(self, src, tgt_input, tgt_expect, grad=True):
         
-        print(tgt.shape)
-        tgt_input = tgt.narrow(1, 0, tgt.size(1) - 1)
-        tgt_expect = tgt.narrow(1, 1, tgt.size(1) - 1)
-        print(tgt_input.shape)
-        print(tgt_expect.shape)
-        
-        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(tgt.device)
+        tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(tgt_input.device)
          
         if grad:
             output = self.t2t_model(src, tgt_input, tgt_mask=tgt_mask)
@@ -51,7 +45,7 @@ class Text2Text(nn.Module):
                 output = self.t2t_model(src, tgt_input, tgt_mask=tgt_mask)
                 output = self.t2t_out(output)
         
-        del tgt_input, tgt_mask
+        # del tgt_input, tgt_mask
         
         # (B, t, D) -> (B, D, T)
         output = output.transpose(-1, -2)
@@ -59,13 +53,9 @@ class Text2Text(nn.Module):
         
         self.loss_value = self.loss_fn(output, tgt_expect)
         
-        del tgt_expect
-        
-        # (B, D, T) -> (B, D, T-1) -> (B, T-1, D)
-        output = output.narrow(2, 0, output.size(2) - 1).transpose(-1, -2)
-        print(output.shape)
+        # del tgt_expect
 
-        return output
+        return output.transpose(-1, -2)
     
     def get_loss(self):
         return self.loss_value

@@ -678,11 +678,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
         
-        sos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
-        eos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
-        transcript = torch.cat((sos, transcript, eos), dim=1)
+        # sos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
+        # eos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
+        # transcript = torch.cat((sos, transcript, eos), dim=1)
         
-        del sos, eos
+        # del sos, eos
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -795,9 +795,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         signal, signal_len, transcript, transcript_len, _, _ = batch
         
-        sos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
-        eos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
-        transcript = torch.cat((sos, transcript, eos), dim=1)
+        # sos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
+        # eos = torch.tensor([0] * transcript.shape[0]).unsqueeze(1).to(transcript.device)
+        # transcript = torch.cat((sos, transcript, eos), dim=1)
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:

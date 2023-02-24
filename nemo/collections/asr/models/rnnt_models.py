@@ -703,6 +703,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             training=True,
             )
         
+        del perturbed_transcript
+        
         loss_t2t = self.decoder.prediction['t2t'].get_loss()
 
         if hasattr(self, '_trainer') and self._trainer is not None:

@@ -173,7 +173,7 @@ class AudioText(_Collection):
 
             total_duration += duration
             
-            perturbed_text_tokens = self.perturb(text, corpus, perturb_ratio, dis_prob)
+            perturbed_text_tokens = parser(self.perturb(text, corpus, perturb_ratio, dis_prob))
 
             data.append(output_type(id_, audio_file, duration, text_tokens, perturbed_text_tokens, offset, text, speaker, orig_sr, lang))
             if index_by_file_id:

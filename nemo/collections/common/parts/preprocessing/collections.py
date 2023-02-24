@@ -175,7 +175,7 @@ class AudioText(_Collection):
             
             perturbed_text_tokens = self.perturb(text, corpus, perturb_ratio, dis_prob)
 
-            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, perturbed_text_tokens, speaker, orig_sr, lang))
+            data.append(output_type(id_, audio_file, duration, text_tokens, perturbed_text_tokens, offset, text, speaker, orig_sr, lang))
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
                 self.mapping[file_id] = len(data) - 1

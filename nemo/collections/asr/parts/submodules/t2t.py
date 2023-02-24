@@ -51,7 +51,7 @@ class Text2Text(nn.Module):
         output = output.transpose(-1, -2)
         tgt_expect = tgt_expect.transpose(-1, -2)
         
-        self.loss_value = self.loss_fn(output.sofmax(1), tgt_expect.sofmax(1))
+        self.loss_value = self.loss_fn(output.softmax(1), tgt_expect.softmax(1))
         
         # del tgt_expect
 

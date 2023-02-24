@@ -676,7 +676,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
-        signal, signal_len, transcript, transcript_len, _, _ = batch
+        signal, signal_len, transcript, transcript_len, perturb_transcript, _ = batch
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -686,22 +686,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
            
         if self.t2t_perturb_ratio > 0.0:
-            # perturbed_transcript = perturb_transcript(
-            #     transcript=transcript,
-            #     transcript_len=transcript_len,
-            #     word_start_idx=word_length,
-            #     word_length=word_length,
-            #     perturb_ratio=self.t2t_perturb_ratio,
-            # )
-            perturbed_transcript = transcript
-            
             decoder, target_length, states = self.decoder(
                 targets=transcript, 
                 target_length=transcript_len, 
-                perturbed_transcript=perturbed_transcript,
+                perturbed_transcript=perturb_transcript,
                 training=True
                 )
-            del perturbed_transcript
             
             loss_t2t = self.decoder.prediction['t2t'].get_loss()
         else:  
@@ -985,34 +975,34 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
     
 
-def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, perturb_ratio):
+# def perturb_transcript(transcript, transcript_len, word_start_idx, word_length, perturb_ratio):
     
-    perturb_transcript_list = []
-    max_transcript_len = 0
+#     perturb_transcript_list = []
+#     max_transcript_len = 0
     
-    for b in range(transcript.shape[0]):
+#     for b in range(transcript.shape[0]):
         
-        n_words = len(word_start_idx[b])
-        perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)
+#         n_words = len(word_start_idx[b])
+#         perturb_word_idx = np.random.choice(range(n_words), size=int(n_words*perturb_ratio), replace=False)
         
-        t = transcript[b].detach().clone()
-        for word_idx in perturb_word_idx:
-            start = word_start_idx[b][word_idx]
-            end = min(start + word_length[b][word_idx] + 1, transcript_len[b])
-            t[start: end] = -1
-        t = t[t != -1]
+#         t = transcript[b].detach().clone()
+#         for word_idx in perturb_word_idx:
+#             start = word_start_idx[b][word_idx]
+#             end = min(start + word_length[b][word_idx] + 1, transcript_len[b])
+#             t[start: end] = -1
+#         t = t[t != -1]
         
-        max_transcript_len = max(max_transcript_len, t.shape[0])
-        perturb_transcript_list.append(t)
-    # print(max_transcript_len)
-    for ith in range(len(perturb_transcript_list)):
-        t_len = perturb_transcript_list[ith].shape[0]
-        # print(t_len)
-        if t_len < max_transcript_len:
-            perturb_transcript_list[ith] = torch.nn.functional.pad(
-                perturb_transcript_list[ith], 
-                (0, max_transcript_len - t_len), 
-                value=0
-            )
-        # print(t.shape[0])
-    return torch.stack(perturb_transcript_list)
+#         max_transcript_len = max(max_transcript_len, t.shape[0])
+#         perturb_transcript_list.append(t)
+#     # print(max_transcript_len)
+#     for ith in range(len(perturb_transcript_list)):
+#         t_len = perturb_transcript_list[ith].shape[0]
+#         # print(t_len)
+#         if t_len < max_transcript_len:
+#             perturb_transcript_list[ith] = torch.nn.functional.pad(
+#                 perturb_transcript_list[ith], 
+#                 (0, max_transcript_len - t_len), 
+#                 value=0
+#             )
+#         # print(t.shape[0])
+#     return torch.stack(perturb_transcript_list)

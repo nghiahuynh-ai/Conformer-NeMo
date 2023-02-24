@@ -16,6 +16,7 @@ import collections
 import json
 import os
 from typing import Any, Dict, List, Optional, Union
+import numpy as np
 
 import pandas as pd
 
@@ -92,7 +93,7 @@ class AudioText(_Collection):
 
     OUTPUT_TYPE = collections.namedtuple(
         typename='AudioTextEntity',
-        field_names='id audio_file duration text_tokens offset text_raw speaker orig_sr lang word_start_idx word_length',
+        field_names='id audio_file duration text_tokens perturbed_text_tokens offset text_raw speaker orig_sr lang',
     )
 
     def __init__(
@@ -105,14 +106,14 @@ class AudioText(_Collection):
         speakers: List[Optional[int]],
         orig_sampling_rates: List[Optional[int]],
         langs: List[Optional[str]],
-        word_start_idxs: List[int],
-        word_lengths: List[int],
         parser: parsers.CharParser,
         min_duration: Optional[float] = None,
         max_duration: Optional[float] = None,
         max_number: Optional[int] = None,
         do_sort_by_duration: bool = False,
         index_by_file_id: bool = False,
+        perturb_ratio: float = 0.2,
+        dis_prob: List[float] = [0.15, 0.15, 0.7],
     ):
         """Instantiates audio-text manifest with filters and preprocessing.
 
@@ -138,8 +139,10 @@ class AudioText(_Collection):
         if index_by_file_id:
             self.mapping = {}
 
-        for id_, audio_file, duration, offset, text, speaker, orig_sr, lang, word_start_idx, word_length in zip(
-            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, langs, word_start_idxs, word_lengths
+        corpus = [word for text in texts for word in text.split()]
+        
+        for id_, audio_file, duration, offset, text, speaker, orig_sr, lang in zip(
+            ids, audio_files, durations, offsets, texts, speakers, orig_sampling_rates, langs
         ):
             # Duration filters.
             if min_duration is not None and duration < min_duration:
@@ -169,8 +172,10 @@ class AudioText(_Collection):
                 continue
 
             total_duration += duration
+            
+            perturbed_text_tokens = self.perturb(text, corpus, perturb_ratio, dis_prob)
 
-            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, speaker, orig_sr, lang, word_start_idx, word_length))
+            data.append(output_type(id_, audio_file, duration, text_tokens, offset, text, perturbed_text_tokens, speaker, orig_sr, lang))
             if index_by_file_id:
                 file_id, _ = os.path.splitext(os.path.basename(audio_file))
                 self.mapping[file_id] = len(data) - 1
@@ -189,6 +194,34 @@ class AudioText(_Collection):
         logging.info("%d files were filtered totalling %.2f hours", num_filtered, duration_filtered / 3600)
 
         super().__init__(data)
+        
+    def perturb(self, seq, perturb_corpus, perturb_ratio, dis_prob):
+    
+        seq = seq.split(' ')
+        del_words = np.random.choice(range(len(seq)), size=int(perturb_ratio * dis_prob[0] * len(seq)), replace=False)
+        ins_words = np.random.choice(range(len(seq)), size=int(perturb_ratio * dis_prob[1] * len(seq)), replace=False)
+        sub_words = np.random.choice(range(len(seq)), size=int(perturb_ratio * dis_prob[2] * len(seq)), replace=False)
+
+        if len(sub_words) == 0 or len(ins_words) == 0 or len(del_words) == 0:
+            del_words, ins_words, sub_words = [], [], []
+            chosen = np.random.choice(['del', 'ins', 'sub'], size=1)
+            if chosen == 'del':
+                del_words = np.random.choice(range(len(seq)), size=1)
+            if chosen == 'ins':
+                ins_words = np.random.choice(range(len(seq)), size=1)
+            if chosen == 'sub':
+                sub_words = np.random.choice(range(len(seq)), size=1)
+
+        for word_idx in del_words:      
+            seq = seq[:word_idx] + seq[word_idx + 1:]
+        for word_idx in ins_words:
+            idx = np.random.randint(low=0, high=len(perturb_corpus))
+            seq = seq[:word_idx] + [perturb_corpus[idx]] + seq[word_idx:]
+        for word_idx in sub_words:
+            idx = np.random.randint(low=0, high=len(perturb_corpus))
+            seq[word_idx] = perturb_corpus[idx]
+
+        return ' '.join(seq)
 
 
 class ASRAudioText(AudioText):
@@ -204,7 +237,7 @@ class ASRAudioText(AudioText):
             **kwargs: Kwargs to pass to `AudioText` constructor.
         """
 
-        ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, word_start_idx, word_length = [], [], [], [], [], [], [], [], [], []
+        ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs = [], [], [], [], [], [], [], []
         for item in manifest.item_iter(manifests_files):
             ids.append(item['id'])
             audio_files.append(item['audio_file'])
@@ -214,10 +247,8 @@ class ASRAudioText(AudioText):
             speakers.append(item['speaker'])
             orig_srs.append(item['orig_sr'])
             langs.append(item['lang'])
-            word_start_idx.append(item['word_start_idx'])
-            word_length.append(item['word_length'])
 
-        super().__init__(ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, word_start_idx, word_length, *args, **kwargs)
+        super().__init__(ids, audio_files, durations, texts, offsets, speakers, orig_srs, langs, *args, **kwargs)
 
 
 class SpeechLabel(_Collection):

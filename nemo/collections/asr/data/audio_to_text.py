@@ -55,10 +55,10 @@ def _speech_collate_fn(batch, pad_id):
     """
     packed_batch = list(zip(*batch))
     if len(packed_batch) == 7:
-        _, audio_lengths, _, tokens_lengths, word_start_idx, word_length, sample_ids = packed_batch
+        _, audio_lengths, _, tokens_lengths, _, perturbed_tokens_lengths, sample_ids = packed_batch
     elif len(packed_batch) == 6:
         sample_ids = None
-        _, audio_lengths, _, tokens_lengths, word_start_idx, word_length = packed_batch
+        _, audio_lengths, _, tokens_lengths, _, perturbed_tokens_lengths = packed_batch
     else:
         raise ValueError("Expects 6 or 7 tensors in the batch!")
     
@@ -67,13 +67,14 @@ def _speech_collate_fn(batch, pad_id):
     if has_audio:
         max_audio_len = max(audio_lengths).item()
     max_tokens_len = max(tokens_lengths).item()
+    max_p_tokens_len = max(perturbed_tokens_lengths).item()
 
-    audio_signal, tokens = [], []
+    audio_signal, tokens, perturbed_tokens = [], [], []
     for b in batch:
         if len(b) == 7:
-            sig, sig_len, tokens_i, tokens_i_len, _, _, _ = b
+            sig, sig_len, tokens_i, tokens_i_len, p_tokens_i, p_tokens_i_len, _ = b
         else:
-            sig, sig_len, tokens_i, tokens_i_len, _, _ = b
+            sig, sig_len, tokens_i, tokens_i_len, p_tokens_i, p_tokens_i_len = b
             
         if has_audio:
             sig_len = sig_len.item()
@@ -87,6 +88,12 @@ def _speech_collate_fn(batch, pad_id):
             pad = (0, max_tokens_len - tokens_i_len)
             tokens_i = torch.nn.functional.pad(tokens_i, pad, value=pad_id)
         tokens.append(tokens_i)
+        
+        p_tokens_i_len = p_tokens_i_len.item()
+        if p_tokens_i_len < max_p_tokens_len:
+            pad = (0, max_p_tokens_len - p_tokens_i_len)
+            p_tokens_i = torch.nn.functional.pad(p_tokens_i, pad, value=pad_id)
+        perturbed_tokens.append(p_tokens_i)
 
     if has_audio:
         audio_signal = torch.stack(audio_signal)
@@ -97,14 +104,14 @@ def _speech_collate_fn(batch, pad_id):
     tokens = torch.stack(tokens)
     tokens_lengths = torch.stack(tokens_lengths)
     
-    # word_start_idx = torch.stack(word_start_idx)
-    # word_length = torch.stack(word_length)
+    perturbed_tokens = torch.stack(perturbed_tokens)
+    perturbed_tokens_lengths = torch.stack(perturbed_tokens_lengths)
     
     if sample_ids is None:
-        return audio_signal, audio_lengths, tokens, tokens_lengths, word_start_idx, word_length
+        return audio_signal, audio_lengths, tokens, tokens_lengths, perturbed_tokens, perturbed_tokens_lengths
     else:
         sample_ids = torch.tensor(sample_ids, dtype=torch.int32)
-        return audio_signal, audio_lengths, tokens, tokens_lengths, word_start_idx, word_length, sample_ids
+        return audio_signal, audio_lengths, tokens, tokens_lengths, perturbed_tokens, perturbed_tokens_lengths, sample_ids
 
 
 class ASRManifestProcessor:
@@ -164,15 +171,20 @@ class ASRManifestProcessor:
 
     def process_text_by_sample(self, sample: collections.ASRAudioText.OUTPUT_TYPE) -> (List[int], int):
         t, tl = sample.text_tokens, len(sample.text_tokens)
+        pt, ptl = sample.perturbed_text_tokens, len(sample.perturbed_text_tokens)
         
         if self.bos_id is not None:
             t = [self.bos_id] + t
             tl += 1
+            pt = [self.bos_id] + pt
+            ptl += 1
         if self.eos_id is not None:
             t = t + [self.eos_id]
             tl += 1
+            pt = pt + [self.eos_id]
+            ptl += 1
 
-        return t, tl
+        return t, tl, pt, ptl
 
 
 def expand_audio_filepaths(audio_tar_filepaths, shard_strategy: str, world_size: int, global_rank: int):
@@ -308,14 +320,12 @@ class _AudioTextDataset(Dataset):
         )
         f, fl = features, torch.tensor(features.shape[0]).long()
 
-        t, tl = self.manifest_processor.process_text_by_sample(sample=sample)
-        
-        word_start_idx, word_length = sample.word_start_idx, sample.word_length
+        t, tl, pt, ptl = self.manifest_processor.process_text_by_sample(sample=sample)
 
         if self.return_sample_id:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), word_start_idx, word_length, index
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), pt, ptl, index
         else:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), word_start_idx, word_length
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), pt, ptl
 
         return output
 

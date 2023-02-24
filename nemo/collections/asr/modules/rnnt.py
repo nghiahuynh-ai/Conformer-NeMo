@@ -270,6 +270,8 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                     tgt_expect = self.prediction["proj_in"](tgt_expect)
                     y = self.prediction["t2t"](src, tgt_input, tgt_expect)
                     
+                    y = y.narrow(1, 0, y.size(1) - 1)
+                    
                     del src, tgt_input, tgt_expect
                     
                 else:

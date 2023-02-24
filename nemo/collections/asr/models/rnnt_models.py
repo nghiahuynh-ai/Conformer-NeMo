@@ -685,21 +685,22 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
            
-        if self.t2t_perturb_ratio > 0.0:
-            perturbed_transcript = perturb_transcript(
-                transcript=transcript,
-                transcript_len=transcript_len,
-                word_start_idx=word_length,
-                word_length=word_length,
-                perturb_ratio=self.t2t_perturb_ratio,
-            )
+        # if self.t2t_perturb_ratio > 0.0:
+        #     perturbed_transcript = perturb_transcript(
+        #         transcript=transcript,
+        #         transcript_len=transcript_len,
+        #         word_start_idx=word_length,
+        #         word_length=word_length,
+        #         perturb_ratio=self.t2t_perturb_ratio,
+        #     )
+        perturbed_transcript = transcript
             
         # print('pass perturb')
             
         decoder, target_length, states = self.decoder(
             targets=transcript, 
             target_length=transcript_len, 
-            perturbed_transcript=transcript,
+            perturbed_transcript=perturbed_transcript,
             training=True,
             )
         

@@ -323,9 +323,9 @@ class _AudioTextDataset(Dataset):
         t, tl, pt, ptl = self.manifest_processor.process_text_by_sample(sample=sample)
 
         if self.return_sample_id:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), pt, ptl, index
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), torch.tensor(pt).long(), torch.tensor(ptl).long(), index
         else:
-            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), pt, ptl
+            output = f, fl, torch.tensor(t).long(), torch.tensor(tl).long(), torch.tensor(pt).long(), torch.tensor(ptl).long()
 
         return output
 

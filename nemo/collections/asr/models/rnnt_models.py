@@ -685,32 +685,27 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
            
-        # if self.t2t_perturb_ratio > 0.0:
-        #     perturbed_transcript = perturb_transcript(
-        #         transcript=transcript,
-        #         transcript_len=transcript_len,
-        #         word_start_idx=word_length,
-        #         word_length=word_length,
-        #         perturb_ratio=self.t2t_perturb_ratio,
-        #     )
-        perturbed_transcript = transcript
+        if self.t2t_perturb_ratio > 0.0:
+            # perturbed_transcript = perturb_transcript(
+            #     transcript=transcript,
+            #     transcript_len=transcript_len,
+            #     word_start_idx=word_length,
+            #     word_length=word_length,
+            #     perturb_ratio=self.t2t_perturb_ratio,
+            # )
+            perturbed_transcript = transcript
             
-        # print('pass perturb')
+            decoder, target_length, states = self.decoder(
+                targets=transcript, 
+                target_length=transcript_len, 
+                perturbed_transcript=perturbed_transcript,
+                training=True
+                )
+            del perturbed_transcript
             
-        decoder, target_length, states = self.decoder(
-            targets=transcript, 
-            target_length=transcript_len, 
-            perturbed_transcript=perturbed_transcript,
-            training=True,
-            )
-        
-        # print('pass decoder')
-        
-        del perturbed_transcript
-        
-        loss_t2t = self.decoder.prediction['t2t'].get_loss()
-        
-        # print('pass loss_t2t')
+            loss_t2t = self.decoder.prediction['t2t'].get_loss()
+        else:  
+            decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len, )
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps

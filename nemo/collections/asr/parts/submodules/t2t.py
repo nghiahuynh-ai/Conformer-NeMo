@@ -57,7 +57,7 @@ class Text2Text(nn.Module):
         
         self.loss_value = self.loss_fn(output, tgt_expect)
         
-        del tgt_e-xpect
+        del tgt_expect
         
         # (B, D, T) -> (B, D, T-1) -> (B, T-1, D)
         output = output.narrow(-1, 0, -1).transpose(-1, -2)

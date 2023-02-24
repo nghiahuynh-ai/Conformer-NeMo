@@ -35,9 +35,9 @@ class Text2Text(nn.Module):
         
     def forward(self, src, tgt, grad=True):
         
-        tgt = tgt.transpose(1, 0)
-        tgt_input = tgt[:-1].transpose(1, 0)
-        tgt_expect = tgt[1:].transpose(1, 0)
+        # tgt = tgt.transpose(1, 0)
+        tgt_input = tgt.narrow(1, 0, -1)
+        tgt_expect = tgt.narrow(1, 1, tgt.size(1))
         
         tgt_mask = self.get_tgt_mask(tgt_input.shape[1]).to(tgt.device)
          
@@ -57,12 +57,10 @@ class Text2Text(nn.Module):
         
         self.loss_value = self.loss_fn(output, tgt_expect)
         
-        del tgt_expect
+        del tgt_e-xpect
         
-        # (B, D, T) -> (T, D, B) -> (B, D, T) -> (B, T, D)
-        output = output.transpose(-1, 0)
-        output = output[:-1].transpose(-1, 0)
-        output = output.transpose(-1, -2)
+        # (B, D, T) -> (B, D, T-1) -> (B, T-1, D)
+        output = output.narrow(-1, 0, -1).transpose(-1, -2)
 
         return output
     

@@ -677,8 +677,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len, word_start_idx, word_length = batch
-        
-        # transcript_len += 1
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -696,6 +694,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 perturb_ratio=self.t2t_perturb_ratio,
             )
             
+        print('pass perturb')
+            
         decoder, target_length, states = self.decoder(
             targets=transcript, 
             target_length=transcript_len, 
@@ -703,9 +703,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             training=True,
             )
         
+        print('pass decoder')
+        
         del perturbed_transcript
         
         loss_t2t = self.decoder.prediction['t2t'].get_loss()
+        
+        print('pass loss_t2t')
 
         if hasattr(self, '_trainer') and self._trainer is not None:
             log_every_n_steps = self._trainer.log_every_n_steps

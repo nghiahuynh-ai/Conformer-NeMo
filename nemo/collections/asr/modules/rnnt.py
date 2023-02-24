@@ -254,27 +254,30 @@ class RNNTDecoder(rnnt_abstract.AbstractRNNTDecoder, Exportable):
                 y = y.to(device)
 
             if self.t2t_apply:
-                sos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
-                eos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
-                src = torch.cat((sos, y_perturbed, eos), dim=1)
-                tgt_input = torch.cat((sos, y), dim=1)
-                tgt_expect = torch.cat((y, eos), dim=1)
-
-                src = self.prediction["embed"](src)
-                tgt_input = self.prediction["embed"](tgt_input)
-                tgt_expect = self.prediction["embed"](tgt_expect)
-                
-                src = self.prediction["proj_in"](src)
-                tgt_input = self.prediction["proj_in"](tgt_input)
-                tgt_expect = self.prediction["proj_in"](tgt_expect)
-                
                 if training:
-                    t2t_out = self.prediction["t2t"](src, tgt_input, tgt_expect)
+                    sos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
+                    eos = torch.tensor([0] * y.shape[0]).unsqueeze(1).to(y.device)
+                    src = torch.cat((sos, y_perturbed, eos), dim=1)
+                    tgt_input = torch.cat((sos, y), dim=1)
+                    tgt_expect = torch.cat((y, eos), dim=1)
+
+                    src = self.prediction["embed"](src)
+                    tgt_input = self.prediction["embed"](tgt_input)
+                    tgt_expect = self.prediction["embed"](tgt_expect)
+                
+                    src = self.prediction["proj_in"](src)
+                    tgt_input = self.prediction["proj_in"](tgt_input)
+                    tgt_expect = self.prediction["proj_in"](tgt_expect)
+                    y = self.prediction["t2t"](src, tgt_input, tgt_expect)
                     
-                y = self.prediction["proj_out"](t2t_out)
-                
-                del src, tgt_input, tgt_expect
-                
+                    del src, tgt_input, tgt_expect
+                    
+                else:
+                    y = self.prediction["embed"](y)
+                    y = self.prediction["proj_in"](y)
+                    
+                y = self.prediction["proj_out"](y)
+
             else:
                 # (B, U) -> (B, U, H)
                 y = self.prediction["embed"](y)

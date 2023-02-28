@@ -667,16 +667,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-            
-        print(processed_signal.shape)
+        
         sf = self._cfg.encoder.subsampling_factor
         b, d, t = processed_signal.shape
         if t % sf != 0:
             pad_len = int(math.ceil(t / sf) * sf)
             pad = processed_signal[:,:,-1].unsqueeze(-1).expand(b, d, pad_len - t)
             processed_signal = torch.cat((processed_signal, pad), dim=-1)
-        print(processed_signal.shape)
-        raise
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

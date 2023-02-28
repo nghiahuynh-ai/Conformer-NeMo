@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import numpy as np
 import copy
 import json
@@ -91,6 +92,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
             self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
+        else:
+            self.spec_augmentation = None
+            
+        if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance:
+            self.speech_enhance = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
         else:
             self.spec_augmentation = None
 
@@ -661,6 +667,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+            
+        print(processed_signal.shape)
+        sf = self._cgf.encoder.subsampling_factor
+        b, d, t = processed_signal.shape
+        if t % sf != 0:
+            pad_len = int(math.ceil(t / sf) * sf)
+            pad = processed_signal[:,:,-1].expand(b, d, pad_len)
+            processed_signal = torch.cat((processed_signal, pad), dim=-1)
+        print(processed_signal.shape)
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

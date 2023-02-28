@@ -48,6 +48,8 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
+  speech_enhance: true
+
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
     pred_hidden: 640

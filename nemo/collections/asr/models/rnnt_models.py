@@ -673,7 +673,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         b, d, t = processed_signal.shape
         if t % sf != 0:
             pad_len = int(math.ceil(t / sf) * sf)
-            pad = processed_signal[:,:,-1].expand(b, d, pad_len)
+            pad = processed_signal[:,:,-1].unsqueeze(-1).expand(b, d, pad_len - t)
             processed_signal = torch.cat((processed_signal, pad), dim=-1)
         print(processed_signal.shape)
         raise

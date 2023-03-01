@@ -105,8 +105,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if max_seq_len % downsampling_factor != 0:
                 max_seq_len = int(math.ceil(max_seq_len/downsampling_factor) * downsampling_factor)
             
-            print(max_seq_len)
-            
             self.speech_enhance = SpeeechEnhance(
                                     seq_len=max_seq_len,
                                     freq_len=self._cfg.preprocessor.features,

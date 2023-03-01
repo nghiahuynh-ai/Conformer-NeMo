@@ -41,6 +41,7 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
+from nemo.collections.asr.parts.submodules.vae import SpeeechEnhance
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -95,8 +96,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             self.spec_augmentation = None
             
-        if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance:
-            self.speech_enhance = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
+        if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
+            win_len = self._cfg.preprocessor.n_fft
+            hop_len = self._cfg.preprocessor.window_stride * self._cfg.preprocessor.sample_rate
+            max_seq_len = int(math.ceil((self._cfg.speech_enhance.max_seq_len - win_len) / hop_len))
+            self.speech_enhance = SpeeechEnhance(
+                                    seq_len=max_seq_len,
+                                    freq_len=self._cfg.preprocessor.features,
+                                    downsampling_factor=16,
+                                    latent_dim=512,
+                                    )
         else:
             self.spec_augmentation = None
 
@@ -668,12 +677,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=input_signal, length=input_signal_length,
             )
         
-        sf = self._cfg.encoder.subsampling_factor
-        b, d, t = processed_signal.shape
-        if t % sf != 0:
-            pad_len = int(math.ceil(t / sf) * sf)
-            pad = processed_signal[:,:,-1].unsqueeze(-1).expand(b, d, pad_len - t)
-            processed_signal = torch.cat((processed_signal, pad), dim=-1)
+        # sf = self._cfg.encoder.subsampling_factor
+        # b, d, t = processed_signal.shape
+        # if t % sf != 0:
+        #     pad_len = int(math.ceil(t / sf) * sf)
+        #     pad = processed_signal[:,:,-1].unsqueeze(-1).expand(b, d, pad_len - t)
+        #     processed_signal = torch.cat((processed_signal, pad), dim=-1)
+        
+        if self.speech_enhance is not None:
+            processed_signal = self.speech_enhance(processed_signal)
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

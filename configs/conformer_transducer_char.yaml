@@ -48,7 +48,9 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
-  speech_enhance: true
+  speech_enhance:
+    apply: True
+    max_sig_len: null
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

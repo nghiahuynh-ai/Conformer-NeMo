@@ -51,7 +51,8 @@ class Encoder(nn.Module):
         x = self.proj(x)
         mu = self.mu(x)
         sigma = torch.exp(self.sigma(x))
-        z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
+        # z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
+        z = mu + sigma
         self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
         
         return z

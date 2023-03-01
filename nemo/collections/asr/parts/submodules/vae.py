@@ -44,7 +44,8 @@ class Encoder(nn.Module):
         
     def forward(self, x):
         x = x.unsqueeze(1)
-        x = self.layers(x)
+        for layer in self.layers:
+            x = layer(x)
         self.old_shape = x.shape
         x = self.flatten(x)
         x = self.proj(x)
@@ -90,7 +91,8 @@ class Decoder(nn.Module):
     def forward(self, x, old_shape):
         x = self.proj(x)
         x = x.reshape(old_shape)
-        x = self.layers(x)
+        for layer in self.layers:
+            x = layer(x)
         
         return torch.squeeze(x, 1)
 

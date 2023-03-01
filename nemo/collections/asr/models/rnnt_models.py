@@ -107,7 +107,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                                     seq_len=max_seq_len,
                                     freq_len=self._cfg.preprocessor.features,
                                     downsampling_factor=downsampling_factor,
-                                    latent_dim=self._cfg.preprocessor.latent_dim,
+                                    latent_dim=self._cfg.speech_enhance.latent_dim,
                                     )
         else:
             self.spec_augmentation = None

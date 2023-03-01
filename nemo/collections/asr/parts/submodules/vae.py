@@ -47,15 +47,14 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
         self.old_shape = x.shape
-        # x = self.flatten(x)
-        # x = self.proj(x)
-        # mu = self.mu(x)
-        # sigma = torch.exp(self.sigma(x))
-        # z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
-        # self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
+        x = self.flatten(x)
+        x = self.proj(x)
+        mu = self.mu(x)
+        sigma = torch.exp(self.sigma(x))
+        z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
+        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
         
-        # return z
-        return x
+        return z
 
 class Decoder(nn.Module):
     def __init__(
@@ -90,13 +89,12 @@ class Decoder(nn.Module):
             self.layers.append(activation)
             
     def forward(self, x, old_shape):
-        # x = self.proj(x)
-        # x = x.reshape(old_shape)
+        x = self.proj(x)
+        x = x.reshape(old_shape)
         for layer in self.layers:
             x = layer(x)
-        x = torch.squeeze(x, 1)
         
-        return x
+        return torch.squeeze(x, 1)
 
 
 class SpeeechEnhance(nn.Module):
@@ -127,7 +125,7 @@ class SpeeechEnhance(nn.Module):
         )
         
         self.mse = nn.MSELoss()
-        self.loss = 0
+        self.loss = None
         
     def forward(self, x):
         
@@ -137,10 +135,8 @@ class SpeeechEnhance(nn.Module):
         
         z = self.encoder(x)
         x_hat = self.decoder(z, self.encoder.old_shape)
-        # self.loss = self.mse(x, x_hat) + self.encoder.kl
-        # self.loss = self.mse(x, x_hat)
+        self.loss = self.mse(x, x_hat) + self.encoder.kl
         
         # x = x_hat[:,:,:original_seq_len]
         
-        # return x
         return x_hat

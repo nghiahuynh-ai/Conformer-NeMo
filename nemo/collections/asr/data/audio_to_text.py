@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _speech_collate_fn(batch, pad_id):
+def _speech_collate_fn(batch, pad_id, max_dur=None, sr=None):
     """collate batch of audio sig, audio len, tokens, tokens len
     Args:
         batch (Optional[FloatTensor], Optional[LongTensor], LongTensor,
@@ -64,7 +64,10 @@ def _speech_collate_fn(batch, pad_id):
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
     if has_audio:
-        max_audio_len = max(audio_lengths).item()
+        if max_dur is None and sr is None:
+            max_audio_len = max(audio_lengths).item()
+        else:
+            max_audio_len = max_dur * sr
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -284,6 +287,8 @@ class _AudioTextDataset(Dataset):
         self.featurizer = WaveformFeaturizer(sample_rate=sample_rate, int_values=int_values, augmentor=augmentor)
         self.trim = trim
         self.return_sample_id = return_sample_id
+        self.max_dur = max_duration
+        self.sr = sample_rate
 
     def get_manifest_sample(self, sample_id):
         return self.manifest_processor.collection[sample_id]
@@ -313,7 +318,7 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
 
     def _collate_fn(self, batch):
-        return _speech_collate_fn(batch, pad_id=self.manifest_processor.pad_id)
+        return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.max_dur, self.sr)
 
 
 class AudioToCharDataset(_AudioTextDataset):

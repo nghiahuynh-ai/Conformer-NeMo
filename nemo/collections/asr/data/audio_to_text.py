@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _speech_collate_fn(batch, pad_id, max_dur=None, sr=None):
+def _speech_collate_fn(batch, pad_id, max_seq_len):
     """collate batch of audio sig, audio len, tokens, tokens len
     Args:
         batch (Optional[FloatTensor], Optional[LongTensor], LongTensor,
@@ -64,10 +64,10 @@ def _speech_collate_fn(batch, pad_id, max_dur=None, sr=None):
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
     if has_audio:
-        if max_dur is None and sr is None:
+        if max_seq_len is None:
             max_audio_len = max(audio_lengths).item()
         else:
-            max_audio_len = max_dur * sr
+            max_audio_len = max_seq_len
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -270,6 +270,8 @@ class _AudioTextDataset(Dataset):
         eos_id: Optional[int] = None,
         pad_id: int = 0,
         return_sample_id: bool = False,
+        win_len: int = 512,
+        hop_len: int = 160,
     ):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
@@ -289,6 +291,8 @@ class _AudioTextDataset(Dataset):
         self.return_sample_id = return_sample_id
         self.max_dur = max_duration
         self.sr = sample_rate
+        self.win_len = win_len
+        self.hop_len = hop_len
 
     def get_manifest_sample(self, sample_id):
         return self.manifest_processor.collection[sample_id]
@@ -318,7 +322,10 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
 
     def _collate_fn(self, batch):
-        return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.max_dur, self.sr)
+        max_seq_len = self.max_dur * self.sr
+        n_features = int(math.ceil((max_seq_len - self.win_len) / self.hop_len + 1) / 16) * 16
+        max_seq_len = (n_features - 1) * self.hop_len + self.win_len
+        return _speech_collate_fn(batch, self.manifest_processor.pad_id, max_seq_len)
 
 
 class AudioToCharDataset(_AudioTextDataset):

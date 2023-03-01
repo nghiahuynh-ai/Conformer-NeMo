@@ -101,7 +101,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             hop_len = self._cfg.preprocessor.window_stride * self._cfg.preprocessor.sample_rate
             downsampling_factor = self._cfg.speech_enhance.downsampling_factor
             max_seq_len = self._cfg.speech_enhance.max_seq_len * self._cfg.preprocessor.sample_rate
-            max_seq_len = int(math.ceil((max_seq_len - win_len) / hop_len))
+            max_seq_len = int(math.ceil((max_seq_len - win_len) / hop_len + 1))
             if max_seq_len % downsampling_factor != 0:
                 max_seq_len = int(math.ceil(max_seq_len/downsampling_factor) * downsampling_factor)
             
@@ -695,7 +695,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-    
+        print(signal.size(-1))
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)

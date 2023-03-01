@@ -33,6 +33,8 @@ class Encoder(nn.Module):
             in_channels = out_channels
         self.flatten = nn.Flatten()
         
+        print(flatten_dim * out_channels)
+        
         self.proj = nn.Linear(flatten_dim * out_channels, latent_dim)
         self.mu = nn.Linear(latent_dim, latent_dim)
         self.sigma = nn.Linear(latent_dim, latent_dim)

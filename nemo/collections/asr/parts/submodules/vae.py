@@ -47,14 +47,15 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
         self.old_shape = x.shape
-        x = self.flatten(x)
-        x = self.proj(x)
-        mu = self.mu(x)
-        sigma = torch.exp(self.sigma(x))
-        z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
-        self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
+        # x = self.flatten(x)
+        # x = self.proj(x)
+        # mu = self.mu(x)
+        # sigma = torch.exp(self.sigma(x))
+        # z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
+        # self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
         
-        return z
+        # return z
+        return x
 
 class Decoder(nn.Module):
     def __init__(
@@ -89,8 +90,8 @@ class Decoder(nn.Module):
             self.layers.append(activation)
             
     def forward(self, x, old_shape):
-        x = self.proj(x)
-        x = x.reshape(old_shape)
+        # x = self.proj(x)
+        # x = x.reshape(old_shape)
         for layer in self.layers:
             x = layer(x)
         x = torch.squeeze(x, 1)

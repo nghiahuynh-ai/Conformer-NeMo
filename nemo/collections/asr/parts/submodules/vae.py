@@ -137,6 +137,6 @@ class SpeeechEnhance(nn.Module):
         x_hat = self.decoder(z, self.encoder.old_shape)
         self.loss = self.mse(x, x_hat) + self.encoder.kl
         
-        x = x_hat[:,:,:original_seq_len]
+        # x = x_hat[:,:,:original_seq_len]
         
-        return x
+        return x_hat

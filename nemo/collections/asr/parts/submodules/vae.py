@@ -131,9 +131,9 @@ class SpeeechEnhance(nn.Module):
         
     def forward(self, x):
         
-        original_seq_len = x.size(-1)
-        if original_seq_len < self.seq_len:
-            x = nn.functional.pad(x, (0, self.seq_len - original_seq_len), value=0.0)
+        # original_seq_len = x.size(-1)
+        # if original_seq_len < self.seq_len:
+        #     x = nn.functional.pad(x, (0, self.seq_len - original_seq_len), value=0.0)
         
         z = self.encoder(x)
         x_hat = self.decoder(z, self.encoder.old_shape)

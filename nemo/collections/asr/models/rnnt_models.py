@@ -683,7 +683,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
         
         if self.speech_enhance is not None:
-            processed_signal = self.speech_enhance(processed_signal)
+            with torch.autograd.set_detect_anomaly(True):
+                processed_signal = self.speech_enhance(processed_signal)
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

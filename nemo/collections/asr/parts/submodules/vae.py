@@ -140,6 +140,7 @@ class SpeeechEnhance(nn.Module):
         # self.loss = self.mse(x, x_hat) + self.encoder.kl
         self.loss = self.mse(x, x_hat)
         
-        x = x_hat[:,:,:original_seq_len]
+        # x = x_hat[:,:,:original_seq_len]
         
-        return x
+        # return x
+        return x_hat

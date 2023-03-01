@@ -682,13 +682,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=input_signal, length=input_signal_length,
             )
         
-        # sf = self._cfg.encoder.subsampling_factor
-        # b, d, t = processed_signal.shape
-        # if t % sf != 0:
-        #     pad_len = int(math.ceil(t / sf) * sf)
-        #     pad = processed_signal[:,:,-1].unsqueeze(-1).expand(b, d, pad_len - t)
-        #     processed_signal = torch.cat((processed_signal, pad), dim=-1)
-        
         if self.speech_enhance is not None:
             processed_signal = self.speech_enhance(processed_signal)
         
@@ -728,8 +721,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             loss_value = self.loss(
                 log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
             )
+            if self.speech_enhance is not None:
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': self.speech_enhance.loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            else:
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
-            tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
             if (sample_id + 1) % log_every_n_steps == 0:
                 self.wer.update(encoded, encoded_len, transcript, transcript_len)
@@ -753,9 +749,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 transcript_lengths=transcript_len,
                 compute_wer=compute_wer,
             )
-
-            tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-
+            
+            if self.speech_enhance is not None:
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': self.speech_enhance.loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            else:
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            
             if compute_wer:
                 tensorboard_logs.update({'training_batch_wer': wer})
 
@@ -765,6 +764,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # Preserve batch acoustic model T and language model U parameters if normalizing
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
+            
+        if self.speech_enhance is not None:
+            loss_value = loss_value + self.speech_enhance.loss
 
         return {'loss': loss_value}
 

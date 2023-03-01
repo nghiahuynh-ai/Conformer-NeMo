@@ -51,6 +51,8 @@ model:
   speech_enhance:
     apply: True
     max_sig_len: null
+    downsampling_factor: 16
+    latent_dim: 512
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

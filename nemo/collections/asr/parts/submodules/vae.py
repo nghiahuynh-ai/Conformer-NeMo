@@ -109,7 +109,7 @@ class SpeeechEnhance(nn.Module):
         assert downsampling_factor % 2 == 0
         self.seq_len = seq_len
         
-        flatten_dim = seq_len/downsampling_factor * freq_len/downsampling_factor
+        flatten_dim = int(seq_len/downsampling_factor * freq_len/downsampling_factor)
         
         self.encoder = Encoder(
             downsampling_factor=downsampling_factor,

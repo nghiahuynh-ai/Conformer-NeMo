@@ -99,12 +99,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
             win_len = self._cfg.preprocessor.n_fft
             hop_len = self._cfg.preprocessor.window_stride * self._cfg.preprocessor.sample_rate
+            downsampling_factor = self._cfg.preprocessor.downsampling_factor
             max_seq_len = int(math.ceil((self._cfg.speech_enhance.max_seq_len - win_len) / hop_len))
+            if max_seq_len % downsampling_factor != 0:
+                max_seq_len = int(math.ceil(max_seq_len/downsampling_factor) * downsampling_factor)
             self.speech_enhance = SpeeechEnhance(
                                     seq_len=max_seq_len,
                                     freq_len=self._cfg.preprocessor.features,
-                                    downsampling_factor=16,
-                                    latent_dim=512,
+                                    downsampling_factor=downsampling_factor,
+                                    latent_dim=self._cfg.preprocessor.latent_dim,
                                     )
         else:
             self.spec_augmentation = None

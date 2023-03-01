@@ -73,7 +73,7 @@ class Decoder(nn.Module):
         n_layers = int(math.log(upsampling_factor, 2))
         self.layers = nn.ModuleList()
         
-        for ith, _ in enumerate(n_layers):
+        for ith, _ in enumerate(range(n_layers)):
             _out_channels = in_channels if ith < n_layers - 1 else out_channels
             self.layers.append(
                 nn.ConvTranspose2d(

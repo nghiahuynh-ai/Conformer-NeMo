@@ -51,8 +51,7 @@ class Encoder(nn.Module):
         x = self.proj(x)
         mu = self.mu(x)
         sigma = torch.exp(self.sigma(x))
-        # z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
-        z = mu + sigma
+        z = mu + sigma * self.distribution.sample(mu.shape).to(mu.device)
         self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 1/2).sum()
         
         return z
@@ -94,8 +93,9 @@ class Decoder(nn.Module):
         x = x.reshape(old_shape)
         for layer in self.layers:
             x = layer(x)
+        x = torch.squeeze(x, 1)
         
-        return torch.squeeze(x, 1)
+        return x
 
 
 class SpeeechEnhance(nn.Module):

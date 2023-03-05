@@ -48,19 +48,22 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
-  vae:
+  speech_enhance:
+    apply: true
     latent_dim: 512
-    n_layers: 0 # layer number of each encoder and decoder. 1 <= n_layers <= 4, 0 -> deactive VAE.
-    feat_in: -1 # default is 80
-    d_model: ${model.vae.feat_in}
+    n_encoder_layers: 4
+    n_decoder_layers: 4
+    feat_in: ${model.preprocessor.features}
+    d_model: 80
     n_heads: 8
     self_attention_model: abs_pos
-    ff_expansion_factor: 4
-    norm_type: layer_norm
     dropout: 0.1
-    real_noise_corpus: null # list of numpy array
+    real_noise:
+      corpus: null # list of numpy array
+      snr: [0, 5] # signal to noise ratio bounds
     white_noise:
-      
+      mean: 0.0 
+      variance: [0.0, 0.05]
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

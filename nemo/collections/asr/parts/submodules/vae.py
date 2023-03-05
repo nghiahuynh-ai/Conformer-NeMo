@@ -51,7 +51,7 @@ class VAESpeechEnhance(nn.Module):
             self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr
         if white_noise_std[0] >= 0.0 and white_noise_std[1] >= white_noise_std[0]:
-            self.add_noise_methods.append('add_white_noise')
+            # self.add_noise_methods.append('add_white_noise')
             self.white_noise_mean = white_noise_mean
             self.white_noise_std = white_noise_std
         

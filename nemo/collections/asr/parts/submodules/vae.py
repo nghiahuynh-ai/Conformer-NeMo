@@ -47,11 +47,11 @@ class VAESpeechEnhance(nn.Module):
         
         self.add_noise_methods = []
         if real_noise_filepath is not None:
-            self.add_noise_methods.append(self._add_real_noise)
+            self.add_noise_methods.append('add_real_noise')
             self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr
         if white_noise_std[0] >= 0.0 and white_noise_std[1] >= white_noise_std[0]:
-            self.add_noise_methods.append(self._add_white_noise)
+            self.add_noise_methods.append('add_white_noise')
             self.white_noise_mean = white_noise_mean
             self.white_noise_std = white_noise_std
         
@@ -60,8 +60,10 @@ class VAESpeechEnhance(nn.Module):
     
     def add_noise(self, signal):
         method = np.random.choice(self.add_noise_methods, size=1)
-        print(method)
-        return method(signal)
+        if method == 'add_real_noise':
+            return self._add_real_noise(signal)
+        else:
+            return self._add_white_noise(signal)
     
     def _add_real_noise(self, signal):
         signal_length = len(signal)

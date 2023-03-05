@@ -711,8 +711,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             spec = self.spec_augmentation(input_spec=spec, length=processed_signal_length)
         
-        del spec
-        
         encoded, encoded_len = self.encoder(audio_signal=spec, length=processed_signal_length)
         return encoded, encoded_len
 

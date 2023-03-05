@@ -785,8 +785,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
-        if self.speech_enhance is not None:
-            loss_value = loss_value + self.speech_enhance.loss_value
+        # if self.speech_enhance is not None:
+        #     loss_value = loss_value + self.speech_enhance.loss_value
 
         return {'loss': loss_value}
 

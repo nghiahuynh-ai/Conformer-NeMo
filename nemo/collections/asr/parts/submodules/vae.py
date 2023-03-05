@@ -86,6 +86,8 @@ class VAESpeechEnhance(nn.Module):
         return signal + noise.to(signal.device)
     
     def forward(self, x_noise, x_clean=None):
+        print('x_noise: ', x_noise.shape)
+        print('x_clean: ', x_clean.shape)
         x = self.proj_in(x_noise)
         x = self.pos_enc(x)
         z = self.encoder(x)

@@ -1,7 +1,8 @@
+import math
 import numpy as np
 import torch
 import torch.nn as nn
-from nemo.collections.asr.parts.submodules.multi_head_attention import PositionalEncoding, MultiHeadAttention
+from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention
 
 
 class VAESpeechEnhance(nn.Module):
@@ -25,8 +26,7 @@ class VAESpeechEnhance(nn.Module):
         
         self.proj_in = nn.Linear(feat_in, d_model)
         if self_attention_model == 'abs_pos':
-            self.pos_enc = PositionalEncoding(d_model=d_model, dropout_rate=dropout)
-            self.pos_enc.extend_pe(length=5000, device=next(self.parameters()).device)
+            self.pos_enc = PositionalEncoding(d_model=d_model, dropout=dropout)
         self.encoder = VAEEncoder(
                             latent_dim=latent_dim,
                             n_layers=n_encoder_layers,
@@ -183,3 +183,26 @@ class VAEMHSALayer(nn.Module):
         residual = residual + self.dropout(x)
         
         return nn.ReLU(residual)
+    
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super().__init__()
+
+        self.d_model = d_model
+        
+        self.dropout = nn.Dropout(dropout)
+
+        pos_encoding = torch.zeros(max_len, d_model)
+        positions_list = torch.arange(0, max_len, dtype=torch.float).view(-1, 1)
+        division_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0)) / d_model) 
+
+        pos_encoding[:, 0::2] = torch.sin(positions_list * division_term)
+
+        pos_encoding[:, 1::2] = torch.cos(positions_list * division_term)
+
+        pos_encoding = pos_encoding.unsqueeze(0).transpose(0, 1)
+        self.register_buffer("pos_encoding", pos_encoding)
+        
+    def forward(self, token_embedding: torch.tensor):
+        return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :]) * math.sqrt(self.d_model)

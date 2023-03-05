@@ -60,6 +60,7 @@ class VAESpeechEnhance(nn.Module):
     
     def add_noise(self, signal):
         method = np.random.choice(self.add_noise_methods, size=1)
+        print(method)
         return method(signal)
     
     def _add_real_noise(self, signal):

@@ -720,7 +720,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=signal, perturbed_signal=perturbed_signal, input_signal_length=signal_len)
+            encoded, encoded_len = self.forward(input_signal=signal, input_perturbed_signal=perturbed_signal, input_signal_length=signal_len)
         del signal, perturbed_signal
             
         # During training, loss must be computed, so decoder forward is necessary

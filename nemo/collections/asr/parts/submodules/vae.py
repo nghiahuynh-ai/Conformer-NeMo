@@ -21,7 +21,7 @@ class VAESpeechEnhance(nn.Module):
         white_noise_std=[0.0, 0.05],
         ):
         
-        super().__init__(self)
+        super().__init__()
         
         self.proj_in = nn.Linear(feat_in, d_model)
         if self_attention_model == 'abs_pos':

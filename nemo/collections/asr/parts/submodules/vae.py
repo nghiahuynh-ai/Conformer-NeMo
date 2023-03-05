@@ -70,8 +70,8 @@ class VAESpeechEnhance(nn.Module):
   
         # extract noise from noise list
         noise = np.random.choice(self.real_noise_corpus, size=1)
-        print('noise: ', len(noise))
-        print('signal: ', signal_length)
+        # print('noise: ', len(noise))
+        # print('signal: ', signal_length)
         start = np.random.randint(0, len(noise) - signal_length - 1)
         noise = torch.from_numpy(noise[start:start + signal_length]).to(signal.device)
         
@@ -93,8 +93,8 @@ class VAESpeechEnhance(nn.Module):
     
     def forward(self, x_noise, x_clean=None):
         x_noise = x_noise.transpose(-1, -2)
-        if x_clean is not None:
-            x_clean = x_clean.transpose(-1, -2)
+        # if x_clean is not None:
+        #     x_clean = x_clean.transpose(-1, -2)
         
         x = self.proj_in(x_noise)
         x = self.pos_enc(x)

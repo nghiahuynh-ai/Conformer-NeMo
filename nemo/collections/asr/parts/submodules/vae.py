@@ -56,7 +56,7 @@ class VAESpeechEnhance(nn.Module):
             self.white_noise_std = white_noise_std
         
         self.loss_fn = nn.MSELoss()
-        self.loss_value = 0.0
+        self.loss_value = torch.tensor(float('inf')).to(self.device)
     
     def add_noise(self, signal):
         method = np.random.choice(self.add_noise_methods, size=1)
@@ -125,7 +125,7 @@ class VAEEncoder(nn.Module):
         self.mu = nn.Linear(d_model, latent_dim)
         self.sigma = nn.Linear(d_model, latent_dim)
         self.N = torch.distributions.Normal(0, 1)
-        self.kl = 0.0
+        self.kl = torch.tensor(float('inf')).to(self.device)
         
     def forward(self, x):
         for layer in self.layers:

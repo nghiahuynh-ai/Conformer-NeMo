@@ -687,14 +687,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 processed_signal, processed_signal_length = self.preprocessor(
                     input_signal=input_signal, length=input_signal_length,
                 )
-                processed_perturbed_signal, _ = self.preprocessor(
-                    input_signal=input_perturbed_signal, length=input_signal_length,
-                )
+                # processed_perturbed_signal, _ = self.preprocessor(
+                #     input_signal=input_perturbed_signal, length=input_signal_length,
+                # )
             else:
                 processed_signal, processed_signal_length = self.preprocessor(
                     input_signal=input_signal, length=input_signal_length,
                 )
 
+        processed_perturbed_signal = processed_signal
         if self.speech_enhance is not None:
             if self.training:
                 processed_signal = self.speech_enhance(processed_perturbed_signal, processed_signal)

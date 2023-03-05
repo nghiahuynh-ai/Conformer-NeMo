@@ -713,8 +713,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
     
-        # perturbed_signal = self.speech_enhance.add_noise(signal)
-        perturbed_signal = signal
+        perturbed_signal = self.speech_enhance.add_noise(signal)
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -785,8 +784,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
-        # if self.speech_enhance is not None:
-        #     loss_value = loss_value + self.speech_enhance.loss_value
+        if self.speech_enhance is not None:
+            loss_value = loss_value + self.speech_enhance.loss_value
 
         return {'loss': loss_value}
 

@@ -45,7 +45,7 @@ class VAESpeechEnhance(nn.Module):
         self.proj_out = nn.Linear(d_model, feat_in)
         
         self.add_noise_methods = []
-        if self.real_noise_corpus is not None:
+        if real_noise_filepath is not None:
             self.add_noise_methods.append(self._add_real_noise)
             self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr

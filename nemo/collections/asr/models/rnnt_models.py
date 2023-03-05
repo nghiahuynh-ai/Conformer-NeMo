@@ -698,7 +698,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             if self.training:
-                processed_perturbed_signal = self.speech_enhance(processed_perturbed_signal, processed_signal)
+                processed_perturbed_signal = self.speech_enhance(processed_perturbed_signal)
+                self.loss_vae = self.speech_enhance.compute_loss(input_signal, input_perturbed_signal)
             else:
                 processed_signal = self.speech_enhance(processed_signal)
         
@@ -790,7 +791,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + self.speech_enhance.loss_value
+            loss_value = loss_value + self.loss_vae
 
         return {'loss': loss_value}
 

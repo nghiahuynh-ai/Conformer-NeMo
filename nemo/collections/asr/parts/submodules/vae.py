@@ -89,7 +89,7 @@ class VAESpeechEnhance(nn.Module):
         noise = torch.from_numpy(noise).type(torch.FloatTensor)
         return signal + noise.to(signal.device)
     
-    def forward(self, x_noise, x_clean=None):
+    def forward(self, x_noise):
         x_noise = x_noise.transpose(-1, -2)
         
         x = self.proj_in(x_noise)
@@ -98,11 +98,11 @@ class VAESpeechEnhance(nn.Module):
         x_hat = self.decoder(z)
         x_hat = self.proj_out(x_hat)
         x_hat = x_hat.transpose(-1, -2)
-        
-        if self.training:
-            self.loss_value = self.loss_fn(x_clean, x_hat) + self.encoder.kl
             
         return x_hat
+    
+    def compute_loss(self, x_clean, x_hat):
+        return self.loss_fn(x_clean, x_hat) + self.encoder.kl
 
 
 class VAEEncoder(nn.Module):

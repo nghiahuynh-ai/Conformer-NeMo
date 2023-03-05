@@ -174,7 +174,7 @@ class VAEMHSALayer(nn.Module):
     def forward(self, x):
         residual = x
         
-        x = self.att(x)
+        x = self.att(query=x, key=x, value=x, mask=None)
         x = self.att_norm(x)
         residual = residual + self.dropout(x)
         

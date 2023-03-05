@@ -712,9 +712,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-        
-        perturbed_signal = signal.clone()
-        perturbed_signal = self.speech_enhance.add_noise(perturbed_signal)
+    
+        perturbed_signal = self.speech_enhance.add_noise(signal)
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:

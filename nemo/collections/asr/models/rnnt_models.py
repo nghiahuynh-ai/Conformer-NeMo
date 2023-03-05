@@ -703,7 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             else:
                 processed_signal = self.speech_enhance(processed_signal)
         
-        if self.speech_enhance is not None:
+        if self.speech_enhance is not None and self.training:
             spec = processed_perturbed_signal
         else:
             spec = processed_signal

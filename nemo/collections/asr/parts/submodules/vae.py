@@ -70,19 +70,16 @@ class VAESpeechEnhance(nn.Module):
   
         # extract noise from noise list
         noise = np.random.choice(self.real_noise_corpus)
-        print('noise: ', len(noise))
-        # print(noise)
-        print('signal: ', signal_length)
         start = np.random.randint(0, len(noise) - signal_length - 1)
         noise = torch.from_numpy(noise[start:start + signal_length]).to(signal.device)
         
         # calculate power of audio and noise
-        snr = torch.randint(low=self.real_noise_snr[0], high=self.real_noise_snr[1], size=(1,))
+        snr = torch.randint(low=self.real_noise_snr[0], high=self.real_noise_snr[1], size=(1,)).to(signal.device)
         signal_energy = torch.mean(signal**2)
         noise_energy = torch.mean(noise**2)
         coef = torch.sqrt(10.0 ** (-snr/10) * signal_energy / noise_energy)
-        signal_coef = torch.sqrt(1 / (1 + coef**2)).to(signal.device)
-        noise_coef = torch.sqrt(coef**2 / (1 + coef**2)).to(signal.device)
+        signal_coef = torch.sqrt(1 / (1 + coef**2))
+        noise_coef = torch.sqrt(coef**2 / (1 + coef**2))
         
         return signal_coef * signal + noise_coef * noise
     

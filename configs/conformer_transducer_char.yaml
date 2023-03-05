@@ -59,11 +59,11 @@ model:
     self_attention_model: abs_pos
     dropout: 0.1
     real_noise:
-      corpus: null # list of numpy array
+      filepath: null # .npy file contains Array(Array(),... , Array())
       snr: [0, 5] # signal to noise ratio bounds
     white_noise:
       mean: 0.0 
-      variance: [0.0, 0.05]
+      std: [0.0, 0.05]
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}

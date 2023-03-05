@@ -15,7 +15,7 @@ class VAESpeechEnhance(nn.Module):
         n_heads=8,
         self_attention_model='abs_pos',
         dropout=0.1,
-        real_noise_corpus=None,
+        real_noise_filepath=None,
         real_noise_snr=[0, 5],
         white_noise_mean=0.0,   
         white_noise_std=[0.0, 0.05],
@@ -47,7 +47,7 @@ class VAESpeechEnhance(nn.Module):
         self.add_noise_methods = []
         if self.real_noise_corpus is not None:
             self.add_noise_methods.append(self._add_real_noise)
-            self.real_noise_corpus = real_noise_corpus
+            self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr
         if white_noise_std[0] >= 0.0 and white_noise_std[1] >= white_noise_std[0]:
             self.add_noise_methods.append(self._add_white_noise)

@@ -93,10 +93,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 n_heads=self._cfg.speech_enhance.n_heads,
                 self_attention_model=self._cfg.speech_enhance.self_attention_model,
                 dropout=self._cfg.speech_enhance.dropout,
-                real_noise_corpus=self._cfg.speech_enhance.real_noise_corpus,
-                real_noise_snr=self._cfg.speech_enhance.real_noise_snr,
-                white_noise_mean=self._cfg.speech_enhance.white_noise_mean,
-                white_noise_std=self._cfg.speech_enhance.white_noise_std,
+                real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
+                real_noise_snr=self._cfg.speech_enhance.real_noise.snr,
+                white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
+                white_noise_std=self._cfg.speech_enhance.white_noise.std,
             )
         else:
             self.speech_enhance = None

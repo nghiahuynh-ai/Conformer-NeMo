@@ -748,7 +748,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.speech_enhance.loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -776,7 +776,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.speech_enhance.loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 

@@ -687,27 +687,32 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 processed_signal, processed_signal_length = self.preprocessor(
                     input_signal=input_signal, length=input_signal_length,
                 )
-                # processed_perturbed_signal, _ = self.preprocessor(
-                #     input_signal=input_perturbed_signal, length=input_signal_length,
-                # )
+                processed_perturbed_signal, _ = self.preprocessor(
+                    input_signal=input_perturbed_signal, length=input_signal_length,
+                )
             else:
                 processed_signal, processed_signal_length = self.preprocessor(
                     input_signal=input_signal, length=input_signal_length,
                 )
 
-        processed_perturbed_signal = processed_signal
+        
         if self.speech_enhance is not None:
             if self.training:
-                processed_signal = self.speech_enhance(processed_perturbed_signal, processed_signal)
+                processed_perturbed_signal = self.speech_enhance(processed_perturbed_signal, processed_signal)
                 # del processed_perturbed_signal
             else:
                 processed_signal = self.speech_enhance(processed_signal)
         
+        if self.speech_enhance is not None:
+            spec = processed_perturbed_signal
+        else:
+            spec = processed_signal
+        
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
-            processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+            spec = self.spec_augmentation(input_spec=spec, length=processed_signal_length)
         
-        encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        encoded, encoded_len = self.encoder(audio_signal=spec, length=processed_signal_length)
         return encoded, encoded_len
 
     # PTL-specific methods

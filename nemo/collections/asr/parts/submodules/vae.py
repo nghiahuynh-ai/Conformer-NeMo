@@ -98,10 +98,12 @@ class VAESpeechEnhance(nn.Module):
         x_hat = self.decoder(z)
         x_hat = self.proj_out(x_hat)
         x_hat = x_hat.transpose(-1, -2)
-            
+        
         return x_hat
     
     def compute_loss(self, x_clean, x_hat):
+        print(self.loss_fn(x_clean, x_hat))
+        print(self.encoder.kl)
         return self.loss_fn(x_clean, x_hat) + self.encoder.kl
 
 

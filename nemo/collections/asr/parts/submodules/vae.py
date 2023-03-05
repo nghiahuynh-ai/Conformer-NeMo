@@ -91,8 +91,6 @@ class VAESpeechEnhance(nn.Module):
     
     def forward(self, x_noise, x_clean=None):
         x_noise = x_noise.transpose(-1, -2)
-        # if x_clean is not None:
-        #     x_clean = x_clean.transpose(-1, -2)
         
         x = self.proj_in(x_noise)
         x = self.pos_enc(x)

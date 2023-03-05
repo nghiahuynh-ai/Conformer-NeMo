@@ -713,7 +713,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
-        perturbed_signal = signal.clone().detach()
+        perturbed_signal = signal.clone()
         perturbed_signal = self.speech_enhance.add_noise(perturbed_signal)
     
         # forward() only performs encoder forward

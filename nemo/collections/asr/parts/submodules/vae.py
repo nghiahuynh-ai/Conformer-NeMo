@@ -69,9 +69,9 @@ class VAESpeechEnhance(nn.Module):
         signal_length = signal.size(1)
   
         # extract noise from noise list
-        noise = np.random.choice(self.real_noise_corpus, size=1)
+        noise = np.random.choice(self.real_noise_corpus)
         print('noise: ', len(noise))
-        print(noise)
+        # print(noise)
         print('signal: ', signal_length)
         start = np.random.randint(0, len(noise) - signal_length - 1)
         noise = torch.from_numpy(noise[start:start + signal_length]).to(signal.device)

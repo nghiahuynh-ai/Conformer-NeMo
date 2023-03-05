@@ -26,6 +26,7 @@ class VAESpeechEnhance(nn.Module):
         self.proj_in = nn.Linear(feat_in, d_model)
         if self_attention_model == 'abs_pos':
             self.pos_enc = PositionalEncoding(d_model=d_model, dropout_rate=dropout)
+            self.pos_enc.extend_pe(length=5000, device=next(self.parameters()).device)
         self.encoder = VAEEncoder(
                             latent_dim=latent_dim,
                             n_layers=n_encoder_layers,

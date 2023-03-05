@@ -170,6 +170,7 @@ class VAEMHSALayer(nn.Module):
         self.ff = nn.Linear(d_model, d_model)
         self.ff_norm = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(dropout)
+        self.activation = nn.ReLU()
         
     def forward(self, x):
         residual = x
@@ -182,7 +183,7 @@ class VAEMHSALayer(nn.Module):
         x = self.ff_norm(x)
         residual = residual + self.dropout(x)
         
-        return nn.ReLU(residual)
+        return self.activation(residual)
     
 
 class PositionalEncoding(nn.Module):

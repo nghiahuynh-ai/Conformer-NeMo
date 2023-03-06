@@ -28,7 +28,6 @@ class VAESpeechEnhance(nn.Module):
         nn.init.xavier_normal_(self.proj_in.weight, 0.08)
         if self_attention_model == 'abs_pos':
             self.pos_enc = PositionalEncoding(d_model=d_model, dropout=dropout)
-            nn.init.xavier_normal_(self.pos_enc.weight, 0.08)
         self.encoder = VAEEncoder(
                             latent_dim=latent_dim,
                             n_layers=n_encoder_layers,

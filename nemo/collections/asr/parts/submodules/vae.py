@@ -127,20 +127,21 @@ class VAEEncoder(nn.Module):
         self.mu = nn.Linear(d_model, latent_dim)
         nn.init.xavier_uniform_(self.mu.weight, 0.04)
         # nn.init.zeros_(self.mu.weight)
-        self.sigma = nn.Linear(d_model, latent_dim)
+        self.log_sigma = nn.Linear(d_model, latent_dim)
         nn.init.xavier_uniform_(self.sigma.weight, 0.04)
         # nn.init.zeros_(self.mu.weight)
         self.N = torch.distributions.Normal(0, 1)
-        self.activation = nn.ReLU()
+        # self.activation = nn.ReLU()
         self.kl = None
         
     def forward(self, x):
         for layer in self.layers:
             x = layer(x)
-        mu = self.activation(self.mu(x))
-        sigma = self.activation(self.sigma(x))
+        mu = self.mu(x)
+        log_sigma = self.log_sigma(x)
+        sigma = torch.exp(0.5 * log_sigma)
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
-        self.kl = -0.5 * torch.mean(1 - sigma**2 - mu**2 + torch.log(sigma))
+        self.kl = -0.5 * torch.mean(1 - sigma**2 - mu**2 + log_sigma)
         return z
   
 class VAEDecoder(nn.Module):

@@ -95,7 +95,7 @@ class VAESpeechEnhance(nn.Module):
         x_noise = x_noise.transpose(-1, -2)
         
         x = self.proj_in(x_noise)
-        # x = self.pos_enc(x)
+        x = self.pos_enc(x)
         z = self.encoder(x)
         x_hat = self.decoder(z)
         x_hat = self.proj_out(x_hat)
@@ -125,19 +125,20 @@ class VAEEncoder(nn.Module):
                 VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
             )
         self.mu = nn.Linear(d_model, latent_dim)
-        # nn.init.xavier_uniform_(self.mu.weight, 0.04)
-        nn.init.zeros_(self.mu.weight)
+        nn.init.xavier_uniform_(self.mu.weight, 0.04)
+        # nn.init.zeros_(self.mu.weight)
         self.sigma = nn.Linear(d_model, latent_dim)
-        # nn.init.xavier_uniform_(self.sigma.weight, 0.04)
-        nn.init.zeros_(self.mu.weight)
+        nn.init.xavier_uniform_(self.sigma.weight, 0.04)
+        # nn.init.zeros_(self.mu.weight)
         self.N = torch.distributions.Normal(0, 1)
+        self.activation = nn.ReLU()
         self.kl = None
         
     def forward(self, x):
         for layer in self.layers:
             x = layer(x)
-        mu = self.mu(x)
-        sigma = self.sigma(x)
+        mu = self.activation(self.mu(x))
+        sigma = self.activation(self.sigma(x))
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
         self.kl = -0.5 * torch.mean(1 - sigma**2 - mu**2 + torch.log(sigma))
         return z

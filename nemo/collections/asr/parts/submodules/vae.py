@@ -178,11 +178,11 @@ class VAEMHSALayer(nn.Module):
             nn.init.xavier_uniform_(self.att.linear_v.weight, 0.04)
             nn.init.xavier_uniform_(self.att.linear_out.weight, 0.04)
         self.att_norm = nn.LayerNorm(d_model)
-        nn.init.xavier_uniform_(self.att_norm.weight, 0.04)
+        # nn.init.xavier_uniform_(self.att_norm.weight, 0.04)
         self.ff = nn.Linear(d_model, d_model)
         nn.init.xavier_uniform_(self.ff.weight, 0.04)
         self.ff_norm = nn.LayerNorm(d_model)
-        nn.init.xavier_uniform_(self.ff_norm.weight, 0.04)
+        # nn.init.xavier_uniform_(self.ff_norm.weight, 0.04)
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         

@@ -102,8 +102,6 @@ class VAESpeechEnhance(nn.Module):
         return x_hat
     
     def compute_loss(self, x_clean, x_hat):
-        print(self.loss_fn(x_clean, x_hat))
-        print(self.encoder.kl)
         return self.loss_fn(x_clean, x_hat) + self.encoder.kl
 
 
@@ -136,6 +134,9 @@ class VAEEncoder(nn.Module):
         sigma = self.sigma(x)
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
         self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 0.5).sum()
+        print(sigma**2)
+        print(mu**2)
+        print(torch.log(sigma))
         return z
   
 class VAEDecoder(nn.Module):

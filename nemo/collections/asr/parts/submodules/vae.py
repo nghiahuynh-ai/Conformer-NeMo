@@ -25,7 +25,7 @@ class VAESpeechEnhance(nn.Module):
         super().__init__()
         
         self.proj_in = nn.Linear(feat_in, d_model)
-        nn.init.xavier_normal_(self.proj_in.weight, 0.08)
+        nn.init.xavier_uniform_(self.proj_in.weight, 0.04)
         if self_attention_model == 'abs_pos':
             self.pos_enc = PositionalEncoding(d_model=d_model, dropout=dropout)
         self.encoder = VAEEncoder(
@@ -45,7 +45,7 @@ class VAESpeechEnhance(nn.Module):
                             dropout=dropout,
                             )
         self.proj_out = nn.Linear(d_model, feat_in)
-        nn.init.xavier_normal_(self.proj_out.weight, 0.08)
+        nn.init.xavier_uniform_(self.proj_out.weight, 0.04)
         
         self.add_noise_methods = []
         if real_noise_filepath is not None:
@@ -125,9 +125,9 @@ class VAEEncoder(nn.Module):
                 VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
             )
         self.mu = nn.Linear(d_model, latent_dim)
-        nn.init.xavier_normal_(self.mu.weight, 0.08)
+        nn.init.xavier_uniform_(self.mu.weight, 0.04)
         self.sigma = nn.Linear(d_model, latent_dim)
-        nn.init.xavier_normal_(self.sigma.weight, 0.08)
+        nn.init.xavier_uniform_(self.sigma.weight, 0.04)
         self.N = torch.distributions.Normal(0, 1)
         self.kl = None
         
@@ -153,7 +153,7 @@ class VAEDecoder(nn.Module):
         super().__init__()
         
         self.proj = nn.Linear(latent_dim, d_model)
-        nn.init.xavier_normal_(self.proj.weight, 0.08)
+        nn.init.xavier_uniform_(self.proj.weight, 0.04)
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(
@@ -173,16 +173,16 @@ class VAEMHSALayer(nn.Module):
         
         if self_attention_model == 'abs_pos':
             self.att = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout)
-            nn.init.xavier_normal_(self.att.linear_q.weight, 0.08)
-            nn.init.xavier_normal_(self.att.linear_k.weight, 0.08)
-            nn.init.xavier_normal_(self.att.linear_v.weight, 0.08)
-            nn.init.xavier_normal_(self.att.linear_out.weight, 0.08)
+            nn.init.xavier_uniform_(self.att.linear_q.weight, 0.04)
+            nn.init.xavier_uniform_(self.att.linear_k.weight, 0.04)
+            nn.init.xavier_uniform_(self.att.linear_v.weight, 0.04)
+            nn.init.xavier_uniform_(self.att.linear_out.weight, 0.04)
         self.att_norm = nn.LayerNorm(d_model)
-        nn.init.xavier_normal_(self.att_norm.weight, 0.08)
+        nn.init.xavier_uniform_(self.att_norm.weight, 0.04)
         self.ff = nn.Linear(d_model, d_model)
-        nn.init.xavier_normal_(self.ff.weight, 0.08)
+        nn.init.xavier_uniform_(self.ff.weight, 0.04)
         self.ff_norm = nn.LayerNorm(d_model)
-        nn.init.xavier_normal_(self.ff_norm.weight, 0.08)
+        nn.init.xavier_uniform_(self.ff_norm.weight, 0.04)
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         

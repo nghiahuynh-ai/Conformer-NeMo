@@ -640,7 +640,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def forward(
         self, 
         input_signal=None,
-        input_perturbed_signal=None,
         input_signal_length=None, 
         processed_signal=None, 
         processed_signal_length=None,
@@ -683,31 +682,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
         
         if not has_processed_signal:
-            if self.speech_enhance is not None and self.training:
-                processed_signal, processed_signal_length = self.preprocessor(
+            processed_signal, processed_signal_length = self.preprocessor(
                     input_signal=input_signal, length=input_signal_length,
                 )
-                processed_perturbed_signal, _ = self.preprocessor(
-                    input_signal=input_perturbed_signal, length=input_signal_length,
-                )
-            else:
-                processed_signal, processed_signal_length = self.preprocessor(
-                    input_signal=input_signal, length=input_signal_length,
-                )
-
-        
-        if self.speech_enhance is not None:
-            if self.training:
-                processed_perturbed_signal = self.speech_enhance(processed_perturbed_signal)
-                self.loss_vae = self.speech_enhance.compute_loss(input_signal, input_perturbed_signal)
-            else:
-                processed_signal = self.speech_enhance(processed_signal)
-        
-        if self.speech_enhance is not None and self.training:
-            spec = processed_perturbed_signal
-        else:
-            spec = processed_signal
-        
+                
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
             spec = self.spec_augmentation(input_spec=spec, length=processed_signal_length)
@@ -719,14 +697,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
     
-        perturbed_signal = self.speech_enhance.add_noise(signal)
-    
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=signal, input_perturbed_signal=perturbed_signal, input_signal_length=signal_len)
-        del signal, perturbed_signal
+            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        del signal
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

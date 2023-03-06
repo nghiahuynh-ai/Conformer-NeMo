@@ -51,8 +51,7 @@ model:
   speech_enhance:
     apply: true
     latent_dim: 512
-    n_encoder_layers: 4
-    n_decoder_layers: 4
+    downsize_factor: 16
     feat_in: ${model.preprocessor.features}
     d_model: 80
     n_heads: 8

@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention
+from nemo.collections.asr.parts.submodules.conformer_modules import ConformerLayer
 
 
 class VAESpeechEnhance(nn.Module):
@@ -141,7 +142,7 @@ class VAEEncoder(nn.Module):
         log_sigma = self.log_sigma(x)
         sigma = torch.exp(0.5 * log_sigma)
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
-        self.kl = -0.5 * torch.mean(1 - sigma**2 - mu**2 + log_sigma)
+        self.kl = -0.5 * torch.sum(1 - sigma**2 - mu**2 + log_sigma)
         return z
   
 class VAEDecoder(nn.Module):

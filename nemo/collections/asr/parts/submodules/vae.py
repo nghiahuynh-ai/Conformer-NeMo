@@ -95,7 +95,7 @@ class VAESpeechEnhance(nn.Module):
         x_noise = x_noise.transpose(-1, -2)
         
         x = self.proj_in(x_noise)
-        x = self.pos_enc(x)
+        # x = self.pos_enc(x)
         z = self.encoder(x)
         x_hat = self.decoder(z)
         x_hat = self.proj_out(x_hat)

@@ -128,7 +128,7 @@ class VAEEncoder(nn.Module):
         nn.init.xavier_uniform_(self.mu.weight, 0.04)
         # nn.init.zeros_(self.mu.weight)
         self.log_sigma = nn.Linear(d_model, latent_dim)
-        nn.init.xavier_uniform_(self.sigma.weight, 0.04)
+        nn.init.xavier_uniform_(self.log_sigma.weight, 0.04)
         # nn.init.zeros_(self.mu.weight)
         self.N = torch.distributions.Normal(0, 1)
         # self.activation = nn.ReLU()

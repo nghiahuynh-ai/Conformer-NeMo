@@ -134,9 +134,9 @@ class VAEEncoder(nn.Module):
         sigma = self.sigma(x)
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
         self.kl = (sigma**2 + mu**2 - torch.log(sigma) - 0.5).sum()
-        print(sigma**2)
-        print(mu**2)
-        print(torch.log(sigma))
+        print('sigma: ', sigma**2)
+        print('mu: ', mu**2)
+        print('logsigma: ', torch.log(sigma))
         return z
   
 class VAEDecoder(nn.Module):

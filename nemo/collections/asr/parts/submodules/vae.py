@@ -178,9 +178,11 @@ class VAEMHSALayer(nn.Module):
             nn.init.xavier_normal_(self.att.linear_v.weight, 0.08)
             nn.init.xavier_normal_(self.att.linear_out.weight, 0.08)
         self.att_norm = nn.LayerNorm(d_model)
+        nn.init.xavier_normal_(self.att_norm.weight, 0.08)
         self.ff = nn.Linear(d_model, d_model)
         nn.init.xavier_normal_(self.ff.weight, 0.08)
         self.ff_norm = nn.LayerNorm(d_model)
+        nn.init.xavier_normal_(self.ff_norm.weight, 0.08)
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         

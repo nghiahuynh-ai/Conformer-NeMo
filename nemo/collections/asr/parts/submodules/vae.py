@@ -125,9 +125,11 @@ class VAEEncoder(nn.Module):
                 VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
             )
         self.mu = nn.Linear(d_model, latent_dim)
-        nn.init.xavier_uniform_(self.mu.weight, 0.04)
+        # nn.init.xavier_uniform_(self.mu.weight, 0.04)
+        nn.init.zeros_(self.mu.weight)
         self.sigma = nn.Linear(d_model, latent_dim)
-        nn.init.xavier_uniform_(self.sigma.weight, 0.04)
+        # nn.init.xavier_uniform_(self.sigma.weight, 0.04)
+        nn.init.zeros_(self.mu.weight)
         self.N = torch.distributions.Normal(0, 1)
         self.kl = None
         

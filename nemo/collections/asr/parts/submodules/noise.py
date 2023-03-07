@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-class NoiseMixer(nn.Module):
+class NoiseMixer:
     def __init__(
         self,
         real_noise_filepath=None,
@@ -46,7 +46,6 @@ class NoiseMixer(nn.Module):
         noise = torch.from_numpy(noise).type(torch.FloatTensor)
         return signal + noise.to(signal.device)
     
-    @torch.no_grad()
     def forwar(self, signal):
         method = np.random.choice(self.add_noise_methods, size=1)
         if method == 'add_real_noise':

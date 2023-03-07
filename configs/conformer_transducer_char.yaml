@@ -107,7 +107,7 @@ model:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor
     sample_rate: *sample_rate
     normalize: "per_feature"
-    window_size: 0.025
+    window_size: 0.032
     window_stride: 0.01
     window: "hann"
     features: 80

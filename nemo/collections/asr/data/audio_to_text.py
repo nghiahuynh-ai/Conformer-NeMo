@@ -263,9 +263,9 @@ class _AudioTextDataset(Dataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
-        win_len: Optional[float] = None,
+        win_len: Optional[int] = None,
         hop_len: Optional[float] = None,
-        downsize_factor: Optional[float] = None,
+        downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         trim: bool = False,
         bos_id: Optional[int] = None,
@@ -276,7 +276,9 @@ class _AudioTextDataset(Dataset):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
         
-        hop_len = hop_len * sample_rate
+        win_len = int(win_len)
+        hop_len = int(hop_len) * sample_rate
+        downsize_factor = int(downsize_factor)
         n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
         max_length = (n_features - 1) * hop_len + win_len
         self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
@@ -378,9 +380,9 @@ class AudioToCharDataset(_AudioTextDataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[float] = None,
         min_duration: Optional[float] = None,
-        win_len: Optional[float] = None,
+        win_len: Optional[int] = None,
         hop_len: Optional[float] = None,
-        downsize_factor: Optional[float] = None,
+        downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         blank_index: int = -1,
         unk_index: int = -1,

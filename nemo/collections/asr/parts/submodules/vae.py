@@ -20,13 +20,13 @@ class VAESpeechEnhance(nn.Module):
         super().__init__()
         
         self.conv_in = nn.ModuleList()
-        in_channels=1,
-        out_channels=d_model,
+        in_channels = 1
+        out_channels = d_model
         for ith, _ in enumerate(range(int(math.log(downsize_factor, 2)))):
             if ith == downsize_factor - 1:
                 out_channels = 1
             self.conv_in.append(
-                torch.nn.Conv2d(
+                nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=3,

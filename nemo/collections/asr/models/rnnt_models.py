@@ -107,7 +107,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.speech_enhance = VAESpeechEnhance(
                 latent_dim=self._cfg.speech_enhance.latent_dim,
                 downsize_factor=self._cfg.speech_enhance.downsize_factor,
-                n_decoder_layers=self._cfg.speech_enhance.n_decoder_layer,
+                n_decoder_layers=self._cfg.speech_enhance.n_decoder_layers,
                 hidden_shape=(int(max_features / downsize_factor), self._cfg.encoder.d_model),
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,

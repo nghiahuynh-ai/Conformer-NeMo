@@ -22,7 +22,7 @@ class VAESpeechEnhance(nn.Module):
         self.conv_in = nn.ModuleList()
         in_channels=1,
         out_channels=d_model,
-        for ith, _ in enumerate(range(math.log(downsize_factor, 2))):
+        for ith, _ in enumerate(range(int(math.log(downsize_factor, 2)))):
             if ith == downsize_factor - 1:
                 out_channels = 1
             self.conv_in.append(

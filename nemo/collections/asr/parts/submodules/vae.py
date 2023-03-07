@@ -23,13 +23,16 @@ class VAESpeechEnhance(nn.Module):
         self.flatten = nn.Flatten()
         self.mu = nn.Linear(flatten_dim, latent_dim)
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        self.unflatten = Unflatten(hidden_shape)
+        print('init VAE Decoder-----------------------------')
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
+            flatten_dim=flatten_dim,
+            hidden_shape=hidden_shape,
             n_layers=n_decoder_layers,
             d_model=d_model,
             n_heads=n_heads,
         )
+        print('init VAE Upsampling-----------------------------')
         self.upsampling = VAEUpsampling(downsize_factor, d_model)
         
         self.N = torch.distributions.Normal(0, 1)
@@ -49,7 +52,6 @@ class VAESpeechEnhance(nn.Module):
         
         self.kld = -0.5 * torch.sum(1 - sigma**2 - mu**2 + log_sigma)
 
-        x_hat = self.unflatten(z)
         x_hat = self.decoder(z)
         x_hat = self.upsampling(x_hat)
         
@@ -59,54 +61,24 @@ class VAESpeechEnhance(nn.Module):
     
     def compute_loss(self, x_clean, x_hat):
         return self.loss_fn(x_clean, x_hat) + self.kld
-
-
-# class VAEEncoder(nn.Module):
-#     def __init__(
-#         self,
-#         latent_dim=512,
-#         n_layers=4,
-#         d_model=80,
-#         n_heads=8,
-#         self_attention_model='abs_pos',
-#         dropout=0.1,
-#         ):
-#         super().__init__()
-        
-#         self.layers = nn.ModuleList()
-#         for _ in range(n_layers):
-#             self.layers.append(
-#                 VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
-#             )
-#         self.mu = nn.Linear(d_model, latent_dim)
-#         self.log_sigma = nn.Linear(d_model, latent_dim)
-#         self.N = torch.distributions.Normal(0, 1)
-#         self.kl = None
-        
-#     def forward(self, x):
-#         for layer in self.layers:
-#             x = layer(x)
-#         mu = self.mu(x)
-#         log_sigma = self.log_sigma(x)
-#         sigma = torch.exp(0.5 * log_sigma)
-#         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
-#         self.kl = -0.5 * torch.sum(1 - sigma**2 - mu**2 + log_sigma)
-#         return z
+    
   
 class VAEDecoder(nn.Module):
     def __init__(
         self,
         latent_dim=512,
-        n_layers=4,
-        d_model=80,
+        flatten_dim=None,
+        hidden_shape=(0, 0),
+        n_layers=8,
+        d_model=512,
         n_heads=8,
         self_attention_model='abs_pos',
         dropout=0.1,
         ):
         super().__init__()
         
-        self.proj = nn.Linear(latent_dim, d_model)
-        nn.init.xavier_uniform_(self.proj.weight, 0.04)
+        self.proj = nn.Linear(latent_dim, flatten_dim)
+        self.unflatten = Unflatten(hidden_shape)
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(
@@ -115,6 +87,7 @@ class VAEDecoder(nn.Module):
         
     def forward(self, x):
         x_hat = self.proj(x)
+        x_hat = self.unflatten(x_hat)
         for layer in self.layers:
             x_hat = layer(x_hat)
         return x_hat

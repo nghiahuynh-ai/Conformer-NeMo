@@ -23,8 +23,6 @@ class VAESpeechEnhance(nn.Module):
         in_channels = 1
         out_channels = d_model
         n_conv_layers = int(math.log(downsize_factor, 2))
-        print(downsize_factor)
-        print(n_conv_layers)
         for ith, _ in enumerate(range(n_conv_layers)):
             if ith == n_conv_layers - 1:
                 out_channels = 1
@@ -112,8 +110,11 @@ class VAEDecoder(nn.Module):
             )
         
     def forward(self, x):
+        print(x.shape)
         x_hat = self.proj(x)
+        print(x.shape)
         x_hat = self.unflatten(x_hat)
+        print(x.shape)
         for layer in self.layers:
             x_hat = layer(x_hat)
         return x_hat

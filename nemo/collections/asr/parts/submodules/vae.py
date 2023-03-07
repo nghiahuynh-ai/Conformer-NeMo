@@ -58,17 +58,16 @@ class VAESpeechEnhance(nn.Module):
         self.kld = None
     
     def forward(self, x):
-        print(x.shape)
+
         x = x.transpose(2, 1)
-        print(x.shape)
+
         x = x.unsqueeze(1)
         for layer in self.conv_in:
             x = layer(x)
         x = x.squeeze(1)
             
-        print(x.shape)
         x = self.flatten(x)
-        print(x.shape)
+
         mu = self.mu(x)
         log_sigma = self.log_sigma(x)
         sigma = torch.exp(0.5 * log_sigma)
@@ -100,7 +99,7 @@ class VAEDecoder(nn.Module):
         dropout=0.1,
         ):
         super().__init__()
-        
+        print(flatten_dim)
         self.proj = nn.Linear(latent_dim, flatten_dim)
         self.unflatten = Unflatten(hidden_shape)
         self.layers = nn.ModuleList()

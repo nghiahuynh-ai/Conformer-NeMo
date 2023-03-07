@@ -22,6 +22,13 @@ class NoiseMixer:
             self.white_noise_mean = white_noise_mean
             self.white_noise_std = white_noise_std
     
+    def __call__(self, signal):
+        method = np.random.choice(self.add_noise_methods, size=1)
+        if method == 'add_real_noise':
+            return self._add_real_noise(signal)
+        else:
+            return self._add_white_noise(signal)
+    
     def _add_real_noise(self, signal):
         signal_length = signal.size(1)
   
@@ -45,10 +52,3 @@ class NoiseMixer:
         noise = np.random.normal(self.white_noise_mean, std, size=signal.shape)
         noise = torch.from_numpy(noise).type(torch.FloatTensor)
         return signal + noise.to(signal.device)
-    
-    def forward(self, signal):
-        method = np.random.choice(self.add_noise_methods, size=1)
-        if method == 'add_real_noise':
-            return self._add_real_noise(signal)
-        else:
-            return self._add_white_noise(signal)

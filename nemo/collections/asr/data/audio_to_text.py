@@ -277,7 +277,7 @@ class _AudioTextDataset(Dataset):
             manifest_filepath = manifest_filepath.split(",")
         
         win_len = int(win_len)
-        hop_len = int(hop_len) * sample_rate
+        hop_len = int(float(hop_len) * sample_rate)
         downsize_factor = int(downsize_factor)
         n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
         max_length = (n_features - 1) * hop_len + win_len

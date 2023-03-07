@@ -51,7 +51,7 @@ class VAESpeechEnhance(nn.Module):
         # )
         
         self.proj = nn.Linear(latent_dim, flatten_dim)
-        self.unflatten = Unflatten(hidden_shape / downsize_factor**2)
+        self.unflatten = Unflatten((hidden_shape[0] / downsize_factor, hidden_shape[1] / downsize_factor))
         
         self.upsampling = VAEUpsampling(downsize_factor * subsampling_factor, d_model)
         

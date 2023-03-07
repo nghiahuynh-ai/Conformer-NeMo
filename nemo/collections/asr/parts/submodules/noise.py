@@ -46,7 +46,7 @@ class NoiseMixer:
         noise = torch.from_numpy(noise).type(torch.FloatTensor)
         return signal + noise.to(signal.device)
     
-    def forwar(self, signal):
+    def forward(self, signal):
         method = np.random.choice(self.add_noise_methods, size=1)
         if method == 'add_real_noise':
             return self._add_real_noise(signal)

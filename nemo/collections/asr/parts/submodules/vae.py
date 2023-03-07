@@ -62,7 +62,7 @@ class VAESpeechEnhance(nn.Module):
     
     def forward(self, x):
         
-        x = x.tranpose(2, 1)
+        x = x.transpose(2, 1)
         
         x = self.flatten(x)
         mu = self.mu(x)

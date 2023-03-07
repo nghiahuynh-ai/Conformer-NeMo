@@ -715,6 +715,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
+        print(signal.shape)
+        
         perturbed_signal = self.noise_mixer(signal)
         
         # forward() only performs encoder forward

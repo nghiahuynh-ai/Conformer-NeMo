@@ -23,6 +23,7 @@ class VAESpeechEnhance(nn.Module):
         in_channels = 1
         out_channels = d_model
         n_conv_layers = int(math.log(downsize_factor, 2))
+        print(downsize_factor)
         print(n_conv_layers)
         for ith, _ in enumerate(range(n_conv_layers)):
             if ith == n_conv_layers - 1:

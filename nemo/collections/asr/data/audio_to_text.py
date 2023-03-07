@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _speech_collate_fn(batch, pad_id):
+def _speech_collate_fn(batch, pad_id, max_length):
     """collate batch of audio sig, audio len, tokens, tokens len
     Args:
         batch (Optional[FloatTensor], Optional[LongTensor], LongTensor,
@@ -63,8 +63,10 @@ def _speech_collate_fn(batch, pad_id):
         raise ValueError("Expects 4 or 5 tensors in the batch!")
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
+    # if has_audio:
+    #     max_audio_len = max(audio_lengths).item()
     if has_audio:
-        max_audio_len = max(audio_lengths).item()
+        max_audio_len = max_length
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -261,6 +263,7 @@ class _AudioTextDataset(Dataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
+        max_length: Optional[int] = None,
         max_utts: int = 0,
         trim: bool = False,
         bos_id: Optional[int] = None,
@@ -270,7 +273,12 @@ class _AudioTextDataset(Dataset):
     ):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
-
+        
+        # n_features = int(math.ceil((max_duration * sample_rate - win_len) / (hop_len * sample_rate) + 1))
+        # max_length = (n_features - 1) * hop_len + win_len
+        # self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+        self.max_length = max_length
+        
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,
             parser=parser,
@@ -311,9 +319,9 @@ class _AudioTextDataset(Dataset):
 
     def __len__(self):
         return len(self.manifest_processor.collection)
-
+        
     def _collate_fn(self, batch):
-        return _speech_collate_fn(batch, pad_id=self.manifest_processor.pad_id)
+        return _speech_collate_fn(batch, pad_id=self.manifest_processor.pad_id, max_length=self.max_length)
 
 
 class AudioToCharDataset(_AudioTextDataset):
@@ -368,6 +376,7 @@ class AudioToCharDataset(_AudioTextDataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[float] = None,
         min_duration: Optional[float] = None,
+        max_length: Optional[int] = None,
         max_utts: int = 0,
         blank_index: int = -1,
         unk_index: int = -1,
@@ -393,6 +402,7 @@ class AudioToCharDataset(_AudioTextDataset):
             augmentor=augmentor,
             max_duration=max_duration,
             min_duration=min_duration,
+            max_length=max_length,
             max_utts=max_utts,
             trim=trim,
             bos_id=bos_id,

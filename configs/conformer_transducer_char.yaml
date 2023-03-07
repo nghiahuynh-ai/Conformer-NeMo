@@ -51,18 +51,13 @@ model:
   speech_enhance:
     apply: true
     latent_dim: 512
-    downsize_factor: 16
-    feat_in: ${model.preprocessor.features}
-    d_model: 80
-    n_heads: 8
-    self_attention_model: abs_pos
-    dropout: 0.1
+    downsize_factor: ${model.encoder.subsampling_factor}
     real_noise:
-      filepath: null # .npy file contains Array(Array(),... , Array())
+      filepath: null 
       snr: [0, 5] # signal to noise ratio bounds
     white_noise:
       mean: 0.0 
-      std: [0.0, 0.05]
+      std: [0.0, 0.05] # std bounds
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
@@ -79,6 +74,9 @@ model:
     trim_silence: false
     max_duration: 16.7 # it is set for LibriSpeech, you may need to update it for your dataset
     min_duration: 0.1
+    win_len: ${model.preprocessor.n_fft},
+    hop_len: ${model.preprocessor.window_stride},
+    downsize_factor: ${model.encoder.subsampling_factor},
     # tarred datasets
     is_tarred: false
     tarred_audio_filepaths: null
@@ -132,7 +130,7 @@ model:
 
     # Sub-sampling params
     subsampling: striding # vggnet or striding
-    subsampling_factor: 4 # must be power of 2
+    subsampling_factor: 16 # must be power of 2
     subsampling_conv_channels: -1 # set to -1 to make it equal to the d_model
 
     # Feed forward module's params

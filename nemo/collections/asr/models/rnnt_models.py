@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 import numpy as np
 import copy
 import json
@@ -41,6 +42,7 @@ from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, L
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
 from nemo.collections.asr.parts.submodules.vae import VAESpeechEnhance
+from nemo.collections.asr.parts.submodules.noise import NoiseMixer
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -84,21 +86,30 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.joint = EncDecRNNTModel.from_config_dict(self.cfg.joint)
         
         if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
-            self.speech_enhance = VAESpeechEnhance(
-                latent_dim=self._cfg.speech_enhance.latent_dim,
-                n_encoder_layers=self._cfg.speech_enhance.n_encoder_layers,
-                n_decoder_layers=self._cfg.speech_enhance.n_decoder_layers,
-                feat_in=self._cfg.speech_enhance.feat_in,
-                d_model=self._cfg.speech_enhance.d_model,
-                n_heads=self._cfg.speech_enhance.n_heads,
-                self_attention_model=self._cfg.speech_enhance.self_attention_model,
-                dropout=self._cfg.speech_enhance.dropout,
+            max_duration = self._cfg.train_ds.max_duration
+            sample_rate = self._cfg.train_ds.sample_rate
+            win_len = self._cfg.preprocessor.n_fft
+            hop_len = self._cfg.preprocessor.window_stride * sample_rate
+            downsize_factor = self._cfg.speech_enhance.downsize_factor
+            
+            n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
+            max_length = (n_features - 1) * hop_len + win_len
+            self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+            self.max_features = int(math.ceil((self.max_length * sample_rate - win_len) / hop_len + 1))
+            
+            self.noise_mixer = NoiseMixer(
                 real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
                 real_noise_snr=self._cfg.speech_enhance.real_noise.snr,
                 white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
                 white_noise_std=self._cfg.speech_enhance.white_noise.std,
             )
+            
+            self.speech_enhance = VAESpeechEnhance(
+                latent_dim=self._cfg.speech_enhance.latent_dim,
+                
+            )
         else:
+            self.noise_mixer = None
             self.speech_enhance = None
 
         # Setup RNNT Loss
@@ -510,8 +521,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if 'manifest_filepath' in config and config['manifest_filepath'] is None:
                 logging.warning(f"Could not load dataset as `manifest_filepath` was None. Provided config : {config}")
                 return None
-
-            dataset = audio_to_text_dataset.get_char_dataset(config=config, augmentor=augmentor)
+            
+            dataset = audio_to_text_dataset.get_char_dataset(config=config, max_length=self.max_length, augmentor=augmentor)
 
         if hasattr(dataset, 'collate_fn'):
             collate_fn = dataset.collate_fn
@@ -643,7 +654,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         input_signal_length=None, 
         processed_signal=None, 
         processed_signal_length=None,
-        
+        perturbed_signal=None,
     ):
         """
         Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
@@ -683,8 +694,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if not has_processed_signal:
             processed_signal, processed_signal_length = self.preprocessor(
-                    input_signal=input_signal, length=input_signal_length,
-                )
+                input_signal=input_signal, length=input_signal_length,
+            )
+            perturbed_signal, _ = self.preprocessor(
+                input_signal=perturbed_signal, length=input_signal_length,
+            )
                 
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -696,12 +710,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-    
+        
+        perturbed_signal = self.noise_mixer(signal)
+        
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len, perturbed_signal=perturbed_signal)
         del signal
             
         # During training, loss must be computed, so decoder forward is necessary

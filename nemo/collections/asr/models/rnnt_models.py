@@ -86,11 +86,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.joint = EncDecRNNTModel.from_config_dict(self.cfg.joint)
         
         if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
-            max_duration = self._cfg.train_ds.max_duration
-            sample_rate = self._cfg.train_ds.sample_rate
-            win_len = self._cfg.preprocessor.n_fft
-            hop_len = self._cfg.preprocessor.window_stride * sample_rate
-            downsize_factor = self._cfg.speech_enhance.downsize_factor
+            max_duration = float(self._cfg.train_ds.max_duration)
+            sample_rate = int(self._cfg.train_ds.sample_rate)
+            win_len = int(self._cfg.preprocessor.n_fft)
+            hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
+            downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
             
             n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
             max_length = (n_features - 1) * hop_len + win_len

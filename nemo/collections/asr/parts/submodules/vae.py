@@ -38,6 +38,7 @@ class VAESpeechEnhance(nn.Module):
         
         flatten_dim = int((hidden_shape[0] * hidden_shape[1]) / downsize_factor**2)
         self.flatten = nn.Flatten()
+        print(hidden_shape)
         print(flatten_dim)
         print('init mu ---------------------------------------')
         self.mu = nn.Linear(flatten_dim, latent_dim)

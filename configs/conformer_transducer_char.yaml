@@ -51,7 +51,7 @@ model:
   speech_enhance:
     apply: true
     latent_dim: 512
-    downsize_factor: 4
+    downsize_factor: 8
     n_decoder_layers: 8
     d_model: 512
     n_heads: 8
@@ -79,7 +79,7 @@ model:
     min_duration: 0.1
     win_len: ${model.preprocessor.n_fft}
     hop_len: ${model.preprocessor.window_stride}
-    downsize_factor: 32
+    downsize_factor: 64
     # tarred datasets
     is_tarred: false
     tarred_audio_filepaths: null

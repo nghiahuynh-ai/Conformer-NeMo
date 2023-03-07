@@ -59,7 +59,7 @@ class VAESpeechEnhance(nn.Module):
     def forward(self, x):
         print(x.shape)
         x = x.transpose(2, 1)
-        
+        print(x.shape)
         x = x.unsqueeze(1)
         for layer in self.conv_in:
             x = layer(x)

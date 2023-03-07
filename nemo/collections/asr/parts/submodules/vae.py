@@ -102,7 +102,7 @@ class VAEDecoder(nn.Module):
         
         self.proj_in = nn.Linear(latent_dim, flatten_dim)
         self.unflatten = Unflatten(hidden_shape)
-        self.proj_att = nn.Linear(hidden_shape[2], d_model)
+        self.proj_att = nn.Linear(hidden_shape[1], d_model)
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(

@@ -23,7 +23,7 @@ class VAESpeechEnhance(nn.Module):
         self.flatten = nn.Flatten()
         self.mu = nn.Linear(flatten_dim, latent_dim)
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        print('init VAE Decoder-----------------------------')
+        
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
             flatten_dim=flatten_dim,
@@ -32,7 +32,7 @@ class VAESpeechEnhance(nn.Module):
             d_model=d_model,
             n_heads=n_heads,
         )
-        print('init VAE Upsampling-----------------------------')
+        
         self.upsampling = VAEUpsampling(downsize_factor, d_model)
         
         self.N = torch.distributions.Normal(0, 1)

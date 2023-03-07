@@ -96,7 +96,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             max_length = (n_features - 1) * hop_len + win_len
             max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
             max_features = int(math.ceil((max_length * sample_rate - win_len) / hop_len + 1))
-            
+            raise 
             self.noise_mixer = NoiseMixer(
                 real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
                 real_noise_snr=self._cfg.speech_enhance.real_noise.snr,

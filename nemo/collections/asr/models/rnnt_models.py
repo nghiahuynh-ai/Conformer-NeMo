@@ -703,6 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+        print(processed_signal.shape)
                 
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

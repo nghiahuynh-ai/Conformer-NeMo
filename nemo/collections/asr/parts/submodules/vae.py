@@ -60,8 +60,10 @@ class VAESpeechEnhance(nn.Module):
         print(x.shape)
         x = x.transpose(2, 1)
         
+        x = x.unsqueeze(1)
         for layer in self.conv_in:
             x = layer(x)
+        x = x.squeeze(1)
             
         print(x.shape)
         x = self.flatten(x)
@@ -138,8 +140,10 @@ class VAEUpsampling(nn.Module):
             in_channels = out_channels
             
     def forward(self, x):
+        x = x.unsqueeze(1)
         for layer in self.layers:
             x = layer(x)
+        x = x.squeeze(1)
         return x
 
 class VAEMHSALayer(nn.Module):

@@ -104,7 +104,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
                 white_noise_std=self._cfg.speech_enhance.white_noise.std,
             )
-            print('end init noise_mixer--------------------------------------------------')
+            print('init speech_enhance--------------------------------------------------')
             self.speech_enhance = VAESpeechEnhance(
                 latent_dim=self._cfg.speech_enhance.latent_dim,
                 downsize_factor=self._cfg.speech_enhance.downsize_factor,
@@ -113,6 +113,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,
             )
+            print('end init speech_enhance--------------------------------------------------')
         else:
             self.noise_mixer = None
             self.speech_enhance = None

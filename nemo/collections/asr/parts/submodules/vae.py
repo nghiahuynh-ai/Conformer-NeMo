@@ -60,7 +60,9 @@ class VAESpeechEnhance(nn.Module):
         print(x.shape)
         x = x.transpose(2, 1)
         
-        x = self.conv_in(x)
+        for layer in self.conv_in:
+            x = layer(x)
+            
         print(x.shape)
         x = self.flatten(x)
         print(x.shape)

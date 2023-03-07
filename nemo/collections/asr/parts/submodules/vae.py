@@ -78,7 +78,9 @@ class VAESpeechEnhance(nn.Module):
         
         self.kld = -0.5 * torch.sum(1 - sigma**2 - mu**2 + log_sigma)
 
-        x_hat = self.decoder(z)
+        # x_hat = self.decoder(z)
+        x_hat = self.proj(z)
+        x_hat = self.unflatten(x_hat)
         x_hat = self.upsampling(x_hat)
         
         x_hat = x_hat.transpose(2, 1)

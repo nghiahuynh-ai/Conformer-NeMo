@@ -90,25 +90,28 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             sample_rate = int(self._cfg.train_ds.sample_rate)
             win_len = int(self._cfg.preprocessor.n_fft)
             hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
-            downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
+            vae_downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
+            subsampling_factor = int(self._cfg.encoder.subsampling_factor)
+            total_downsize_factor = vae_downsize_factor * subsampling_factor
             
             n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
             max_length = (n_features - 1) * hop_len + win_len
-            max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+            max_length = int(math.ceil(max_length / total_downsize_factor) * total_downsize_factor)
             max_features = int(math.ceil((max_length * sample_rate - win_len) / hop_len + 1))
 
-            # self.noise_mixer = NoiseMixer(
-            #     real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
-            #     real_noise_snr=self._cfg.speech_enhance.real_noise.snr,
-            #     white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
-            #     white_noise_std=self._cfg.speech_enhance.white_noise.std,
-            # )
+            self.noise_mixer = NoiseMixer(
+                real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
+                real_noise_snr=self._cfg.speech_enhance.real_noise.snr,
+                white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
+                white_noise_std=self._cfg.speech_enhance.white_noise.std,
+            )
             
             self.speech_enhance = VAESpeechEnhance(
                 latent_dim=self._cfg.speech_enhance.latent_dim,
-                downsize_factor=self._cfg.speech_enhance.downsize_factor,
+                downsize_factor=vae_downsize_factor,
+                subsampling_factor=subsampling_factor,
                 n_decoder_layers=self._cfg.speech_enhance.n_decoder_layers,
-                hidden_shape=(int(max_features / downsize_factor), self._cfg.encoder.d_model),
+                hidden_shape=(int(max_features/subsampling_factor), int(self._cfg.encoder.d_model)),
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,
             )

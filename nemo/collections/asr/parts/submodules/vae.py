@@ -9,7 +9,8 @@ class VAESpeechEnhance(nn.Module):
     def __init__(
         self,
         latent_dim=512,
-        downsize_factor=None,
+        downsize_factor=4,
+        subsampling_factor=8,
         n_decoder_layers=8,                                                       
         hidden_shape=(0, 0),
         d_model=512,
@@ -17,25 +18,38 @@ class VAESpeechEnhance(nn.Module):
         ):
         
         super().__init__()
-        print('init-----------------------------------------')
-        flatten_dim = hidden_shape[0] * hidden_shape[1]
-        print('init flatten -----------------------------------------')
+        
+        self.conv_in = nn.ModuleList()
+        in_channels=1,
+        out_channels=d_model,
+        for ith, _ in enumerate(range(math.log(downsize_factor, 2))):
+            if ith == downsize_factor - 1:
+                out_channels = 1
+            self.conv_in.append(
+                torch.nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=out_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                )
+            )
+            in_channels = out_channels
+        
+        flatten_dim = (hidden_shape[0] * hidden_shape[1]) / downsize_factor**2
         self.flatten = nn.Flatten()
-        print('init mu -----------------------------------------')
         self.mu = nn.Linear(flatten_dim, latent_dim)
-        print('init logsigma -----------------------------------------')
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        print('init decoder -----------------------------------------')
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
             flatten_dim=flatten_dim,
-            hidden_shape=hidden_shape,
+            hidden_shape=(hidden_shape/downsize_factor, hidden_shape[1]/downsize_factor),
             n_layers=n_decoder_layers,
             d_model=d_model,
             n_heads=n_heads,
         )
         
-        self.upsampling = VAEUpsampling(downsize_factor, d_model)
+        self.upsampling = VAEUpsampling(downsize_factor * subsampling_factor, d_model)
         
         self.N = torch.distributions.Normal(0, 1)
         

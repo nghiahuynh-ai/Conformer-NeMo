@@ -69,7 +69,7 @@ def inject_dataloader_value_from_model_config(model_cfg: dict, dataloader_cfg: D
             dataloader_cfg[key] = model_cfg[key]
 
 
-def get_char_dataset(config: dict, max_length: int, augmentor: Optional['AudioAugmentor'] = None) -> audio_to_text.AudioToCharDataset:
+def get_char_dataset(config: dict, augmentor: Optional['AudioAugmentor'] = None) -> audio_to_text.AudioToCharDataset:
     """
     Instantiates a Character Encoding based AudioToCharDataset.
 
@@ -91,7 +91,9 @@ def get_char_dataset(config: dict, max_length: int, augmentor: Optional['AudioAu
         augmentor=augmentor,
         max_duration=config.get('max_duration', None),
         min_duration=config.get('min_duration', None),
-        max_length=max_length,
+        win_len=config.get('win_len', None),
+        hop_len=config.get('hop_len', None),
+        downsize_factor=config.get('downsize_factor', None),
         max_utts=config.get('max_utts', 0),
         blank_index=config.get('blank_index', -1),
         unk_index=config.get('unk_index', -1),

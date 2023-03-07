@@ -94,8 +94,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
             max_length = (n_features - 1) * hop_len + win_len
-            self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
-            self.max_features = int(math.ceil((self.max_length * sample_rate - win_len) / hop_len + 1))
+            max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+            max_features = int(math.ceil((self.max_length * sample_rate - win_len) / hop_len + 1))
             
             self.noise_mixer = NoiseMixer(
                 real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
@@ -108,7 +108,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 latent_dim=self._cfg.speech_enhance.latent_dim,
                 downsize_factor=self._cfg.speech_enhance.downsize_factor,
                 n_decoder_layers=self._cfg.speech_enhance.n_decoder_layer,
-                hidden_shape=(int(self.max_features / downsize_factor), self._cfg.encoder.d_model),
+                hidden_shape=(int(max_features / downsize_factor), self._cfg.encoder.d_model),
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,
             )
@@ -526,7 +526,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 logging.warning(f"Could not load dataset as `manifest_filepath` was None. Provided config : {config}")
                 return None
             
-            dataset = audio_to_text_dataset.get_char_dataset(config=config, max_length=self.max_length, augmentor=augmentor)
+            dataset = audio_to_text_dataset.get_char_dataset(config=config, augmentor=augmentor)
 
         if hasattr(dataset, 'collate_fn'):
             collate_fn = dataset.collate_fn

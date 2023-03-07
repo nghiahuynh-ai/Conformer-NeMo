@@ -263,7 +263,9 @@ class _AudioTextDataset(Dataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
-        max_length: Optional[int] = None,
+        win_len: Optional[float] = None,
+        hop_len: Optional[float] = None,
+        downsize_factor: Optional[float] = None,
         max_utts: int = 0,
         trim: bool = False,
         bos_id: Optional[int] = None,
@@ -274,10 +276,10 @@ class _AudioTextDataset(Dataset):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
         
-        # n_features = int(math.ceil((max_duration * sample_rate - win_len) / (hop_len * sample_rate) + 1))
-        # max_length = (n_features - 1) * hop_len + win_len
-        # self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
-        self.max_length = max_length
+        hop_len = hop_len * sample_rate
+        n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
+        max_length = (n_features - 1) * hop_len + win_len
+        self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
         
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,
@@ -376,7 +378,9 @@ class AudioToCharDataset(_AudioTextDataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[float] = None,
         min_duration: Optional[float] = None,
-        max_length: Optional[int] = None,
+        win_len: Optional[float] = None,
+        hop_len: Optional[float] = None,
+        downsize_factor: Optional[float] = None,
         max_utts: int = 0,
         blank_index: int = -1,
         unk_index: int = -1,
@@ -402,7 +406,9 @@ class AudioToCharDataset(_AudioTextDataset):
             augmentor=augmentor,
             max_duration=max_duration,
             min_duration=min_duration,
-            max_length=max_length,
+            win_len=win_len,
+            hop_len=hop_len,
+            downsize_factor=downsize_factor,
             max_utts=max_utts,
             trim=trim,
             bos_id=bos_id,

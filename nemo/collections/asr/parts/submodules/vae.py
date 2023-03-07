@@ -99,24 +99,28 @@ class VAEDecoder(nn.Module):
         dropout=0.1,
         ):
         super().__init__()
-        print(flatten_dim)
-        self.proj = nn.Linear(latent_dim, flatten_dim)
+        
+        self.proj_in = nn.Linear(latent_dim, flatten_dim)
         self.unflatten = Unflatten(hidden_shape)
+        self.proj_att = nn.Linear(flatten_dim, d_model)
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(
                 VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
             )
+        self.proj_out = nn.Linear(d_model, flatten_dim)
         
     def forward(self, x):
         print(x.shape)
-        x_hat = self.proj(x)
-        print(x.shape)
+        x_hat = self.proj_in(x)
+        print(x_hat.shape)
         x_hat = self.unflatten(x_hat)
-        print(x.shape)
+        print(x_hat.shape)
+        x_hat = self.proj_att(x_hat)
         for layer in self.layers:
             x_hat = layer(x_hat)
-        return x_hat
+        
+        return self.proj_out(x_hat)
     
     
 class VAEUpsampling(nn.Module):

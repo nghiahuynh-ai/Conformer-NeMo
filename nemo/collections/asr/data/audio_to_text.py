@@ -276,6 +276,10 @@ class _AudioTextDataset(Dataset):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
         
+        print(win_len)
+        print(hop_len)
+        print(downsize_factor)
+        
         win_len = int(win_len)
         hop_len = int(float(hop_len) * sample_rate)
         downsize_factor = int(downsize_factor)

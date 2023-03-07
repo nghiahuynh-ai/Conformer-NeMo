@@ -281,7 +281,7 @@ class _AudioTextDataset(Dataset):
             
             n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
             max_features = int(math.ceil(n_features / downsize_factor) * downsize_factor)
-            self.max_length = max_features * (hop_len - 1)
+            self.max_length = (max_features - 1) * hop_len
 
         else:
             self.max_length = None

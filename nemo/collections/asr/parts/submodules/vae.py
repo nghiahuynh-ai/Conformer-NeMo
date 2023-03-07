@@ -43,7 +43,7 @@ class VAESpeechEnhance(nn.Module):
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
             flatten_dim=flatten_dim,
-            hidden_shape=(int(hidden_shape/downsize_factor), int(hidden_shape[1]/downsize_factor)),
+            hidden_shape=(int(hidden_shape[0]/downsize_factor), int(hidden_shape[1]/downsize_factor)),
             n_layers=n_decoder_layers,
             d_model=d_model,
             n_heads=n_heads,

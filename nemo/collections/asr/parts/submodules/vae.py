@@ -10,20 +10,22 @@ class VAESpeechEnhance(nn.Module):
         self,
         latent_dim=512,
         downsize_factor=None,
-        n_decoder_layers = 8,                                                       
+        n_decoder_layers=8,                                                       
         hidden_shape=(0, 0),
         d_model=512,
         n_heads=8,
         ):
         
         super().__init__()
-        
+        print('init-----------------------------------------')
         flatten_dim = hidden_shape[0] * hidden_shape[1]
-        
+        print('init flatten -----------------------------------------')
         self.flatten = nn.Flatten()
+        print('init mu -----------------------------------------')
         self.mu = nn.Linear(flatten_dim, latent_dim)
+        print('init logsigma -----------------------------------------')
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        
+        print('init decoder -----------------------------------------')
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
             flatten_dim=flatten_dim,

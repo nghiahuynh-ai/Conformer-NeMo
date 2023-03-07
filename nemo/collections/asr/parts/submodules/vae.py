@@ -38,11 +38,7 @@ class VAESpeechEnhance(nn.Module):
         
         flatten_dim = int((hidden_shape[0] * hidden_shape[1]) / downsize_factor**2)
         self.flatten = nn.Flatten()
-        print(hidden_shape)
-        print(flatten_dim)
-        print('init mu ---------------------------------------')
         self.mu = nn.Linear(flatten_dim, latent_dim)
-        print('init sigma ---------------------------------------')
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
         self.decoder = VAEDecoder(
             latent_dim=latent_dim,
@@ -61,10 +57,13 @@ class VAESpeechEnhance(nn.Module):
         self.kld = None
     
     def forward(self, x):
-        
+        print(x.shape)
         x = x.transpose(2, 1)
         
+        x = self.conv_in(x)
+        print(x.shape)
         x = self.flatten(x)
+        print(x.shape)
         mu = self.mu(x)
         log_sigma = self.log_sigma(x)
         sigma = torch.exp(0.5 * log_sigma)

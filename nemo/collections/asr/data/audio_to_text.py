@@ -264,6 +264,7 @@ class _AudioTextDataset(Dataset):
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
         hop_len: Optional[float] = None,
+        win_len: Optional[int] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         trim: bool = False,

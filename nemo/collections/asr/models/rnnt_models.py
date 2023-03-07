@@ -700,7 +700,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-        print(processed_signal.shape)
                 
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -712,8 +711,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-        
-        print(signal.shape)
         
         perturbed_signal = self.noise_mixer(signal)
         

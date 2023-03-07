@@ -263,7 +263,6 @@ class _AudioTextDataset(Dataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
-        win_len: Optional[int] = None,
         hop_len: Optional[float] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
@@ -276,18 +275,14 @@ class _AudioTextDataset(Dataset):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
         
-        if win_len is not None and hop_len is not None and downsize_factor is not None:
-            win_len = int(win_len)
+        if hop_len is not None and downsize_factor is not None:
             hop_len = int(float(hop_len) * sample_rate)
             downsize_factor = int(downsize_factor)
             
-            n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
+            n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
             max_features = int(math.ceil(n_features / downsize_factor) * downsize_factor)
-            self.max_length = (max_features - 1) * hop_len + win_len
-            
-            # n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
-            # max_length = (n_features - 1) * hop_len + win_len
-            # self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+            self.max_length = max_features * hop_len
+
         else:
             self.max_length = None
         
@@ -388,7 +383,6 @@ class AudioToCharDataset(_AudioTextDataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[float] = None,
         min_duration: Optional[float] = None,
-        win_len: Optional[int] = None,
         hop_len: Optional[float] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
@@ -416,7 +410,6 @@ class AudioToCharDataset(_AudioTextDataset):
             augmentor=augmentor,
             max_duration=max_duration,
             min_duration=min_duration,
-            win_len=win_len,
             hop_len=hop_len,
             downsize_factor=downsize_factor,
             max_utts=max_utts,

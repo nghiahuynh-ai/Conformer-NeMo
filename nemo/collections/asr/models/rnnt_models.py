@@ -88,17 +88,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
             max_duration = float(self._cfg.train_ds.max_duration)
             sample_rate = int(self._cfg.train_ds.sample_rate)
-            win_len = int(self._cfg.preprocessor.n_fft)
             hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
             vae_downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
             subsampling_factor = int(self._cfg.encoder.subsampling_factor)
             total_downsize_factor = vae_downsize_factor * subsampling_factor
             
-            n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
+            n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
             max_features = int(math.ceil(n_features / total_downsize_factor) * total_downsize_factor)
-            # max_length = (max_features - 1) * hop_len + win_len
-            # max_length = int(math.ceil(max_length / total_downsize_factor) * total_downsize_factor)
-            # max_features = int(math.ceil((max_length - win_len) / hop_len + 1))
 
             self.noise_mixer = NoiseMixer(
                 real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,

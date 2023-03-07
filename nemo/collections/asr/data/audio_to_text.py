@@ -63,10 +63,10 @@ def _speech_collate_fn(batch, pad_id, max_length):
         raise ValueError("Expects 4 or 5 tensors in the batch!")
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
-    # if has_audio:
-    #     max_audio_len = max(audio_lengths).item()
-    if has_audio:
+    if has_audio and max_length is not None:
         max_audio_len = max_length
+    if has_audio and max_length is None:
+        max_audio_len = max(audio_lengths).item()
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -276,16 +276,15 @@ class _AudioTextDataset(Dataset):
         if type(manifest_filepath) == str:
             manifest_filepath = manifest_filepath.split(",")
         
-        print(win_len)
-        print(hop_len)
-        print(downsize_factor)
-        
-        win_len = int(win_len)
-        hop_len = int(float(hop_len) * sample_rate)
-        downsize_factor = int(downsize_factor)
-        n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
-        max_length = (n_features - 1) * hop_len + win_len
-        self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+        if win_len is not None and hop_len is not None and downsize_factor is not None:
+            win_len = int(win_len)
+            hop_len = int(float(hop_len) * sample_rate)
+            downsize_factor = int(downsize_factor)
+            n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
+            max_length = (n_features - 1) * hop_len + win_len
+            self.max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)
+        else:
+            self.max_length = None
         
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,

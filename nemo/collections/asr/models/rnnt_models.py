@@ -106,7 +106,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             self.speech_enhance = VAESpeechEnhance(
                 latent_dim=self._cfg.speech_enhance.latent_dim,
-                
+                downsize_factor=self._cfg.speech_enhance.downsize_factor,
+                n_decoder_layers=self._cfg.speech_enhance.n_decoder_layer,
+                hidden_shape=(int(self.max_features / downsize_factor), self._cfg.encoder.d_model),
+                d_model=self._cfg.speech_enhance.d_model,
+                n_heads=self._cfg.speech_enhance.n_heads,
             )
         else:
             self.noise_mixer = None
@@ -654,7 +658,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         input_signal_length=None, 
         processed_signal=None, 
         processed_signal_length=None,
-        perturbed_signal=None,
     ):
         """
         Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
@@ -696,9 +699,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-            perturbed_signal, _ = self.preprocessor(
-                input_signal=perturbed_signal, length=input_signal_length,
-            )
                 
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -715,10 +715,17 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len, perturbed_signal=perturbed_signal)
+            encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
+        del perturbed_signal
+        
+        spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
         del signal
+        
+        spec_hat = self.speech_enhance(encoded)
+        loss_vae = self.speech_enhance.compute_loss(spec_clean, spec_hat)
+        del spec_clean, spec_hat
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -740,7 +747,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -768,7 +775,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': self.loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -783,7 +790,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + self.loss_vae
+            loss_value = loss_value + loss_vae
 
         return {'loss': loss_value}
 

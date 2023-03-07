@@ -52,6 +52,9 @@ model:
     apply: true
     latent_dim: 512
     downsize_factor: ${model.encoder.subsampling_factor}
+    n_decoder_layers: 8
+    d_model: 512
+    n_heads: 8
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds

@@ -102,7 +102,7 @@ class VAEDecoder(nn.Module):
         
         self.proj_in = nn.Linear(latent_dim, flatten_dim)
         self.unflatten = Unflatten(hidden_shape)
-        self.proj_att = nn.Linear(flatten_dim, d_model)
+        self.proj_att = nn.Linear(hidden_shape[2], d_model)
         self.layers = nn.ModuleList()
         for _ in range(n_layers):
             self.layers.append(
@@ -111,11 +111,9 @@ class VAEDecoder(nn.Module):
         self.proj_out = nn.Linear(d_model, flatten_dim)
         
     def forward(self, x):
-        print(x.shape)
+        
         x_hat = self.proj_in(x)
-        print(x_hat.shape)
         x_hat = self.unflatten(x_hat)
-        print(x_hat.shape)
         x_hat = self.proj_att(x_hat)
         for layer in self.layers:
             x_hat = layer(x_hat)

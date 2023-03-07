@@ -92,6 +92,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
             downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
             
+            print(max_duration)
+            print(sample_rate)
+            print(win_len)
+            print(hop_len)
+            print(downsize_factor)
+            
             n_features = int(math.ceil((max_duration * sample_rate - win_len) / hop_len + 1))
             max_length = (n_features - 1) * hop_len + win_len
             max_length = int(math.ceil(max_length / downsize_factor) * downsize_factor)

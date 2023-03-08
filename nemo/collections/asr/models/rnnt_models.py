@@ -699,14 +699,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-            print(processed_signal.shape)
-            print(processed_signal_length)
+
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        return encoded, encoded_len
+        return encoded, encoded_len, processed_signal_length
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
@@ -716,17 +715,19 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
+            encoded, encoded_len, spec_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
+            encoded, encoded_len, spec_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         del perturbed_signal
         
         spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
         del signal
         
+        spec_mask = self.make_spec_mask(spec_clean.shape, spec_len)
+        
         spec_hat = self.speech_enhance(encoded)
-        loss_vae = self.speech_enhance.compute_loss(spec_clean, spec_hat)
-        del spec_clean, spec_hat
+        loss_vae = self.speech_enhance.compute_loss(spec_clean * spec_mask, spec_hat * spec_mask)
+        del spec_clean, spec_hat, spec_mask
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -999,3 +1000,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
     
+    def make_spec_mask(self, spec_shape, lengths):
+        n_batches, n_features, max_length = spec_shape
+        mask = []
+        for b in range(n_batches):
+            time_mask = [(i < lengths[b]) for i in range(max_length)]
+            sample_mask = [time_mask for _ in range(n_features)]
+            mask.append(sample_mask)
+        return torch.tensor(mask)

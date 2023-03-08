@@ -54,10 +54,10 @@ class VAESpeechEnhance(nn.Module):
 
         mu = self.mu(x)
         log_sigma = self.log_sigma(x)
-        sigma = torch.exp(0.5 * log_sigma)
+        sigma = torch.exp(log_sigma)
         z = mu + sigma * self.N.sample(mu.shape).to(x.device)
         
-        self.kld = -0.5 * torch.sum(1 - sigma**2 - mu**2 + log_sigma)
+        self.kld = (sigma**2 + mu**2 - torch.log(sigma) - 0.5).sum()
         
         x_hat = self.proj(z)
         x_hat = self.unflatten(x_hat)

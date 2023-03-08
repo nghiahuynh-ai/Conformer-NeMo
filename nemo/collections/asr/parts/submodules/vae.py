@@ -43,7 +43,7 @@ class VAESpeechEnhance(nn.Module):
         )
         
         self.proj_out = nn.Linear(dim * downsize_factor * subsampling_factor, n_features)
-        self.activation = nn.Sigmoid()
+        self.activation = nn.ReLU()
 
         self.loss_fn = nn.MSELoss()
         self.kld = None

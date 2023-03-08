@@ -81,7 +81,7 @@ class VAEdownsampling(nn.Module):
     def __init__(self, downsampling_factor, dim, conv_channels):
         super().__init__()
         
-        self.norm_in = nn.BatchNorm2d(dim)
+        self.norm_in = nn.BatchNorm2d(1)
         
         self.layers = nn.ModuleList()
         in_channels = 1
@@ -108,7 +108,7 @@ class VAEdownsampling(nn.Module):
             padding=0,
         )
         self.activation = nn.ReLU()
-        self.norm_out = nn.BatchNorm2d(int(dim/downsampling_factor))
+        self.norm_out = nn.BatchNorm2d(1)
             
     def forward(self, x):
         x = x.unsqueeze(1)
@@ -126,7 +126,7 @@ class VAEUpsampling(nn.Module):
     def __init__(self, upsampling_factor, dim, conv_channels):
         super().__init__()
         
-        self.norm_in = nn.BatchNorm2d(dim)
+        self.norm_in = nn.BatchNorm2d(1)
         
         self.layers = nn.ModuleList()
         in_channels = 1
@@ -154,7 +154,7 @@ class VAEUpsampling(nn.Module):
             padding=0,
         )
         self.activation = nn.ReLU()
-        self.norm_out = nn.BatchNorm2d(dim*upsampling_factor)
+        self.norm_out = nn.BatchNorm2d(1)
             
     def forward(self, x):
         x = x.unsqueeze(1)

@@ -91,7 +91,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
             vae_downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
             subsampling_factor = int(self._cfg.encoder.subsampling_factor)
-            total_downsize_factor = vae_downsize_factor * subsampling_factor
+            total_downsize_factor = int(self._cfg.train_ds.downsize_factor)
             
             n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
             max_features = int(math.ceil(n_features / total_downsize_factor) * total_downsize_factor)
@@ -107,10 +107,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 latent_dim=self._cfg.speech_enhance.latent_dim,
                 downsize_factor=vae_downsize_factor,
                 subsampling_factor=subsampling_factor,
-                n_decoder_layers=self._cfg.speech_enhance.n_decoder_layers,
                 hidden_shape=(int(max_features/subsampling_factor), int(self._cfg.encoder.d_model)),
-                d_model=self._cfg.speech_enhance.d_model,
-                n_heads=self._cfg.speech_enhance.n_heads,
+                conv_channels=self._cfg.speech_enhance.conv_channels,
             )
 
         else:

@@ -87,7 +87,7 @@ class VAEdownsampling(nn.Module):
                 )
             )
             self.layers.append(
-                nn.Conv1d(
+                nn.Conv2d(
                     in_channels=out_channels,
                     out_channels=out_channels,
                     kernel_size=1,
@@ -95,21 +95,26 @@ class VAEdownsampling(nn.Module):
                     padding=0,
                 )
             )
-        self.layers.append(
-            nn.Conv1d(
-                in_channels=out_channels,
-                out_channels=1,
-                kernel_size=1,
-                stride=1,
-                padding=0,
-            )
+            in_channels = out_channels
+            
+        self.conv_out = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+            padding=0,
         )
-        in_channels = out_channels
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for layer in self.layers:
-            x = layer(x)
+        for ith, layer in enumerate(self.layers):
+            if ith % 2 == 0:
+                x = layer(x)
+            else:
+                x = x.transpose(3, 2)
+                x = layer(x)
+                x = x.transpose(3, 2)
+        x = self.conv_out(x)
         x = x.squeeze(1)
         return x
     
@@ -134,7 +139,7 @@ class VAEUpsampling(nn.Module):
                 )
             )
             self.layers.append(
-                nn.Conv1d(
+                nn.Conv2d(
                     in_channels=out_channels,
                     out_channels=out_channels,
                     kernel_size=1,
@@ -142,8 +147,10 @@ class VAEUpsampling(nn.Module):
                     padding=0,
                 )
             )
+            in_channels = out_channels
+            
         self.layers.append(
-            nn.Conv1d(
+            nn.Conv2d(
                 in_channels=out_channels,
                 out_channels=1,
                 kernel_size=1,
@@ -151,12 +158,17 @@ class VAEUpsampling(nn.Module):
                 padding=0,
             )
         )
-        in_channels = out_channels
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for layer in self.layers:
-            x = layer(x)
+        for ith, layer in enumerate(self.layers):
+            if ith % 2 == 0:
+                x = layer(x)
+            else:
+                x = x.transpose(3, 2)
+                x = layer(x)
+                x = x.transpose(3, 2)
+        x = self.conv_out(x)
         x = x.squeeze(1)
         return x
     

@@ -116,7 +116,7 @@ class VAEdownsampling(nn.Module):
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for layer in enumerate(self.layers):
+        for layer in self.layers:
             x = layer(x)
         x = self.conv_out(x)
         x = self.activation(x)
@@ -166,7 +166,7 @@ class VAEUpsampling(nn.Module):
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for layer in enumerate(self.layers):
+        for layer in self.layers:
             x = layer(x)
         x = self.conv_out(x)
         x = self.activation(x)

@@ -9,6 +9,7 @@ class VAESpeechEnhance(nn.Module):
     def __init__(
         self,
         latent_dim=512,
+        d_model=512,
         n_features=80,
         downsize_factor=4,
         subsampling_factor=8,                                                     
@@ -20,6 +21,7 @@ class VAESpeechEnhance(nn.Module):
         
         self.downsampling = VAEdownsampling(
             downsampling_factor=downsize_factor,
+            d_model=d_model,
             conv_channels=conv_channels,
         )
         
@@ -36,6 +38,7 @@ class VAESpeechEnhance(nn.Module):
         
         self.upsampling = VAEUpsampling(
             upsampling_factor=downsize_factor*subsampling_factor, 
+            d_model=d_model,
             conv_channels=conv_channels
         )
         

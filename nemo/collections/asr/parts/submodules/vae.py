@@ -38,7 +38,7 @@ class VAESpeechEnhance(nn.Module):
         
         self.upsampling = VAEUpsampling(
             upsampling_factor=downsize_factor*subsampling_factor, 
-            d_model=d_model,
+            d_model=int(d_model / downsize_factor),
             conv_channels=conv_channels
         )
         

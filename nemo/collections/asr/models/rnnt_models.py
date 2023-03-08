@@ -723,7 +723,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
         del signal
         
-        spec_mask = self.make_spec_mask(spec_clean.shape, spec_len)
+        spec_mask = self.make_spec_mask(spec_clean.shape, spec_len).to(spec_clean.device)
         
         spec_hat = self.speech_enhance(encoded)
         loss_vae = self.speech_enhance.compute_loss(spec_clean * spec_mask, spec_hat * spec_mask)

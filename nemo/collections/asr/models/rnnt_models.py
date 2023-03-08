@@ -112,6 +112,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 hidden_shape=(int(max_features/subsampling_factor), int(self._cfg.encoder.d_model)),
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
+            
+            self.linear_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
+            self.act_out = nn.SiLU()
 
         else:
             self.noise_mixer = None
@@ -729,6 +732,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         spec_hat = self.speech_enhance(encoded)
         loss_vae = self.speech_enhance.compute_loss(spec_clean, spec_hat)
         del spec_clean, spec_hat #, spec_mask
+        
+        encoded = encoded.transpose(1, 2)
+        encoded = self.linear_out(encoded)
+        encoded = self.act_out(encoded)
+        encoded = encoded.transpose(1, 2)
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

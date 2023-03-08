@@ -9,6 +9,7 @@ class VAESpeechEnhance(nn.Module):
     def __init__(
         self,
         latent_dim=512,
+        n_features=80,
         downsize_factor=4,
         subsampling_factor=8,                                                     
         hidden_shape=(0, 0),
@@ -37,6 +38,8 @@ class VAESpeechEnhance(nn.Module):
             upsampling_factor=downsize_factor*subsampling_factor, 
             conv_channels=conv_channels
         )
+        
+        self.proj_out = nn.Linear(dim * downsize_factor * subsampling_factor, n_features)
 
         self.loss_fn = nn.MSELoss()
         self.kld = None
@@ -59,6 +62,7 @@ class VAESpeechEnhance(nn.Module):
         x_hat = self.proj(z)
         x_hat = self.unflatten(x_hat)
         x_hat = self.upsampling(x_hat)
+        x_hat = self.proj_out(x_hat)
         
         x_hat = x_hat.transpose(2, 1)
         

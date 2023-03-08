@@ -41,16 +41,9 @@ class VAESpeechEnhance(nn.Module):
         self.flatten = nn.Flatten()
         self.mu = nn.Linear(flatten_dim, latent_dim)
         self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        # self.decoder = VAEDecoder(
-        #     latent_dim=latent_dim,
-        #     flatten_dim=flatten_dim,
-        #     hidden_shape=(int(hidden_shape[0]/downsize_factor), int(hidden_shape[1]/downsize_factor)),
-        #     n_layers=n_decoder_layers,
-        #     d_model=d_model,
-        #     n_heads=n_heads,
-        # )
         
         self.proj = nn.Linear(latent_dim, flatten_dim)
+        print(hidden_shape)
         self.unflatten = Unflatten((hidden_shape[0] / downsize_factor, hidden_shape[1] / downsize_factor))
         
         self.upsampling = VAEUpsampling(downsize_factor * subsampling_factor, d_model)

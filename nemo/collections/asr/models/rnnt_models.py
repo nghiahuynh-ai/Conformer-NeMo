@@ -727,7 +727,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         spec_hat = self.speech_enhance(encoded)
         loss_vae = self.speech_enhance.compute_loss(spec_clean, spec_hat)
-        del spec_clean, spec_hat, spec_mask
+        del spec_clean, spec_hat #, spec_mask
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

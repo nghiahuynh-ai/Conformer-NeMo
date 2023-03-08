@@ -40,6 +40,7 @@ class VAESpeechEnhance(nn.Module):
         )
         
         self.proj_out = nn.Linear(dim * downsize_factor * subsampling_factor, n_features)
+        self.activation = nn.Sigmoid()
 
         self.loss_fn = nn.MSELoss()
         self.kld = None
@@ -63,6 +64,7 @@ class VAESpeechEnhance(nn.Module):
         x_hat = self.unflatten(x_hat)
         x_hat = self.upsampling(x_hat)
         x_hat = self.proj_out(x_hat)
+        x_hat = self.activation(x_hat)
         
         x_hat = x_hat.transpose(2, 1)
         
@@ -73,14 +75,18 @@ class VAESpeechEnhance(nn.Module):
 
 
 class VAEdownsampling(nn.Module):
-    def __init__(self, downsampling_factor, conv_channels):
+    def __init__(self, downsampling_factor, d_model, conv_channels):
         super().__init__()
         
         self.layers = nn.ModuleList()
         in_channels = 1
         out_channels = conv_channels
+        dim_out = d_model
         n_conv_layers = int(math.log(downsampling_factor, 2))
         for _ in range(n_conv_layers):
+            self.layers.append(
+                nn.LayerNorm(dim_out)
+            )
             self.layers.append(
                 nn.Conv2d(
                     in_channels=in_channels,
@@ -90,16 +96,10 @@ class VAEdownsampling(nn.Module):
                     padding=1,
                 )
             )
-            # self.layers.append(
-            #     nn.Conv2d(
-            #         in_channels=out_channels,
-            #         out_channels=out_channels,
-            #         kernel_size=3,
-            #         stride=1,
-            #         padding=1,
-            #     )
-            # )
+            self.layers.append(nn.ReLU())
+            self.layers.append(nn.Dropout(p=0.1))
             in_channels = out_channels
+            dim_out = int(dim_out / 2)
             
         self.conv_out = nn.Conv2d(
             in_channels=out_channels,
@@ -108,30 +108,33 @@ class VAEdownsampling(nn.Module):
             stride=1,
             padding=0,
         )
+        self.activation = nn.ReLU()
+        self.norm_out = nn.LayerNorm(dim_out)
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for ith, layer in enumerate(self.layers):
-            # if ith % 2 == 0:
+        for layer in enumerate(self.layers):
             x = layer(x)
-            # else:
-            #     x = x.transpose(3, 2)
-            #     x = layer(x)
-            #     x = x.transpose(3, 2)
         x = self.conv_out(x)
+        x = self.activation(x)
+        x = self.norm_out(x)
         x = x.squeeze(1)
         return x
     
     
 class VAEUpsampling(nn.Module):
-    def __init__(self, upsampling_factor, conv_channels):
+    def __init__(self, upsampling_factor, d_model, conv_channels):
         super().__init__()
         
         self.layers = nn.ModuleList()
         in_channels = 1
         out_channels = conv_channels
+        dim_out = d_model
         n_layers = int(math.log(upsampling_factor, 2))
         for _ in range(n_layers):
+            self.layers.append(
+                nn.LayerNorm(dim_out)
+            )
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=in_channels,
@@ -142,15 +145,10 @@ class VAEUpsampling(nn.Module):
                     output_padding=1,
                 )
             )
-            # self.layers.append(
-            #     nn.Conv2d(
-            #         in_channels=out_channels,
-            #         out_channels=out_channels,
-            #         kernel_size=3,
-            #         stride=1,
-            #         padding=1,
-            #     )
-            # )
+            self.layers.append(nn.ReLU())
+            self.layers.append(nn.Dropout(p=0.1))
+            in_channels = out_channels
+            dim_out = dim_out * 2
             in_channels = out_channels
             
         self.conv_out = nn.Conv2d(
@@ -160,17 +158,16 @@ class VAEUpsampling(nn.Module):
             stride=1,
             padding=0,
         )
+        self.activation = nn.ReLU()
+        self.norm_out = nn.LayerNorm(dim_out)
             
     def forward(self, x):
         x = x.unsqueeze(1)
-        for ith, layer in enumerate(self.layers):
-            # if ith % 2 == 0:
+        for layer in enumerate(self.layers):
             x = layer(x)
-            # else:
-            #     x = x.transpose(3, 2)
-            #     x = layer(x)
-            #     x = x.transpose(3, 2)
         x = self.conv_out(x)
+        x = self.activation(x)
+        x = self.norm_out(x)
         x = x.squeeze(1)
         return x
     

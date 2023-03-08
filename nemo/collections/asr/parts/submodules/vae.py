@@ -17,24 +17,6 @@ class VAESpeechEnhance(nn.Module):
         
         super().__init__()
         
-        # self.conv_in = nn.ModuleList()
-        # in_channels = 1
-        # out_channels = conv_channels
-        # n_conv_layers = int(math.log(downsize_factor, 2))
-        # for ith, _ in enumerate(range(n_conv_layers)):
-        #     if ith == n_conv_layers - 1:
-        #         out_channels = 1
-        #     self.conv_in.append(
-        #         nn.Conv2d(
-        #             in_channels=in_channels,
-        #             out_channels=out_channels,
-        #             kernel_size=3,
-        #             stride=2,
-        #             padding=1,
-        #         )
-        #     )
-        #     in_channels = out_channels
-        
         self.downsampling = VAEdownsampling(
             downsampling_factor=downsize_factor,
             conv_channels=conv_channels,
@@ -62,11 +44,6 @@ class VAESpeechEnhance(nn.Module):
     def forward(self, x):
 
         x = x.transpose(2, 1)
-
-        # x = x.unsqueeze(1)
-        # for layer in self.conv_in:
-        #     x = layer(x)
-        # x = x.squeeze(1)
         
         x = self.downsampling(x)
             

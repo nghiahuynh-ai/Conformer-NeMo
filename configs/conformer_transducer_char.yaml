@@ -52,7 +52,6 @@ model:
     apply: true
     latent_dim: 512
     downsize_factor: 8
-    n_decoder_layers: 8
     conv_channels: 64
     real_noise:
       filepath: null 

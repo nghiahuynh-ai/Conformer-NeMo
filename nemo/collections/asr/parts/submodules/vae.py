@@ -90,9 +90,9 @@ class VAEdownsampling(nn.Module):
                 nn.Conv2d(
                     in_channels=out_channels,
                     out_channels=out_channels,
-                    kernel_size=1,
+                    kernel_size=3,
                     stride=1,
-                    padding=0,
+                    padding=1,
                 )
             )
             in_channels = out_channels
@@ -142,21 +142,19 @@ class VAEUpsampling(nn.Module):
                 nn.Conv2d(
                     in_channels=out_channels,
                     out_channels=out_channels,
-                    kernel_size=1,
+                    kernel_size=3,
                     stride=1,
-                    padding=0,
+                    padding=1,
                 )
             )
             in_channels = out_channels
             
-        self.layers.append(
-            nn.Conv2d(
-                in_channels=out_channels,
-                out_channels=1,
-                kernel_size=1,
-                stride=1,
-                padding=0,
-            )
+        self.conv_out = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+            padding=0,
         )
             
     def forward(self, x):

@@ -243,3 +243,7 @@ class VAEMHSALayer(nn.Module):
         residual = residual + self.dropout(x)
         
         return self.activation(residual)
+    
+
+def block_grad_on_pad(spec, spec_length):
+    pass

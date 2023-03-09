@@ -65,10 +65,12 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
     has_audio = audio_lengths[0] is not None
     if has_audio:
         max_audio_len = max(audio_lengths).item()
+        print(max_audio_len)
         if hop_len is not None and downsize_factor is not None:
             n_feats = int(math.ceil(max_audio_len / hop_len))
             max_feats = int(math.ceil(n_feats / downsize_factor) * downsize_factor)
             max_audio_len = (max_feats - 1) * hop_len
+            print(max_audio_len)
             
     max_tokens_len = max(tokens_lengths).item()
     
@@ -327,7 +329,6 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
         
     def _collate_fn(self, batch):
-        print(self.hop_len, self.downsize_factor)
         return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.hop_len, self.downsize_factor)
 
 

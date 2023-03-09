@@ -62,14 +62,14 @@ class SEEncoder(nn.Module):
         for ith in range(n_layers):
             self.layers.append(
                 SEConvModule(
-                    dim_in=int(d_model / torch.pow(2, ith)),
-                    dim_out=int(d_model / torch.pow(2, ith + 1)),
+                    dim_in=int(d_model / 2**ith),
+                    dim_out=int(d_model / 2**(ith + 1)),
                     conv_channels=conv_channels,
                 )
             )
             self.layers.append(
                 SETransModule(
-                    d_model=int(d_model / torch.pow(2, ith + 1)),
+                    d_model=int(d_model / 2**(ith + 1)),
                     n_heads=n_heads,
                 )
             )
@@ -106,14 +106,14 @@ class SEDecoder(nn.Module):
         for ith in range(n_layers):
             self.layers.append(
                 SETransModule(
-                    d_model=int(d_model * torch.pow(2, ith)),
+                    d_model=int(d_model * 2**ith),
                     n_heads=n_heads,
                 )
             )
             self.layers.append(
                 SEConvTransposedModule(
-                dim_in=int(d_model * torch.pow(2, ith)),
-                dim_out=int(d_model * torch.pow(2, ith + 1)),
+                dim_in=int(d_model * 2**ith),
+                dim_out=int(d_model * 2**(ith + 1)),
                 conv_channels=conv_channels,
                 )
             )

@@ -75,12 +75,15 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
     max_tokens_len = max(tokens_lengths).item()
     
     audio_signal, tokens = [], []
+    i = 0
     for b in batch:
         if len(b) == 5:
             sig, sig_len, tokens_i, tokens_i_len, _ = b
         else:
             sig, sig_len, tokens_i, tokens_i_len = b
         if has_audio:
+            print(i, sig_len)
+            i += 1
             sig_len = sig_len.item()
             if sig_len < max_audio_len:
                 pad = (0, max_audio_len - sig_len)

@@ -34,7 +34,7 @@ class SpeechEnhance(nn.Module):
             conv_channels=conv_channels,
             dim_in=asr_d_model,
             dim_out=n_features,
-            d_model=d_model,
+            d_model=int(d_model / scaling_factor),
             n_heads=n_heads,
         )
         

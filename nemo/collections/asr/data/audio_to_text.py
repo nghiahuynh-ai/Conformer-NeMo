@@ -82,13 +82,13 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
         else:
             sig, sig_len, tokens_i, tokens_i_len = b
         if has_audio:
-            print(i, sig_len)
-            i += 1
             sig_len = sig_len.item()
             if sig_len < max_audio_len:
+                print(i, sig_len, max_audio_len - sig_len)
+                i += 1
                 pad = (0, max_audio_len - sig_len)
                 sig = torch.nn.functional.pad(sig, pad)
-                audio_signal.append(sig)
+            audio_signal.append(sig)
         tokens_i_len = tokens_i_len.item()
         if tokens_i_len < max_tokens_len:
             pad = (0, max_tokens_len - tokens_i_len)

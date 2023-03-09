@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _speech_collate_fn(batch, pad_id, max_length):
+def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
     """collate batch of audio sig, audio len, tokens, tokens len
     Args:
         batch (Optional[FloatTensor], Optional[LongTensor], LongTensor,
@@ -63,10 +63,11 @@ def _speech_collate_fn(batch, pad_id, max_length):
         raise ValueError("Expects 4 or 5 tensors in the batch!")
     max_audio_len = 0
     has_audio = audio_lengths[0] is not None
-    if has_audio and max_length is not None:
-        max_audio_len = max_length
-    if has_audio and max_length is None:
+    if has_audio:
         max_audio_len = max(audio_lengths).item()
+        n_feats = int(math.ceil(max_audio_len / hop_len))
+        max_feats = int(math.ceil(n_feats / downsize_factor) * downsize_factor)
+        max_audio_len = (max_feats - 1) * hop_len
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -264,7 +265,6 @@ class _AudioTextDataset(Dataset):
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
         hop_len: Optional[float] = None,
-        win_len: Optional[int] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         trim: bool = False,
@@ -277,15 +277,11 @@ class _AudioTextDataset(Dataset):
             manifest_filepath = manifest_filepath.split(",")
         
         if hop_len is not None and downsize_factor is not None:
-            hop_len = int(float(hop_len) * sample_rate)
-            downsize_factor = int(downsize_factor)
-            
-            n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
-            max_features = int(math.ceil(n_features / downsize_factor) * downsize_factor)
-            self.max_length = (max_features - 1) * hop_len
-
+            self.hop_len = int(float(hop_len) * sample_rate)
+            self.downsize_factor = int(downsize_factor)
         else:
-            self.max_length = None
+            self.hop_len = None
+            self.downsize_factor = None
         
         self.manifest_processor = ASRManifestProcessor(
             manifest_filepath=manifest_filepath,
@@ -329,7 +325,7 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
         
     def _collate_fn(self, batch):
-        return _speech_collate_fn(batch, pad_id=self.manifest_processor.pad_id, max_length=self.max_length)
+        return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.hop_len, self.downsize_factor)
 
 
 class AudioToCharDataset(_AudioTextDataset):

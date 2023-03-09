@@ -5,48 +5,28 @@ import torch.nn as nn
 from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention
 
 
-class VAESpeechEnhance(nn.Module):
+class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        latent_dim=512,
-        d_model=512,
+        scaling_factor=8,
         n_features=80,
-        downsize_factor=4,
-        subsampling_factor=8,                                                     
-        hidden_shape=(0, 0),
         conv_channels=64,
         ):
         
         super().__init__()
         
-        self.downsampling = VAEdownsampling(
-            downsampling_factor=downsize_factor,
-            dim=d_model,
-            conv_channels=conv_channels,
-        )
+        self.encoder = SEEncoder()
         
-        flatten_dim = int((hidden_shape[0] * hidden_shape[1]) / downsize_factor**2)
-        self.flatten = nn.Flatten()
+        self.decoder = SEDecoder()
         
-        self.mu = nn.Linear(flatten_dim, latent_dim)
-        self.log_sigma = nn.Linear(flatten_dim, latent_dim)
-        self.N = torch.distributions.Normal(0, 1)
-        
-        self.proj = nn.Linear(latent_dim, flatten_dim)
-        time, dim = int(hidden_shape[0] / downsize_factor), int(hidden_shape[1] / downsize_factor)
-        self.unflatten = Unflatten((time, dim))
-        
-        self.upsampling = VAEUpsampling(
-            upsampling_factor=downsize_factor*subsampling_factor, 
-            dim=int(d_model / downsize_factor),
-            conv_channels=conv_channels
-        )
-        
-        self.proj_out = nn.Linear(dim * downsize_factor * subsampling_factor, n_features)
+        self.proj_out = nn.Linear(output_dim * scaling_factor, n_features)
         self.activation = nn.ReLU()
 
         self.loss_fn = nn.MSELoss()
         self.kld = None
+        
+    def forward_encoder(self, x):
+        return self.encoder(x)
     
     def forward(self, x):
 
@@ -77,7 +57,7 @@ class VAESpeechEnhance(nn.Module):
         return self.loss_fn(x_clean, x_hat) + self.kld
 
 
-class VAEdownsampling(nn.Module):
+class SEEncoder(nn.Module):
     def __init__(self, downsampling_factor, dim, conv_channels):
         super().__init__()
         
@@ -122,7 +102,7 @@ class VAEdownsampling(nn.Module):
         return x
     
     
-class VAEUpsampling(nn.Module):
+class SEDecoder(nn.Module):
     def __init__(self, upsampling_factor, dim, conv_channels):
         super().__init__()
         

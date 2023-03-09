@@ -50,8 +50,8 @@ model:
 
   speech_enhance:
     apply: true
-    latent_dim: 512
-    downsize_factor: 8
+    scaling_factor: 8
+    n_feats: ${model.preprocessor.features}
     conv_channels: 64
     real_noise:
       filepath: null 
@@ -123,7 +123,7 @@ model:
 
   encoder:
     _target_: nemo.collections.asr.modules.ConformerEncoder
-    feat_in: ${model.preprocessor.features}
+    feat_in: null # ${model.preprocessor.features}
     feat_out: -1 # you may set it if you need different output size other than the default d_model
     n_layers: 17
     d_model: 512

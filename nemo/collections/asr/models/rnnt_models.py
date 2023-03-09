@@ -112,9 +112,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 hidden_shape=(int(max_features/subsampling_factor), int(self._cfg.encoder.d_model)),
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
-            
-            self.linear_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
-            self.act_out = nn.SiLU()
 
         else:
             self.noise_mixer = None

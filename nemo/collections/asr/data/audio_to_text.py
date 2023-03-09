@@ -70,7 +70,7 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
             n_feats = int(math.ceil(max_audio_len / hop_len))
             max_feats = int(math.ceil(n_feats / downsize_factor) * downsize_factor)
             max_audio_len = (max_feats - 1) * hop_len
-            print(max_audio_len)
+            print(n_feats, max_feats, max_audio_len)
             
     max_tokens_len = max(tokens_lengths).item()
     

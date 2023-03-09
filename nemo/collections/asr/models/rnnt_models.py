@@ -704,7 +704,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         processed_signal = processed_signal.transpose(1, 2)
         processed_signal = self.speech_enhance.forward_encoder(processed_signal)
-        processed_signal_length = processed_signal.size(1)
+        processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0))
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         return encoded, encoded_len, processed_signal_length
@@ -1010,3 +1010,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             sample_mask = [time_mask for _ in range(n_features)]
             mask.append(sample_mask)
         return torch.tensor(mask)
+    
+
+def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
+    """ Calculates the output length of a Tensor passed through a convolution or max pooling layer"""
+    add_pad: float = (padding * 2) - kernel_size
+    one: float = 1.0
+    for i in range(repeat_num):
+        lengths = torch.div(lengths.to(dtype=torch.float) + add_pad, stride) + one
+        if ceil_mode:
+            lengths = torch.ceil(lengths)
+        else:
+            lengths = torch.floor(lengths)
+    return lengths.to(dtype=torch.int)

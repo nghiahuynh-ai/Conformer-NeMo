@@ -41,7 +41,7 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
-from nemo.collections.asr.parts.submodules.vae import VAESpeechEnhance
+from nemo.collections.asr.parts.submodules.vae import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
 
 
@@ -86,15 +86,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.joint = EncDecRNNTModel.from_config_dict(self.cfg.joint)
         
         if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
-            max_duration = float(self._cfg.train_ds.max_duration)
-            sample_rate = int(self._cfg.train_ds.sample_rate)
-            hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
-            vae_downsize_factor = int(self._cfg.speech_enhance.downsize_factor)
-            subsampling_factor = int(self._cfg.encoder.subsampling_factor)
-            total_downsize_factor = int(self._cfg.train_ds.downsize_factor)
+            # max_duration = float(self._cfg.train_ds.max_duration)
+            # sample_rate = int(self._cfg.train_ds.sample_rate)
+            # hop_len = int(self._cfg.preprocessor.window_stride * sample_rate)
+            # scaling_factor = int(self._cfg.speech_enhance.scaling_factor)
             
-            n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
-            max_features = int(math.ceil(n_features / total_downsize_factor) * total_downsize_factor)
+            # n_features = int(math.ceil((max_duration * sample_rate) / hop_len))
+            # max_features = int(math.ceil(n_features / scaling_factor) * scaling_factor)
 
             self.noise_mixer = NoiseMixer(
                 real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
@@ -103,14 +101,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 white_noise_std=self._cfg.speech_enhance.white_noise.std,
             )
             
-            self.speech_enhance = VAESpeechEnhance(
-                latent_dim=self._cfg.speech_enhance.latent_dim,
-                d_model=self._cfg.encoder.d_model,
-                n_features=self._cfg.preprocessor.features,
-                downsize_factor=vae_downsize_factor,
-                subsampling_factor=subsampling_factor,
-                hidden_shape=(int(max_features/subsampling_factor), int(self._cfg.encoder.d_model)),
+            self.speech_enhance = SpeechEnhance(
+                scaling_factor=self._cfg.speech_enhance.scaling_factor,
+                n_features=self._cfg.speech_enhance.n_feats,
+                asr_d_model=self._cfg.encoder.d_model,
                 conv_channels=self._cfg.speech_enhance.conv_channels,
+                d_model=self._cfg.speech_enhance.d_model,
+                n_heads=self._cfg.speech_enhance.n_heads,
             )
 
         else:
@@ -705,6 +702,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
+        processed_signal = processed_signal.transpose(1, 2)
+        processed_signal = self.speech_enhance.forward_encoder(processed_signal)
+        processed_signal_length = processed_signal.size(1)
+        
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         return encoded, encoded_len, processed_signal_length
 
@@ -726,15 +727,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # spec_mask = self.make_spec_mask(spec_clean.shape, spec_len).to(spec_clean.device)
         
-        spec_hat = self.speech_enhance(encoded)
-        loss_vae = self.speech_enhance.compute_loss(spec_clean, spec_hat)
+        spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+        loss_se = self.speech_enhance.compute_loss(spec_clean, spec_hat.transpose(1, 2))
         del spec_clean, spec_hat #, spec_mask
-        
-        encoded = encoded.transpose(1, 2)
-        encoded = self.linear_out(encoded)
-        encoded = self.act_out(encoded)
-        encoded = encoded.transpose(1, 2)
-            
+
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
 
@@ -755,7 +751,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -783,7 +779,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_vae, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -798,7 +794,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_vae
+            loss_value = loss_value + loss_se
 
         return {'loss': loss_value}
 

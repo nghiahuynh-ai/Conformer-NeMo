@@ -10,213 +10,212 @@ class SpeechEnhance(nn.Module):
         self,
         scaling_factor=8,
         n_features=80,
+        asr_d_model=512,
         conv_channels=64,
+        d_model=512,
+        n_heads=8,
         ):
         
         super().__init__()
         
-        self.encoder = SEEncoder()
+        self.n_features = n_features
         
-        self.decoder = SEDecoder()
+        self.encoder = SEEncoder(
+            scaling_factor=scaling_factor,
+            conv_channels=conv_channels,
+            dim_in=n_features,
+            dim_out=asr_d_model,
+            d_model=d_model,
+            n_heads=n_heads,
+        )
         
-        self.proj_out = nn.Linear(output_dim * scaling_factor, n_features)
-        self.activation = nn.ReLU()
-
-        self.loss_fn = nn.MSELoss()
-        self.kld = None
+        self.decoder = SEDecoder(
+            scaling_factor=scaling_factor,
+            conv_channels=conv_channels,
+            dim_in=asr_d_model,
+            dim_out=n_features,
+            d_model=d_model,
+            n_heads=n_heads,
+        )
         
     def forward_encoder(self, x):
         return self.encoder(x)
     
-    def forward(self, x):
-
-        x = x.transpose(2, 1)
-        
-        x = self.downsampling(x)
-            
-        x = self.flatten(x)
-
-        mu = self.mu(x)
-        log_sigma = self.log_sigma(x)
-        sigma = torch.exp(log_sigma)
-        z = mu + sigma * self.N.sample(mu.shape).to(x.device)
-        
-        self.kld = (sigma**2 + mu**2 - torch.log(sigma) - 0.5).sum()
-        
-        x_hat = self.proj(z)
-        x_hat = self.unflatten(x_hat)
-        x_hat = self.upsampling(x_hat)
-        x_hat = self.proj_out(x_hat)
-        x_hat = self.activation(x_hat)
-        
-        x_hat = x_hat.transpose(2, 1)
-        
-        return x_hat
+    def forward_decoder(self, x):
+        return self.decoder(x, self.encoder.layers_out)
     
-    def compute_loss(self, x_clean, x_hat):
-        return self.loss_fn(x_clean, x_hat) + self.kld
-
+    def compute_loss(self, x, x_hat):
+        lsc = torch.sum((torch.abs(x) - torch.abs(x_hat))**2, dim=(1, 2))
+        lsc = torch.mean(torch.sqrt(lsc) / torch.sum(torch.abs(x)**2, dim=(1, 2)))
+        lmag = torch.mean(1/self.n_features * torch.sum(torch.abs(torch.log(torch.abs(x) / torch.abs(x_hat)))), dim=(1, 2))
+        return lsc + lmag
 
 class SEEncoder(nn.Module):
-    def __init__(self, downsampling_factor, dim, conv_channels):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, d_model, n_heads):
         super().__init__()
         
-        self.norm_in = nn.BatchNorm2d(1)
+        self.norm_in = nn.LayerNorm(dim_in)
+        self.proj_in = nn.Linear(dim_in, d_model)
         
         self.layers = nn.ModuleList()
-        in_channels = 1
-        out_channels = conv_channels
-        n_conv_layers = int(math.log(downsampling_factor, 2))
-        for _ in range(n_conv_layers):
+        n_layers = int(math.log(scaling_factor, 2))
+        for ith in range(n_layers):
             self.layers.append(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    stride=2,
-                    padding=1,
+                SEConvModule(
+                    dim_in=int(d_model / torch.pow(2, ith)),
+                    dim_out=int(d_model / torch.pow(2, ith + 1)),
+                    conv_channels=conv_channels,
                 )
             )
-            self.layers.append(nn.ReLU())
-            in_channels = out_channels
+            self.layers.append(
+                SETransModule(
+                    d_model=int(d_model / torch.pow(2, ith + 1)),
+                    n_heads=n_heads,
+                )
+            )
             
-        self.conv_out = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=1,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-        )
-        self.activation = nn.ReLU()
-        self.norm_out = nn.BatchNorm2d(1)
+        self.layers_out = []
+        
+        self.proj_out = nn.Linear(int(d_model / scaling_factor), dim_out)
+        self.act_out = nn.ReLU()
             
     def forward(self, x):
-        x = x.unsqueeze(1)
+        # x: (b, t, d)
+        
         x = self.norm_in(x)
-        for layer in self.layers:
+        x = self.proj_in(x)
+        
+        for ith, layer in enumerate(self.layers):
             x = layer(x)
-        x = self.conv_out(x)
-        x = self.activation(x)
-        x = self.norm_out(x)
-        x = x.squeeze(1)
-        return x
-    
+            if ith % 2 == 1:
+                self.layers_out = [x] + self.layers_out
+        
+        x = self.proj_out(x)
+        return self.act_out(x)
+        
     
 class SEDecoder(nn.Module):
-    def __init__(self, upsampling_factor, dim, conv_channels):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, d_model, n_heads):
         super().__init__()
         
-        self.norm_in = nn.BatchNorm2d(1)
+        self.norm_in = nn.LayerNorm(dim_in)
+        self.proj_in = nn.Linear(dim_in, d_model)
         
         self.layers = nn.ModuleList()
-        in_channels = 1
-        out_channels = conv_channels
-        n_layers = int(math.log(upsampling_factor, 2))
-        for _ in range(n_layers):
+        n_layers = int(math.log(scaling_factor, 2))
+        for ith in range(n_layers):
             self.layers.append(
-                nn.ConvTranspose2d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    stride=2,
-                    padding=1,
-                    output_padding=1,
+                SETransModule(
+                    d_model=int(d_model * torch.pow(2, ith)),
+                    n_heads=n_heads,
                 )
             )
-            self.layers.append(nn.ReLU())
-            in_channels = out_channels
-            
-        self.conv_out = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=1,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-        )
-        self.activation = nn.ReLU()
-        self.norm_out = nn.BatchNorm2d(1)
-            
-    def forward(self, x):
-        x = x.unsqueeze(1)
-        x = self.norm_in(x)
-        for layer in self.layers:
-            x = layer(x)
-        x = self.conv_out(x)
-        x = self.activation(x)
-        x = self.norm_out(x)
-        x = x.squeeze(1)
-        return x
-    
-    
-class Unflatten(nn.Module):
-    def __init__(self, unflatten_shape):
-        super().__init__()
-        self.unflatten_shape = unflatten_shape
-        
-    def forward(self, x):
-        return x.reshape(x.size(0), self.unflatten_shape[0], self.unflatten_shape[1])
-    
-       
-class VAEDecoder(nn.Module):
-    def __init__(
-        self,
-        latent_dim=512,
-        flatten_dim=None,
-        hidden_shape=(0, 0),
-        n_layers=8,
-        d_model=512,
-        n_heads=8,
-        self_attention_model='abs_pos',
-        dropout=0.1,
-        ):
-        super().__init__()
-        
-        self.proj_in = nn.Linear(latent_dim, flatten_dim)
-        self.unflatten = Unflatten(hidden_shape)
-        self.proj_att = nn.Linear(hidden_shape[1], d_model)
-        self.layers = nn.ModuleList()
-        for _ in range(n_layers):
             self.layers.append(
-                VAEMHSALayer(self_attention_model, d_model, n_heads, dropout)
+                SEConvTransposedModule(
+                dim_in=int(d_model * torch.pow(2, ith)),
+                dim_out=int(d_model * torch.pow(2, ith + 1)),
+                conv_channels=conv_channels,
+                )
             )
-        self.proj_out = nn.Linear(d_model, flatten_dim)
+            
+        self.proj_out = nn.Linear(int(d_model * scaling_factor), dim_out)
+        self.act_out = nn.ReLU()
+            
+    def forward(self, x, enc_out):
+        # x: (b, t, d)
         
-    def forward(self, x):
+        x = self.norm_in(x)
+        x = self.proj_in(x)
         
-        x_hat = self.proj_in(x)
-        x_hat = self.unflatten(x_hat)
-        x_hat = self.proj_att(x_hat)
-        for layer in self.layers:
-            x_hat = layer(x_hat)
+        for ith, layer in enumerate(self.layers):
+            if ith % 2 == 0:
+                x = enc_out[int(ith / 2)] + layer(x)
+            else:
+                x = layer(x)
         
-        return self.proj_out(x_hat)
+        x = self.proj_out(x)
+        return self.act_out(x)
     
-
-class VAEMHSALayer(nn.Module):
-    def __init__(self, self_attention_model, d_model, n_heads, dropout):
+    
+class SEConvModule(nn.Module):
+    def __init__(self, dim_in, dim_out, conv_channels):
         super().__init__()
         
-        if self_attention_model == 'abs_pos':
-            self.att = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout)
+        self.norm_in = nn.LayerNorm(dim_in)
+        self.conv = nn.Conv2d(
+            in_channels=1,
+            out_channels=conv_channels,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            )
+        self.proj_out = nn.Linear(conv_channels * int(dim_in / 2), dim_out)
+        self.activation = nn.ReLU()
+    
+    def forward(self, x):
+        # x: (b, t, d) -> (b, 1, t, d)
+        
+        x = self.norm_in(x)
+        
+        x = x.unsqueeze(1)
+        x = self.conv(x)
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
+        
+        x = self.proj_out(x)
+        return self.activation(x)
+    
+    
+class SEConvTransposedModule(nn.Module):
+    def __init__(self, dim_in, dim_out, conv_channels):
+        super().__init__()
+        
+        self.norm_in = nn.LayerNorm(dim_in)
+        self.conv = nn.ConvTranspose2d(
+            in_channels=1,
+            out_channels=conv_channels,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            output_padding=1,
+            )
+        self.proj_out = nn.Linear(conv_channels * (2 * dim_in), dim_out)
+        self.activation = nn.ReLU()
+    
+    def forward(self, x):
+        # x: (b, t, d) -> (b, 1, t, d)
+        
+        x = self.norm_in(x)
+        
+        x = x.unsqueeze(1)
+        x = self.conv(x)
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
+        
+        x = self.proj_out(x)
+        return self.activation(x)
+        
+
+class SETransModule(nn.Module):
+    def __init__(self, d_model, n_heads, dropout=0.1):
+        super().__init__()
+        
         self.att_norm = nn.LayerNorm(d_model)
-        self.ff = nn.Linear(d_model, d_model)
+        self.att = MultiHeadAttention(n_head=n_heads, n_feat=d_model, dropout_rate=dropout)
         self.ff_norm = nn.LayerNorm(d_model)
+        self.ff = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
         self.activation = nn.ReLU()
         
     def forward(self, x):
         residual = x
         
+        x = self.att_norm(residual)
         x = self.att(query=x, key=x, value=x, mask=None)
-        x = self.att_norm(x)
         residual = residual + self.dropout(x)
         
-        x = self.ff(residual)
-        x = self.ff_norm(x)
+        x = self.ff_norm(residual)
+        x = self.ff(x)
         residual = residual + self.dropout(x)
         
         return self.activation(residual)
-    
-
-def block_grad_on_pad(spec, spec_length):
-    pass

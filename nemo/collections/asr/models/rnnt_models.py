@@ -704,7 +704,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         processed_signal = processed_signal.transpose(1, 2)
         processed_signal = self.speech_enhance.forward_encoder(processed_signal)
-        processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0))
+        processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         return encoded, encoded_len, processed_signal_length

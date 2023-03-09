@@ -280,7 +280,7 @@ class _AudioTextDataset(Dataset):
         
         if hop_len is not None and downsize_factor is not None:
             self.hop_len = int(float(hop_len) * sample_rate)
-            self.downsize_factor = int(downsize_factor)
+            self.downsize_factor = downsize_factor
         else:
             self.hop_len = None
             self.downsize_factor = None
@@ -327,6 +327,7 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
         
     def _collate_fn(self, batch):
+        print(self.hop_len, self.downsize_factor)
         return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.hop_len, self.downsize_factor)
 
 

@@ -47,9 +47,9 @@ class SpeechEnhance(nn.Module):
     def compute_loss(self, x, x_hat):
         # x, x_hat: (b, t, d)
         lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
-        lmag = torch.nn.functional.l1_loss(x, x_hat)
-        
+        lmag = torch.nn.functional.mse_loss(x, x_hat)
         return lsc + lmag
+
 
 class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, d_model, n_heads):

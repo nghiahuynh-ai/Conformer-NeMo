@@ -50,7 +50,7 @@ model:
 
   speech_enhance:
     apply: true
-    mode: pretrain # pretrain or finetune
+    # mode: pretrain # pretrain or finetune
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}
     conv_channels: 64

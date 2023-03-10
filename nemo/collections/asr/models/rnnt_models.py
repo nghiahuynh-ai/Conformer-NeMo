@@ -709,15 +709,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         perturbed_signal = self.noise_mixer(signal)
         
+        spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+        del signal
+        
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         del perturbed_signal
-        
-        spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
-        del signal
         
         spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
         loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)

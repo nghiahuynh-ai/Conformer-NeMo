@@ -48,6 +48,10 @@ class SpeechEnhance(nn.Module):
         lsc = torch.sum((torch.abs(x) - torch.abs(x_hat))**2, dim=(1, 2))
         lsc = torch.mean(torch.sqrt(lsc) / torch.sum(torch.abs(x)**2, dim=(1, 2)))
         lmag = torch.mean(1/self.n_features * torch.sum(torch.abs(torch.log(torch.abs(x) / torch.abs(x_hat))), dim=(1, 2)))
+        
+        print(lsc)
+        print(lmag)
+        
         return lsc + lmag
 
 class SEEncoder(nn.Module):

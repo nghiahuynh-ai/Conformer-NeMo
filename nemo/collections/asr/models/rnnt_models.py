@@ -722,12 +722,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         del perturbed_signal
         
-        spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
-        del signal
+        if self.mode == 'pretrain':
+            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
+            del spec_clean, spec_hat
         
-        spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-        loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
-        del spec_clean, spec_hat
+        del signal
 
         # During training, loss must be computed, so decoder forward is necessary
         if self.mode == 'finetune':
@@ -833,51 +834,52 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         tensorboard_logs = {}
 
         # If experimental fused Joint-Loss-WER is not used
-        if not self.joint.fuse_loss_wer:
-            if self.compute_eval_loss:
-                decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
-                joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
+        if self.mode == 'finetune'
+            if not self.joint.fuse_loss_wer:
+                if self.compute_eval_loss:
+                    decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+                    joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
 
-                loss_value = self.loss(
-                    log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
+                    loss_value = self.loss(
+                        log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
+                    )
+
+                    tensorboard_logs['val_loss'] = loss_value
+
+                self.wer.update(encoded, encoded_len, transcript, transcript_len)
+                wer, wer_num, wer_denom = self.wer.compute()
+                self.wer.reset()
+
+                tensorboard_logs['val_wer_num'] = wer_num
+                tensorboard_logs['val_wer_denom'] = wer_denom
+                tensorboard_logs['val_wer'] = wer
+
+            else:
+                # If experimental fused Joint-Loss-WER is used
+                compute_wer = True
+
+                if self.compute_eval_loss:
+                    decoded, target_len, states = self.decoder(targets=transcript, target_length=transcript_len)
+                else:
+                    decoded = None
+                    target_len = transcript_len
+
+                # Fused joint step
+                loss_value, wer, wer_num, wer_denom = self.joint(
+                    encoder_outputs=encoded,
+                    decoder_outputs=decoded,
+                    encoder_lengths=encoded_len,
+                    transcripts=transcript,
+                    transcript_lengths=target_len,
+                    compute_wer=compute_wer,
                 )
 
-                tensorboard_logs['val_loss'] = loss_value
+                if loss_value is not None:
+                    tensorboard_logs['val_loss'] = loss_value
 
-            self.wer.update(encoded, encoded_len, transcript, transcript_len)
-            wer, wer_num, wer_denom = self.wer.compute()
-            self.wer.reset()
-
-            tensorboard_logs['val_wer_num'] = wer_num
-            tensorboard_logs['val_wer_denom'] = wer_denom
-            tensorboard_logs['val_wer'] = wer
-
-        else:
-            # If experimental fused Joint-Loss-WER is used
-            compute_wer = True
-
-            if self.compute_eval_loss:
-                decoded, target_len, states = self.decoder(targets=transcript, target_length=transcript_len)
-            else:
-                decoded = None
-                target_len = transcript_len
-
-            # Fused joint step
-            loss_value, wer, wer_num, wer_denom = self.joint(
-                encoder_outputs=encoded,
-                decoder_outputs=decoded,
-                encoder_lengths=encoded_len,
-                transcripts=transcript,
-                transcript_lengths=target_len,
-                compute_wer=compute_wer,
-            )
-
-            if loss_value is not None:
-                tensorboard_logs['val_loss'] = loss_value
-
-            tensorboard_logs['val_wer_num'] = wer_num
-            tensorboard_logs['val_wer_denom'] = wer_denom
-            tensorboard_logs['val_wer'] = wer
+                tensorboard_logs['val_wer_num'] = wer_num
+                tensorboard_logs['val_wer_denom'] = wer_denom
+                tensorboard_logs['val_wer'] = wer
 
         return tensorboard_logs
 

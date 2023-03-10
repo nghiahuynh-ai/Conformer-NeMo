@@ -44,11 +44,14 @@ class NoiseMixer:
         coef = torch.sqrt(10.0 ** (-snr/10) * signal_energy / noise_energy)
         signal_coef = torch.sqrt(1 / (1 + coef**2))
         noise_coef = torch.sqrt(coef**2 / (1 + coef**2))
-        
-        return signal_coef * signal + noise_coef * noise
+        signal = signal_coef * signal + noise_coef * noise
+        del noise, snr, signal_energy, noise_energy, coef, signal_coef, noise_coef
+        return signal
     
     def _add_white_noise(self, signal):
         std = np.random.uniform(self.white_noise_std[0], self.white_noise_std[1])
         noise = np.random.normal(self.white_noise_mean, std, size=signal.shape)
         noise = torch.from_numpy(noise).type(torch.FloatTensor)
-        return signal + noise.to(signal.device)
+        signal = signal + noise.to(signal.device)
+        del noise
+        return signal

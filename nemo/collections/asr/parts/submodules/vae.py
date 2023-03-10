@@ -52,6 +52,7 @@ class SpeechEnhance(nn.Module):
         
         print(lsc)
         print(lmag)
+        print(x**2 - x_hat**2)
         
         return lsc + lmag
 

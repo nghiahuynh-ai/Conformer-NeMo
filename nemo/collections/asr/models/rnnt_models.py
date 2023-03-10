@@ -707,6 +707,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        del processed_signal_length
+        
         return encoded, encoded_len
 
     # PTL-specific methods

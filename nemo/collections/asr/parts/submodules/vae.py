@@ -52,7 +52,6 @@ class SpeechEnhance(nn.Module):
         
         print(lsc)
         print(lmag)
-        print(x**2- x_hat**2)
         
         return lsc + lmag
 
@@ -125,6 +124,7 @@ class SEDecoder(nn.Module):
             )
             
         self.proj_out = nn.Linear(int(d_model * scaling_factor), dim_out)
+        self.norm_out = nn.LayerNorm(dim_out)
         self.act_out = nn.ReLU()
             
     def forward(self, x, enc_out):
@@ -140,6 +140,8 @@ class SEDecoder(nn.Module):
                 x = layer(x)
         
         x = self.proj_out(x)
+        x = self.norm_out(x)
+        
         return self.act_out(x)
     
     

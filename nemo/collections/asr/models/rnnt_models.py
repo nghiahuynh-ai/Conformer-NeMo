@@ -41,7 +41,7 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
-from nemo.collections.asr.parts.submodules.vae import SpeechEnhance
+from nemo.collections.asr.parts.submodules.speech_enhance import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
 
 
@@ -749,7 +749,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 
@@ -777,7 +777,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
 
             if self.speech_enhance is not None:
-                tensorboard_logs = {'train_loss': loss_value, 'vae_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
 

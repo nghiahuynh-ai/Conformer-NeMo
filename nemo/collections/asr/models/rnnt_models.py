@@ -796,7 +796,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            if self.mode = 'pretrain':
+            if self.mode == 'pretrain':
                 loss_value = loss_se
             else:
                 loss_value = loss_value + loss_se

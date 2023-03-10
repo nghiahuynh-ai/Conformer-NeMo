@@ -101,10 +101,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,
             )
+            
+            self.alpha = self._cfg.speech_enhance.alpha
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
+            self.alpha = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -786,7 +789,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_se
+            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 

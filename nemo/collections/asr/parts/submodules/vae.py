@@ -45,12 +45,14 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x, self.encoder.layers_out)
     
     def compute_loss(self, x, x_hat):
-        lsc = torch.sum((torch.abs(x) - torch.abs(x_hat))**2, dim=(1, 2))
-        lsc = torch.mean(torch.sqrt(lsc) / torch.sum(torch.abs(x)**2, dim=(1, 2)))
-        lmag = torch.mean(1/self.n_features * torch.sum(torch.abs(torch.log(torch.abs(x) / torch.abs(x_hat))), dim=(1, 2)))
+        x = x.transpose(1, 2)
+        x_hat = x_hat.transpose(1, 2)
+        lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
+        lmag = torch.nn.functional.l1_loss(torch.log(x), torch.log(x_hat))
         
         print(lsc)
         print(lmag)
+        print(x**2- x_hat**2)
         
         return lsc + lmag
 

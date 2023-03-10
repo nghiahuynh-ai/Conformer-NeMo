@@ -68,16 +68,17 @@ class SEEncoder(nn.Module):
                     conv_channels=conv_channels,
                 )
             )
-            self.layers.append(
-                SETransModule(
-                    d_model=int(d_model / 2**(ith + 1)),
-                    n_heads=n_heads,
-                )
-            )
+            # self.layers.append(
+            #     SETransModule(
+            #         d_model=int(d_model / 2**(ith + 1)),
+            #         n_heads=n_heads,
+            #     )
+            # )
             
         self.layers_out = []
         
         self.proj_out = nn.Linear(int(d_model / scaling_factor), dim_out)
+        self.norm_out = nn.LayerNorm(dim_out)
         self.act_out = nn.ReLU()
             
     def forward(self, x):
@@ -90,10 +91,12 @@ class SEEncoder(nn.Module):
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
-            if ith % 2 == 1:
-                self.layers_out = [x] + self.layers_out
+            # if ith % 2 == 1:
+            self.layers_out = [x] + self.layers_out
         
         x = self.proj_out(x)
+        x = self.norm_out(x)
+        
         return self.act_out(x)
         
     
@@ -107,12 +110,12 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            self.layers.append(
-                SETransModule(
-                    d_model=int(d_model * 2**ith),
-                    n_heads=n_heads,
-                )
-            )
+            # self.layers.append(
+            #     SETransModule(
+            #         d_model=int(d_model * 2**ith),
+            #         n_heads=n_heads,
+            #     )
+            # )
             self.layers.append(
                 SEConvTransposedModule(
                 dim_in=int(d_model * 2**ith),
@@ -132,10 +135,11 @@ class SEDecoder(nn.Module):
         x = self.proj_in(x)
         
         for ith, layer in enumerate(self.layers):
+            x = enc_out[ith] + layer(x)
             # if ith % 2 == 0:
-            #     x = enc_out[int(ith / 2)] + layer(x)
+            #   x = enc_out[int(ith / 2)] + layer(x)
             # else:
-                x = layer(x)
+            #     x = layer(x)
         
         x = self.proj_out(x)
         x = self.norm_out(x)
@@ -148,11 +152,18 @@ class SEConvModule(nn.Module):
         super().__init__()
         
         self.norm_in = nn.LayerNorm(dim_in)
-        self.conv = nn.Conv2d(
+        self.conv_in = nn.Conv2d(
             in_channels=1,
             out_channels=conv_channels,
             kernel_size=3,
             stride=2,
+            padding=1,
+            )
+        self.conv_out = nn.Conv2d(
+            in_channels=conv_channels,
+            out_channels=conv_channels,
+            kernel_size=3,
+            stride=1,
             padding=1,
             )
         self.proj_out = nn.Linear(conv_channels * int(dim_in / 2), dim_out)
@@ -164,7 +175,8 @@ class SEConvModule(nn.Module):
         x = self.norm_in(x)
         
         x = x.unsqueeze(1)
-        x = self.conv(x)
+        x = self.conv_in(x)
+        x = self.conv_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
         
@@ -177,8 +189,15 @@ class SEConvTransposedModule(nn.Module):
         super().__init__()
         
         self.norm_in = nn.LayerNorm(dim_in)
-        self.conv = nn.ConvTranspose2d(
+        self.conv_in = nn.Conv2d(
             in_channels=1,
+            out_channels=conv_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+            )
+        self.conv_out = nn.ConvTranspose2d(
+            in_channels=conv_channels,
             out_channels=conv_channels,
             kernel_size=3,
             stride=2,
@@ -194,7 +213,8 @@ class SEConvTransposedModule(nn.Module):
         x = self.norm_in(x)
         
         x = x.unsqueeze(1)
-        x = self.conv(x)
+        x = self.conv_in(x)
+        x = self.conv_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
         

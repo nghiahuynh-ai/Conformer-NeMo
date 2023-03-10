@@ -122,7 +122,7 @@ class SEDecoder(nn.Module):
             )
             
         self.proj_out = nn.Linear(int(d_model * scaling_factor), dim_out)
-        # self.norm_out = nn.LayerNorm(dim_out)
+        self.norm_out = nn.LayerNorm(dim_out)
         self.act_out = nn.ReLU()
             
     def forward(self, x, enc_out):
@@ -132,13 +132,13 @@ class SEDecoder(nn.Module):
         x = self.proj_in(x)
         
         for ith, layer in enumerate(self.layers):
-            if ith % 2 == 0:
-                x = enc_out[int(ith / 2)] + layer(x)
-            else:
+            # if ith % 2 == 0:
+            #     x = enc_out[int(ith / 2)] + layer(x)
+            # else:
                 x = layer(x)
         
         x = self.proj_out(x)
-        # x = self.norm_out(x)
+        x = self.norm_out(x)
         
         return self.act_out(x)
     

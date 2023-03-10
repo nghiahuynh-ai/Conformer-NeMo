@@ -12,8 +12,7 @@ class SpeechEnhance(nn.Module):
         n_features=80,
         asr_d_model=512,
         conv_channels=64,
-        d_model=512,
-        n_heads=8,
+        expand_factor=8,
         ):
         
         super().__init__()
@@ -25,8 +24,7 @@ class SpeechEnhance(nn.Module):
             conv_channels=conv_channels,
             dim_in=n_features,
             dim_out=asr_d_model,
-            d_model=d_model,
-            n_heads=n_heads,
+            dim_expand=expand_factor * n_features,
         )
         
         self.decoder = SEDecoder(
@@ -34,8 +32,7 @@ class SpeechEnhance(nn.Module):
             conv_channels=conv_channels,
             dim_in=asr_d_model,
             dim_out=n_features,
-            d_model=int(d_model / scaling_factor),
-            n_heads=n_heads,
+            dim_narrow=int(expand_factor / scaling_factor * n_features)
         )
         
     def forward_encoder(self, x):
@@ -52,32 +49,26 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, d_model, n_heads):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, dim_expand):
         super().__init__()
         
         self.norm_in = nn.LayerNorm(dim_in)
-        self.proj_in = nn.Linear(dim_in, d_model)
+        self.proj_in = nn.Linear(dim_in, dim_expand)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
                 SEConvModule(
-                    dim_in=int(d_model / 2**ith),
-                    dim_out=int(d_model / 2**(ith + 1)),
+                    dim_in=int(dim_expand / 2**ith),
+                    dim_out=int(dim_expand / 2**(ith + 1)),
                     conv_channels=conv_channels,
                 )
             )
-            # self.layers.append(
-            #     SETransModule(
-            #         d_model=int(d_model / 2**(ith + 1)),
-            #         n_heads=n_heads,
-            #     )
-            # )
             
         self.layers_out = []
         
-        self.proj_out = nn.Linear(int(d_model / scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_expand / scaling_factor), dim_out)
         self.norm_out = nn.LayerNorm(dim_out)
         self.act_out = nn.ReLU()
             
@@ -89,9 +80,8 @@ class SEEncoder(nn.Module):
         x = self.norm_in(x)
         x = self.proj_in(x)
         
-        for ith, layer in enumerate(self.layers):
+        for layer in self.layers:
             x = layer(x)
-            # if ith % 2 == 1:
             self.layers_out = [x] + self.layers_out
         
         x = self.proj_out(x)
@@ -101,30 +91,24 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, d_model, n_heads):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, dim_narrow):
         super().__init__()
         
         self.norm_in = nn.LayerNorm(dim_in)
-        self.proj_in = nn.Linear(dim_in, d_model)
+        self.proj_in = nn.Linear(dim_in, dim_narrow)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            # self.layers.append(
-            #     SETransModule(
-            #         d_model=int(d_model * 2**ith),
-            #         n_heads=n_heads,
-            #     )
-            # )
             self.layers.append(
                 SEConvTransposedModule(
-                dim_in=int(d_model * 2**ith),
-                dim_out=int(d_model * 2**(ith + 1)),
+                dim_in=int(dim_narrow * 2**ith),
+                dim_out=int(dim_narrow * 2**(ith + 1)),
                 conv_channels=conv_channels,
                 )
             )
             
-        self.proj_out = nn.Linear(int(d_model * scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_narrow * scaling_factor), dim_out)
         self.norm_out = nn.LayerNorm(dim_out)
         self.act_out = nn.ReLU()
             
@@ -137,10 +121,6 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
-            # if ith % 2 == 0:
-            #   x = enc_out[int(ith / 2)] + layer(x)
-            # else:
-            #     x = layer(x)
         
         x = self.proj_out(x)
         x = self.norm_out(x)
@@ -177,6 +157,7 @@ class SEConvModule(nn.Module):
         
         x = x.unsqueeze(1)
         x = self.conv_in(x)
+        x = self.activation(x)
         x = self.conv_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
@@ -215,6 +196,7 @@ class SEConvTransposedModule(nn.Module):
         
         x = x.unsqueeze(1)
         x = self.conv_in(x)
+        x = self.activation(x)
         x = self.conv_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)

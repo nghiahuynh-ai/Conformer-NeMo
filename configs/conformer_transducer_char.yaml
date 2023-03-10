@@ -54,8 +54,7 @@ model:
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}
     conv_channels: 64
-    d_model: 512
-    n_heads: 8
+    expand_factor: 8
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds

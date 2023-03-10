@@ -801,9 +801,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len, _ = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len, _ = self.forward(input_signal=signal, input_signal_length=signal_len)
+            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
 
         best_hyp_text, all_hyp_text = self.decoding.rnnt_decoder_predictions_tensor(
@@ -818,9 +818,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len, _ = self.forward(processed_signal=signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len, _ = self.forward(input_signal=signal, input_signal_length=signal_len)
+            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
 
         tensorboard_logs = {}

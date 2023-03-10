@@ -707,7 +707,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        return encoded, encoded_len, processed_signal_length
+        return encoded, encoded_len
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
@@ -717,19 +717,17 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len, spec_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len, spec_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
+            encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         del perturbed_signal
         
         spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
         del signal
         
-        # spec_mask = self.make_spec_mask(spec_clean.shape, spec_len).to(spec_clean.device)
-        
         spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-        loss_se = self.speech_enhance.compute_loss(spec_clean, spec_hat.transpose(1, 2))
-        del spec_clean, spec_hat #, spec_mask
+        loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
+        del spec_clean, spec_hat
 
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

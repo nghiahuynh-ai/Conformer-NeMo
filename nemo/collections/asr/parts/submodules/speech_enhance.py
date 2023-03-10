@@ -83,6 +83,8 @@ class SEEncoder(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
+        self.layers_out.clear()
+        
         x = self.norm_in(x)
         x = self.proj_in(x)
         

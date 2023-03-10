@@ -834,7 +834,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         tensorboard_logs = {}
 
         # If experimental fused Joint-Loss-WER is not used
-        if self.mode == 'finetune'
+        if self.mode == 'finetune':
             if not self.joint.fuse_loss_wer:
                 if self.compute_eval_loss:
                     decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

@@ -135,7 +135,8 @@ class SEDecoder(nn.Module):
         x = self.proj_in(x)
         
         for ith, layer in enumerate(self.layers):
-            x = enc_out[ith] + layer(x)
+            x = x + enc_out[ith]
+            x = layer(x)
             # if ith % 2 == 0:
             #   x = enc_out[int(ith / 2)] + layer(x)
             # else:

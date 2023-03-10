@@ -48,11 +48,10 @@ class SpeechEnhance(nn.Module):
         x = x.transpose(1, 2)
         x_hat = x_hat.transpose(1, 2)
         lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
-        lmag = torch.nn.functional.l1_loss(torch.log(x), torch.log(x_hat))
+        lmag = torch.nn.functional.l1_loss(x, x_hat)
         
         print(lsc)
         print(lmag)
-        print(x**2 - x_hat**2)
         
         return lsc + lmag
 

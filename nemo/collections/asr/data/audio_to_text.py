@@ -65,10 +65,10 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
     has_audio = audio_lengths[0] is not None
     if has_audio:
         max_audio_len = max(audio_lengths).item()
-        # if hop_len is not None and downsize_factor is not None:
-        #     n_feats = int(max_audio_len / hop_len + 1)
-        #     max_feats = int(n_feats / downsize_factor + 1) * downsize_factor
-        #     max_audio_len = (max_feats - 1) * hop_len
+        if hop_len is not None and downsize_factor is not None:
+            n_feats = int(max_audio_len / hop_len + 1)
+            max_feats = int(n_feats / downsize_factor + 1) * downsize_factor
+            max_audio_len = (max_feats - 1) * hop_len
             
     max_tokens_len = max(tokens_lengths).item()
     

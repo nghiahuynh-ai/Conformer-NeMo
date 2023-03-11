@@ -23,6 +23,8 @@ class NoiseMixer:
             self.white_noise_std = white_noise_std
     
     def __call__(self, signal):
+        if len(self.add_noise_methods) < 1:
+            return signal
         method = np.random.choice(self.add_noise_methods, size=1)
         if method == 'add_real_noise':
             return self._add_real_noise(signal)

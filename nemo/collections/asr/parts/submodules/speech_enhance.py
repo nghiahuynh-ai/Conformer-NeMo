@@ -129,7 +129,7 @@ class SEConvModule(nn.Module):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
-            in_channels=conv_channels,
+            in_channels=1,
             out_channels=conv_channels,
             kernel_size=3,
             stride=2,
@@ -137,7 +137,7 @@ class SEConvModule(nn.Module):
             )
         self.norm_in = nn.BatchNorm2d(conv_channels)
         self.conv_out = nn.Conv2d(
-            in_channels=1,
+            in_channels=conv_channels,
             out_channels=conv_channels,
             kernel_size=3,
             stride=1,
@@ -167,7 +167,7 @@ class SEConvTransposedModule(nn.Module):
         super().__init__()
 
         self.conv_in = nn.Conv2d(
-            in_channels=conv_channels,
+            in_channels=1   ,
             out_channels=conv_channels,
             kernel_size=3,
             stride=1,
@@ -175,7 +175,7 @@ class SEConvTransposedModule(nn.Module):
             )
         self.norm_in = nn.BatchNorm2d(conv_channels)
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=1,
+            in_channels=conv_channels,
             out_channels=conv_channels,
             kernel_size=3,
             stride=2,

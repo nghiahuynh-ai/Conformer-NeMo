@@ -86,27 +86,27 @@ class ConformerEncoder(NeuralModule, Exportable):
         input_example_length = torch.randint(1, max_dim, (max_batch,)).to(dev)
         return tuple([input_example, input_example_length])
 
-    @property
-    def input_types(self):
-        """Returns definitions of module input ports.
-        """
-        return OrderedDict(
-            {
-                "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
-                "length": NeuralType(tuple('B'), LengthsType()),
-            }
-        )
+    # @property
+    # def input_types(self):
+    #     """Returns definitions of module input ports.
+    #     """
+    #     return OrderedDict(
+    #         {
+    #             "audio_signal": NeuralType(('B', 'D', 'T'), SpectrogramType()),
+    #             "length": NeuralType(tuple('B'), LengthsType()),
+    #         }
+    #     )
 
-    @property
-    def output_types(self):
-        """Returns definitions of module output ports.
-        """
-        return OrderedDict(
-            {
-                "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-                "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-            }
-        )
+    # @property
+    # def output_types(self):
+    #     """Returns definitions of module output ports.
+    #     """
+    #     return OrderedDict(
+    #         {
+    #             "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+    #             "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+    #         }
+    #     )
 
     def __init__(
         self,
@@ -239,12 +239,12 @@ class ConformerEncoder(NeuralModule, Exportable):
         self.pos_enc.extend_pe(max_audio_length, device)
 
     @typecheck()
-    def forward(self, audio_signal, length=None):
+    def forward(self, audio_signal, length=None, pre_encode=None):
         self.update_max_seq_length(seq_length=audio_signal.size(2), device=audio_signal.device)
-        return self.forward_for_export(audio_signal=audio_signal, length=length)
+        return self.forward_for_export(audio_signal=audio_signal, length=length, pre_encode=pre_encode)
 
     @typecheck()
-    def forward_for_export(self, audio_signal, length):
+    def forward_for_export(self, audio_signal, length, pre_encode=None):
         max_audio_length: int = audio_signal.size(-1)
 
         if max_audio_length > self.max_audio_length:
@@ -255,14 +255,15 @@ class ConformerEncoder(NeuralModule, Exportable):
                 audio_signal.size(0), max_audio_length, dtype=torch.int32, device=self.seq_range.device
             )
 
-        if self.pre_encode is not None:
-            
-            audio_signal = torch.transpose(audio_signal, 1, 2)
-            
+        audio_signal = torch.transpose(audio_signal, 1, 2)
+        
+        if pre_encode is None:
             if isinstance(self.pre_encode, ConvSubsampling):
                 audio_signal, length = self.pre_encode(audio_signal, length)
             else:
                 audio_signal = self.pre_encode(audio_signal)
+        else:
+            audio_signal = pre_encode(audio_signal)
                 
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size

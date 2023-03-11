@@ -697,12 +697,18 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
         if self.speech_enhance is not None:
-            processed_signal = processed_signal.transpose(1, 2)
-            processed_signal = self.speech_enhance.forward_encoder(processed_signal)
-            processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
+            # processed_signal = processed_signal.transpose(1, 2)
+            # processed_signal = self.speech_enhance.forward_encoder(processed_signal)
+            # processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
             
-        encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
-        del processed_signal_length
+            encoded, encoded_len = self.encoder(
+                audio_signal=processed_signal, 
+                length=processed_signal_length,
+                pre_enc=self.speech_enhance.encoder)
+        else:
+            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+            
+        # del processed_signal_length
         
         return encoded, encoded_len
 
@@ -792,7 +798,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
+            loss_value = loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 

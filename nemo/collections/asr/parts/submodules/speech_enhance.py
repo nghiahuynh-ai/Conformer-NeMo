@@ -167,7 +167,7 @@ class SEConvTransposedModule(nn.Module):
         super().__init__()
 
         self.conv_in = nn.Conv2d(
-            in_channels=1   ,
+            in_channels=1,
             out_channels=conv_channels,
             kernel_size=3,
             stride=1,

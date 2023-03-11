@@ -49,29 +49,35 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, dim_expand):
         super().__init__()
+        
+        self.proj_in = nn.Linear(dim_in, dim_expand)
+        self.act_in = nn.ReLU()
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
                 SEConvModule(
-                    dim_in=int(dim_in / 2**ith),
-                    dim_out=int(dim_in / 2**(ith + 1)),
+                    dim_in=int(dim_expand / 2**ith),
+                    dim_out=int(dim_expand / 2**(ith + 1)),
                     conv_channels=conv_channels,
                 )
             )
             
         self.layers_out = []
         
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_expand / scaling_factor), dim_out)
         self.act_out = nn.ReLU()
             
     def forward(self, x):
         # x: (b, t, d)
         
         self.layers_out.clear()
+        
+        x = self.proj_in(x)
+        x = self.act_in(x)
         
         for layer in self.layers:
             x = layer(x)

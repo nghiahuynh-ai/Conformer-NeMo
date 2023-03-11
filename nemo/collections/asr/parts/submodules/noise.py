@@ -13,12 +13,12 @@ class NoiseMixer:
         super().__init__()
         
         self.add_noise_methods = []
-        if real_noise_filepath is not None:
+        if real_noise_filepath is not None and real_noise_snr[1] > real_noise_snr[0]:
             self.add_noise_methods.append('add_real_noise')
             self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr
-        if white_noise_std[0] >= 0.0 and white_noise_std[1] >= white_noise_std[0]:
-            # self.add_noise_methods.append('add_white_noise')
+        if white_noise_std[0] >= 0.0 and white_noise_std[1] > white_noise_std[0]:
+            self.add_noise_methods.append('add_white_noise')
             self.white_noise_mean = white_noise_mean
             self.white_noise_std = white_noise_std
     

@@ -696,10 +696,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
-        processed_signal = processed_signal.transpose(1, 2)
-        processed_signal = self.speech_enhance.forward_encoder(processed_signal)
-        processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
-        
+        if self.speech_enhance is not None:
+            processed_signal = processed_signal.transpose(1, 2)
+            processed_signal = self.speech_enhance.forward_encoder(processed_signal)
+            processed_signal_length = torch.tensor([processed_signal.size(1)] * processed_signal.size(0), device=processed_signal.device)
+            
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         del processed_signal_length
         
@@ -709,10 +710,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
-        perturbed_signal = self.noise_mixer(signal)
-        
-        spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
-        del signal
+        if self.speech_enhance is not None:
+            perturbed_signal = self.noise_mixer(signal)
+            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            del signal
+        else:
+            perturbed_signal = signal
         
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
@@ -721,9 +724,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         del perturbed_signal
         
-        spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-        loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
-        del spec_clean, spec_hat
+        if self.speech_enhance is not None:
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
+            del spec_clean, spec_hat
 
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

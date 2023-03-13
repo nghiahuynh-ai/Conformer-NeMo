@@ -101,13 +101,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
-            self.pretrain = self._cfg.speech_enhance.pretrain
+            # self.pretrain = self._cfg.speech_enhance.pretrain
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
-            self.pretrain = None
+            # self.pretrain = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -812,8 +812,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return list(zip(sample_id, best_hyp_text))
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
-        if self.pretrain:
-            return {}
+        # if self.pretrain:
+        #     return {}
         
         signal, signal_len, transcript, transcript_len = batch
 
@@ -876,8 +876,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return tensorboard_logs
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
-        if self.pretrain:
-            return {}
+        # if self.pretrain:
+        #     return {}
         
         logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
         test_logs = {
@@ -890,8 +890,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return test_logs
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
-        if self.pretrain:
-            return {}
+        # if self.pretrain:
+        #     return {}
         
         if self.compute_eval_loss:
             val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
@@ -904,8 +904,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return {**val_loss_log, 'log': tensorboard_logs}
 
     def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
-        if self.pretrain:
-            return {}
+        # if self.pretrain:
+        #     return {}
         
         if self.compute_eval_loss:
             test_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()

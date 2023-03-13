@@ -12,7 +12,6 @@ class SpeechEnhance(nn.Module):
         n_features=80,
         asr_d_model=512,
         conv_channels=64,
-        expand_factor=8,
         ):
         
         super().__init__()
@@ -25,15 +24,13 @@ class SpeechEnhance(nn.Module):
             conv_channels=conv_channels,
             dim_in=n_features,
             dim_out=asr_d_model,
-            dim_expand=expand_factor * n_features,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
             dim_in=asr_d_model,
-            dim_out=n_features,
-            dim_narrow=int(expand_factor / scaling_factor * n_features)
+            dim_narrow=int(n_features / scaling_factor)
         )
         
     def forward_encoder(self, x, length):
@@ -58,35 +55,29 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, dim_expand):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
-        
-        self.proj_in = nn.Linear(dim_in, dim_expand)
-        self.act_in = nn.ReLU()
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
                 SEConvModule(
-                    dim_in=int(dim_expand / 2**ith),
-                    dim_out=int(dim_expand / 2**(ith + 1)),
+                    dim_in=int(dim_in / 2**ith),
+                    dim_out=int(dim_in / 2**(ith + 1)),
                     conv_channels=conv_channels,
                 )
             )
             
         self.layers_out = []
         
-        self.proj_out = nn.Linear(int(dim_expand / scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
         self.act_out = nn.ReLU()
             
     def forward(self, x):
         # x: (b, t, d)
         
         self.layers_out.clear()
-        
-        x = self.proj_in(x)
-        x = self.act_in(x)
         
         for layer in self.layers:
             x = layer(x)
@@ -98,7 +89,7 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out, dim_narrow):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_narrow):
         super().__init__()
         
         self.proj_in = nn.Linear(dim_in, dim_narrow)
@@ -115,9 +106,6 @@ class SEDecoder(nn.Module):
                 )
             )
             
-        self.proj_out = nn.Linear(int(dim_narrow * scaling_factor), dim_out)
-        self.act_out = nn.Sigmoid()
-            
     def forward(self, x, enc_out):
         # x: (b, t, d)
 
@@ -128,13 +116,11 @@ class SEDecoder(nn.Module):
             x = x + enc_out[ith]
             x = layer(x)
         
-        x = self.proj_out(x)
-        
-        return self.act_out(x)
+        return x
     
     
 class SEConvModule(nn.Module):
-    def __init__(self, dim_in, dim_out, conv_channels):
+    def __init__(self, conv_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
@@ -144,16 +130,13 @@ class SEConvModule(nn.Module):
             stride=2,
             padding=1,
             )
-        self.norm_in = nn.BatchNorm2d(conv_channels)
         self.conv_out = nn.Conv2d(
             in_channels=conv_channels,
-            out_channels=conv_channels,
-            kernel_size=3,
+            out_channels=1,
+            kernel_size=1,
             stride=1,
-            padding=1,
+            padding=0,
             )
-        self.norm_out = nn.BatchNorm2d(conv_channels)
-        self.proj_out = nn.Linear(conv_channels * int(dim_in / 2), dim_out)
         self.activation = nn.ReLU()
     
     def forward(self, x):
@@ -161,53 +144,46 @@ class SEConvModule(nn.Module):
 
         x = x.unsqueeze(1)
         x = self.conv_in(x)
-        x = self.norm_in(x)
+        x = self.activation(x)
         x = self.conv_out(x)
-        x = self.norm_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
-        
-        x = self.proj_out(x)
+
         return self.activation(x)
     
     
 class SEConvTransposedModule(nn.Module):
-    def __init__(self, dim_in, dim_out, conv_channels):
+    def __init__(self, conv_channels):
         super().__init__()
 
         self.conv_in = nn.Conv2d(
             in_channels=1,
             out_channels=conv_channels,
-            kernel_size=3,
+            kernel_size=1,
             stride=1,
-            padding=1,
+            padding=0,
             )
-        self.norm_in = nn.BatchNorm2d(conv_channels)
+        self.activation = nn.ReLU()
         self.conv_out = nn.ConvTranspose2d(
             in_channels=conv_channels,
-            out_channels=conv_channels,
+            out_channels=1,
             kernel_size=3,
             stride=2,
             padding=1,
             output_padding=1,
             )
-        self.norm_out = nn.BatchNorm2d(conv_channels)
-        self.proj_out = nn.Linear(conv_channels * (2 * dim_in), dim_out)
-        self.activation = nn.ReLU()
     
     def forward(self, x):
         # x: (b, t, d) -> (b, 1, t, d)
 
         x = x.unsqueeze(1)
         x = self.conv_in(x)
-        x = self.norm_in(x)
+        x = self.activation(x)
         x = self.conv_out(x)
-        x = self.norm_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
-        
-        x = self.proj_out(x)
-        return self.activation(x)
+
+        return x
         
 
 class SETransModule(nn.Module):

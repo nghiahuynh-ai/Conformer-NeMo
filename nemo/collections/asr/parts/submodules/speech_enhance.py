@@ -43,7 +43,7 @@ class SpeechEnhance(nn.Module):
             kernel_size=3,
             ceil_mode=False,
             stride=2,
-            repeat_num=math.log(self.scaling_factor, 2),
+            repeat_num=int(math.log(self.scaling_factor, 2)),
         )
         return self.encoder(x), length
     

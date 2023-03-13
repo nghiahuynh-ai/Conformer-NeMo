@@ -97,6 +97,9 @@ class SEDecoder(nn.Module):
             self.layers.append(
                 SEConvTransposedModule(conv_channels=conv_channels)
             )
+        self.norm_out = nn.LayerNorm(dim_in * scaling_factor)
+        self.out = nn.Linear(dim_in * scaling_factor, dim_in * scaling_factor)
+        self.act_out = nn.Sigmoid()
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
@@ -105,10 +108,13 @@ class SEDecoder(nn.Module):
         x = self.act_in(x)
         
         for ith, layer in enumerate(self.layers):
-            # x = x + enc_out[ith]
+            x = x + enc_out[ith]
             x = layer(x)
         
-        return x
+        x = self.norm_out(x)
+        x = self.out(x)
+        
+        return self.act_out(x)
     
     
 class SEConvModule(nn.Module):

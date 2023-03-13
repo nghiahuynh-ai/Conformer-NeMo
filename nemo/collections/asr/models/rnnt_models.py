@@ -101,11 +101,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
+            self.pretrain = self._cfg.speech_enhance.pretrain
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
+            self.pretrain = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -788,7 +790,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_se
+            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 
@@ -810,6 +812,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return list(zip(sample_id, best_hyp_text))
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
+        if self.pretrain:
+            return {}
+        
         signal, signal_len, transcript, transcript_len = batch
 
         # forward() only performs encoder forward

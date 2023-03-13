@@ -105,7 +105,7 @@ class SEDecoder(nn.Module):
         x = self.act_in(x)
         
         for ith, layer in enumerate(self.layers):
-            x = x + enc_out[ith]
+            # x = x + enc_out[ith]
             x = layer(x)
         
         return x
@@ -125,9 +125,9 @@ class SEConvModule(nn.Module):
         self.conv_out = nn.Conv2d(
             in_channels=conv_channels,
             out_channels=1,
-            kernel_size=1,
+            kernel_size=3,
             stride=1,
-            padding=0,
+            padding=1,
             )
         self.activation = nn.ReLU()
     
@@ -151,9 +151,9 @@ class SEConvTransposedModule(nn.Module):
         self.conv_in = nn.Conv2d(
             in_channels=1,
             out_channels=conv_channels,
-            kernel_size=1,
+            kernel_size=3,
             stride=1,
-            padding=0,
+            padding=1,
             )
         self.activation = nn.ReLU()
         self.conv_out = nn.ConvTranspose2d(

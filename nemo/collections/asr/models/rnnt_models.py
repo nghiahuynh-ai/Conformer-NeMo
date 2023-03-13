@@ -719,7 +719,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
-        del signal
+        # del signal
         
         if self.speech_enhance is not None:
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))

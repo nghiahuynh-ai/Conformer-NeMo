@@ -272,6 +272,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         # else:
         #     audio_signal = self.pre_encode(audio_signal)
         
+        print(length)
         print(audio_signal.shape)
         if self.pre_encode is not None:
             if isinstance(self.pre_encode, ConvSubsampling):

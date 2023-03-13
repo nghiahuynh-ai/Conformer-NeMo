@@ -811,7 +811,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
         
         if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded)
+            encoded = self.asr_enc_out(encoded.transpose(1, 2))
+            encoded = encoded.transpose(1, 2)
 
         best_hyp_text, all_hyp_text = self.decoding.rnnt_decoder_predictions_tensor(
             encoder_output=encoded, encoded_lengths=encoded_len, return_hypotheses=False
@@ -831,7 +832,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         del signal
         
         if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded)
+            encoded = self.asr_enc_out(encoded.transpose(1, 2))
+            encoded = encoded.transpose(1, 2)
 
         tensorboard_logs = {}
 

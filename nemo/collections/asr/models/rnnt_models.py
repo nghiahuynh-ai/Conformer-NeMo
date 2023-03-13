@@ -876,6 +876,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return tensorboard_logs
 
     def test_step(self, batch, batch_idx, dataloader_idx=0):
+        if self.pretrain:
+            return {}
+        
         logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
         test_logs = {
             'test_wer_num': logs['val_wer_num'],
@@ -887,6 +890,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return test_logs
 
     def multi_validation_epoch_end(self, outputs, dataloader_idx: int = 0):
+        if self.pretrain:
+            return {}
+        
         if self.compute_eval_loss:
             val_loss_mean = torch.stack([x['val_loss'] for x in outputs]).mean()
             val_loss_log = {'val_loss': val_loss_mean}
@@ -898,6 +904,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return {**val_loss_log, 'log': tensorboard_logs}
 
     def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
+        if self.pretrain:
+            return {}
+        
         if self.compute_eval_loss:
             test_loss_mean = torch.stack([x['test_loss'] for x in outputs]).mean()
             test_loss_log = {'test_loss': test_loss_mean}

@@ -62,11 +62,7 @@ class SEEncoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SEConvModule(
-                    dim_in=int(dim_in / 2**ith),
-                    dim_out=int(dim_in / 2**(ith + 1)),
-                    conv_channels=conv_channels,
-                )
+                SEConvModule(conv_channels=conv_channels)
             )
             
         self.layers_out = []
@@ -99,11 +95,7 @@ class SEDecoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SEConvTransposedModule(
-                dim_in=int(dim_narrow * 2**ith),
-                dim_out=int(dim_narrow * 2**(ith + 1)),
-                conv_channels=conv_channels,
-                )
+                SEConvTransposedModule(conv_channels=conv_channels)
             )
             
     def forward(self, x, enc_out):

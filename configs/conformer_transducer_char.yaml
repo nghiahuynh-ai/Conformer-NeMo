@@ -63,6 +63,8 @@ model:
     trim_silence: false
     max_duration: 16.7 # it is set for LibriSpeech, you may need to update it for your dataset
     min_duration: 0.1
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     # tarred datasets
     is_tarred: false
     tarred_audio_filepaths: null

@@ -101,15 +101,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
-            self.asr_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
-            self.se_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
+            # self.asr_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
+            # self.se_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
-            self.asr_enc_out = None
-            self.se_enc_out = None
+            # self.asr_enc_out = None
+            # self.se_enc_out = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -726,10 +726,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # del signal
         
         if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded.transpose(1, 2))
-            encoded = encoded.transpose(1, 2)
-            se_encoded = self.se_enc_out(encoded.transpose(1, 2))
-            se_encoded = se_encoded.transpose(1, 2)
+            # encoded = self.asr_enc_out(encoded.transpose(1, 2))
+            # encoded = encoded.transpose(1, 2)
+            # se_encoded = self.se_enc_out(encoded.transpose(1, 2))
+            # se_encoded = se_encoded.transpose(1, 2)
             spec_hat = self.speech_enhance.forward_decoder(se_encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
             del spec_clean, spec_hat, se_encoded
@@ -810,9 +810,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
         
-        if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded.transpose(1, 2))
-            encoded = encoded.transpose(1, 2)
+        # if self.speech_enhance is not None:
+        #     encoded = self.asr_enc_out(encoded.transpose(1, 2))
+        #     encoded = encoded.transpose(1, 2)
 
         best_hyp_text, all_hyp_text = self.decoding.rnnt_decoder_predictions_tensor(
             encoder_output=encoded, encoded_lengths=encoded_len, return_hypotheses=False
@@ -831,9 +831,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         del signal
         
-        if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded.transpose(1, 2))
-            encoded = encoded.transpose(1, 2)
+        # if self.speech_enhance is not None:
+        #     encoded = self.asr_enc_out(encoded.transpose(1, 2))
+        #     encoded = encoded.transpose(1, 2)
 
         tensorboard_logs = {}
 

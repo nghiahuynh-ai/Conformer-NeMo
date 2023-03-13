@@ -55,7 +55,6 @@ class SpeechEnhance(nn.Module):
         lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
         lmag = torch.nn.functional.l1_loss(x, x_hat)
         return lsc + lmag
-        # return torch.nn.functional.mse_loss(x, x_hat)
 
 
 class SEEncoder(nn.Module):

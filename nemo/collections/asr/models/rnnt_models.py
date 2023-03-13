@@ -726,8 +726,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # del signal
         
         if self.speech_enhance is not None:
-            encoded = self.asr_enc_out(encoded)
-            se_encoded = self.se_enc_out(encoded)
+            encoded = self.asr_enc_out(encoded.transpose(1, 2))
+            encoded = encoded.transpose(1, 2)
+            se_encoded = self.se_enc_out(encoded.transpose(1, 2))
+            se_encoded = se_encoded.transpose(1, 2)
             spec_hat = self.speech_enhance.forward_decoder(se_encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
             del spec_clean, spec_hat, se_encoded

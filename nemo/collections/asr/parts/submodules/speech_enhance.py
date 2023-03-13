@@ -37,8 +37,15 @@ class SpeechEnhance(nn.Module):
         )
         
     def forward_encoder(self, x):
-        length = int(x.size(1) / self.scaling_factor)
-        return self.encoder(x), torch.tensor(length, dtype=torch.int, device=x.device)
+        length = calc_length(
+            lengths=length,
+            padding=1,
+            kernel_size=3,
+            ceil_mode=False,
+            stride=2,
+            repeat_num=math.log(self.scaling_factor, 2),
+        )
+        return self.encoder(x), length
     
     def forward_decoder(self, x):
         return self.decoder(x, self.encoder.layers_out)
@@ -226,6 +233,20 @@ class SETransModule(nn.Module):
         residual = residual + self.dropout(x)
         
         return self.activation(residual)
+
+
+def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
+    """ Calculates the output length of a Tensor passed through a convolution or max pooling layer"""
+    add_pad: float = (padding * 2) - kernel_size
+    one: float = 1.0
+    for i in range(repeat_num):
+        lengths = torch.div(lengths.to(dtype=torch.float) + add_pad, stride) + one
+        if ceil_mode:
+            lengths = torch.ceil(lengths)
+        else:
+            lengths = torch.floor(lengths)
+    return lengths.to(dtype=torch.int)
+
 
 # class PositionalEncoding2D(nn.Module):
 #     def __init__(self, channels):

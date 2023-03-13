@@ -146,21 +146,40 @@ class ConformerEncoder(NeuralModule, Exportable):
         else:
             self.xscale = None
 
-        if subsampling_conv_channels == -1:
-            subsampling_conv_channels = d_model
-        if subsampling and subsampling_factor > 1:
-            self.pre_encode = ConvSubsampling(
-                subsampling=subsampling,
-                subsampling_factor=subsampling_factor,
-                feat_in=feat_in,
-                feat_out=d_model,
-                conv_channels=subsampling_conv_channels,
-                activation=nn.ReLU(),
-            )
-            self._feat_out = d_model
+        # if subsampling_conv_channels == -1:
+        #     subsampling_conv_channels = d_model
+        # if subsampling and subsampling_factor > 1:
+        #     self.pre_encode = ConvSubsampling(
+        #         subsampling=subsampling,
+        #         subsampling_factor=subsampling_factor,
+        #         feat_in=feat_in,
+        #         feat_out=d_model,
+        #         conv_channels=subsampling_conv_channels,
+        #         activation=nn.ReLU(),
+        #     )
+        #     self._feat_out = d_model
+        # else:
+        #     self.pre_encode = nn.Linear(feat_in, d_model)
+        #     self._feat_out = d_model
+        
+        if subsampling is not None:
+            if subsampling_conv_channels == -1:
+                subsampling_conv_channels = d_model
+            if subsampling_factor > 1:
+                self.pre_encode = ConvSubsampling(
+                    subsampling=subsampling,
+                    subsampling_factor=subsampling_factor,
+                    feat_in=feat_in,
+                    feat_out=d_model,
+                    conv_channels=subsampling_conv_channels,
+                    activation=nn.ReLU(),
+                )
+                # self._feat_out = d_model
+            else:
+                self.pre_encode = nn.Linear(feat_in, d_model)
         else:
-            self.pre_encode = nn.Linear(feat_in, d_model)
-            self._feat_out = d_model
+            self.pre_encode = None
+        self._feat_out = d_model
 
         if not untie_biases and self_attention_model == "rel_pos":
             d_head = d_model // n_heads
@@ -228,13 +247,13 @@ class ConformerEncoder(NeuralModule, Exportable):
             self.register_buffer('seq_range', seq_range, persistent=False)
         self.pos_enc.extend_pe(max_audio_length, device)
 
-    @typecheck()
-    def forward(self, audio_signal, length=None):
+    # @typecheck()
+    def forward(self, audio_signal, length=None, pre_encode=None):
         self.update_max_seq_length(seq_length=audio_signal.size(2), device=audio_signal.device)
-        return self.forward_for_export(audio_signal=audio_signal, length=length)
+        return self.forward_for_export(audio_signal=audio_signal, length=length, pre_encode=pre_encode)
 
-    @typecheck()
-    def forward_for_export(self, audio_signal, length):
+    # @typecheck()
+    def forward_for_export(self, audio_signal, length, pre_encode=None):
         max_audio_length: int = audio_signal.size(-1)
 
         if max_audio_length > self.max_audio_length:
@@ -247,11 +266,20 @@ class ConformerEncoder(NeuralModule, Exportable):
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
 
-        if isinstance(self.pre_encode, ConvSubsampling):
-            audio_signal, length = self.pre_encode(audio_signal, length)
-            # print('conformer block: ', length)
+        # if isinstance(self.pre_encode, ConvSubsampling):
+        #     audio_signal, length = self.pre_encode(audio_signal, length)
+        #     # print('conformer block: ', length)
+        # else:
+        #     audio_signal = self.pre_encode(audio_signal)
+        
+        if self.pre_encode is not None:
+            if isinstance(self.pre_encode, ConvSubsampling):
+                audio_signal, length = self.pre_encode(audio_signal, length)
+            else:
+                audio_signal = self.pre_encode(audio_signal)
         else:
-            audio_signal = self.pre_encode(audio_signal)
+            audio_signal = pre_encode(audio_signal)
+            
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size
         max_audio_length = audio_signal.size(1)

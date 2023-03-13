@@ -48,6 +48,20 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
+  speech_enhance:
+    apply: true
+    alpha: 0.1
+    scaling_factor: 8
+    n_feats: ${model.preprocessor.features}
+    conv_channels: 64
+    expand_factor: 8
+    real_noise:
+      filepath: null 
+      snr: [0, 5] # signal to noise ratio bounds
+    white_noise:
+      mean: 0.0 
+      std: [0.0, 0.05] # std bounds
+
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
     pred_hidden: 640

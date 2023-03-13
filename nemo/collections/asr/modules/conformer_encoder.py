@@ -278,7 +278,9 @@ class ConformerEncoder(NeuralModule, Exportable):
             else:
                 audio_signal = self.pre_encode(audio_signal)
         else:
-            audio_signal = pre_encode(audio_signal)
+            audio_signal, length = pre_encode(audio_signal)
+            print(audio_signal.shape)
+            print(length)
             
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size

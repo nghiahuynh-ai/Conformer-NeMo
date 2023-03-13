@@ -226,7 +226,6 @@ class SETransModule(nn.Module):
         
         return self.activation(residual)
 
-    
 # class PositionalEncoding2D(nn.Module):
 #     def __init__(self, channels):
 #         """

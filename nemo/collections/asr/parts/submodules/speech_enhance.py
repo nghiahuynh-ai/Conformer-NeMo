@@ -116,7 +116,7 @@ class SEDecoder(nn.Module):
             )
             
         self.proj_out = nn.Linear(int(dim_narrow * scaling_factor), dim_out)
-        self.act_out = nn.ReLU()
+        self.act_out = nn.Sigmoid()
             
     def forward(self, x, enc_out):
         # x: (b, t, d)

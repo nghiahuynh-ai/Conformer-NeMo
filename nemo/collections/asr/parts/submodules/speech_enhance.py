@@ -37,7 +37,7 @@ class SpeechEnhance(nn.Module):
         )
         
     def forward_encoder(self, x):
-        length = int(length / self.scaling_factor)
+        length = int(x.size(1) / self.scaling_factor)
         return self.encoder(x), torch.tensor(length, dtype=torch.int, device=x.device)
     
     def forward_decoder(self, x):

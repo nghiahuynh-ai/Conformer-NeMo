@@ -36,7 +36,7 @@ class SpeechEnhance(nn.Module):
             dim_narrow=int(expand_factor / scaling_factor * n_features)
         )
         
-    def forward_encoder(self, x):
+    def forward_encoder(self, x, length):
         length = calc_length(
             lengths=length,
             padding=1,

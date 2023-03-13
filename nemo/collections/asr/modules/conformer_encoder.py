@@ -280,7 +280,7 @@ class ConformerEncoder(NeuralModule, Exportable):
             else:
                 audio_signal = self.pre_encode(audio_signal)
         else:
-            audio_signal, length = pre_encode.forward_encoder(audio_signal)
+            audio_signal, length = pre_encode.forward_encoder(audio_signal, length)
             # print(audio_signal.shape)
             # print(length)
             

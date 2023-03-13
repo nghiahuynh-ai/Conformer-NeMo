@@ -50,7 +50,6 @@ model:
 
   speech_enhance:
     apply: true
-    pretrain: false
     alpha: 0.1
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}

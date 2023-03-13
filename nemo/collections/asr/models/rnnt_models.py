@@ -101,13 +101,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
-            # self.pretrain = self._cfg.speech_enhance.pretrain
+            self.asr_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
+            self.se_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
-            # self.pretrain = None
+            self.asr_enc_out = None
+            self.se_enc_out = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -724,9 +726,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         # del signal
         
         if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            encoded = self.asr_enc_out(encoded)
+            se_encoded = self.se_enc_out(encoded)
+            spec_hat = self.speech_enhance.forward_decoder(se_encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
-            del spec_clean, spec_hat
+            del spec_clean, spec_hat, se_encoded
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

@@ -695,7 +695,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.encoder(
                 audio_signal=processed_signal, 
                 length=processed_signal_length,
-                pre_enc=self.speech_enhance.encoder)
+                pre_encode=self.speech_enhance.encoder)
         else:
             encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         

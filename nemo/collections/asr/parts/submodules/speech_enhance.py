@@ -60,21 +60,32 @@ class SEEncoder(nn.Module):
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = 1
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                out_channels = conv_channels
-            else:
-                in_channels = conv_channels
-                out_channels = conv_channels
+            # if ith == 0:
+            #     in_channels = 1
+            #     out_channels = conv_channels
+            # else:
+            #     in_channels = conv_channels
+            #     out_channels = conv_channels
+            # self.layers.append(
+            #     SEConvModule(in_channels=in_channels, out_channels=out_channels)
+            # )
             self.layers.append(
-                SEConvModule(in_channels=in_channels, out_channels=out_channels)
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=conv_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                )
             )
+            in_channels = conv_channels
             
         self.layers_out = []
         
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
-        self.act_out = nn.ReLU()
+        # self.act_out = nn.ReLU()
             
     def forward(self, x):
         # x: (b, t, d)
@@ -83,14 +94,14 @@ class SEEncoder(nn.Module):
         
         x = x.unsqueeze(1)
         for layer in self.layers:
-            x = layer(x)
+            x = nn.functional.relu(layer(x))
             self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
         x = self.proj_out(x)
         
-        return self.act_out(x)
+        return nn.functional.relu(x)
         
     
 class SEDecoder(nn.Module):

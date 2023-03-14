@@ -81,6 +81,7 @@ class SEEncoder(nn.Module):
         
         self.layers_out.clear()
         
+        x = x.unsqueeze(1)
         for layer in self.layers:
             x = layer(x)
             self.layers_out = [x] + self.layers_out
@@ -112,7 +113,6 @@ class SEDecoder(nn.Module):
                 SEConvTransposedModule(in_channels=in_channels, out_channels=out_channels)
             )
         
-        
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x, enc_out):
@@ -121,6 +121,7 @@ class SEDecoder(nn.Module):
         x = self.proj_in(x)
         x = self.act_in(x)
         
+        x = x.unsqueeze(1)
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
@@ -159,9 +160,8 @@ class SEConvModule(nn.Module):
             )
     
     def forward(self, x):
-        # x: (b, t, d)
+        # x: (b, c, t, d)
 
-        x = x.unsqueeze(1)
         x = nn.functional.relu(self.conv_in(x))
         x = nn.functional.relu(self.conv(x))
         x = nn.functional.glu(self.conv_out(x), dim=1)
@@ -170,35 +170,34 @@ class SEConvModule(nn.Module):
     
     
 class SEConvTransposedModule(nn.Module):
-    def __init__(self, conv_channels):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
-            in_channels=conv_channels,
-            out_channels=conv_channels * 2,
+            in_channels=in_channels,
+            out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
         )
         self.conv = nn.Conv2d(
-            in_channels=conv_channels,
-            out_channels=conv_channels,
+            in_channels=out_channels,
+            out_channels=out_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=conv_channels,
-            out_channels=conv_channels,
+            in_channels=out_channels,
+            out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
             )
     
     def forward(self, x):
-        # x: (b, t, d)
+        # x: (b, c, t, d)
 
-        x = x.unsqueeze(1)
         x = nn.functional.glu(self.conv_in(x), dim=1)
         x = nn.functional.relu(self.conv(x))
         x = self.conv_out(x)

@@ -52,6 +52,7 @@ model:
     apply: true
     pretrain: false
     alpha: 0.1
+    multitask_steps: 500
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}
     conv_channels: 64

@@ -11,7 +11,6 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
-        conv_channels=64,
         ):
         
         super().__init__()

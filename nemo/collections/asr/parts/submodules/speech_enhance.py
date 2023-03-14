@@ -28,7 +28,7 @@ class SpeechEnhance(nn.Module):
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
+            conv_channels=asr_d_model,
             dim_in=asr_d_model,
             dim_out=n_features,
         )
@@ -104,8 +104,12 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            self.layers.append(
-                SEConvTransposedModule(in_channels=conv_channels, out_channels=conv_channels)
+            nn.ConvTranspose2d(
+                in_channels=conv_channels,
+                out_channels=conv_channels,
+                kernel_size=4,
+                stride=2,
+                padding=1,
             )
         
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)

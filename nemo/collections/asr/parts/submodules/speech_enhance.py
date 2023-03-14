@@ -21,7 +21,7 @@ class SpeechEnhance(nn.Module):
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
+            conv_channels=asr_d_model,
             dim_in=n_features,
             dim_out=asr_d_model,
         )
@@ -62,15 +62,6 @@ class SEEncoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
         for ith in range(n_layers):
-            # if ith == 0:
-            #     in_channels = 1
-            #     out_channels = conv_channels
-            # else:
-            #     in_channels = conv_channels
-            #     out_channels = conv_channels
-            # self.layers.append(
-            #     SEConvModule(in_channels=in_channels, out_channels=out_channels)
-            # )
             self.layers.append(
                 nn.Conv2d(
                     in_channels=in_channels,
@@ -85,7 +76,6 @@ class SEEncoder(nn.Module):
         self.layers_out = []
         
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
-        # self.act_out = nn.ReLU()
             
     def forward(self, x):
         # x: (b, t, d)
@@ -98,7 +88,7 @@ class SEEncoder(nn.Module):
             self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
+        x = x.transpose(1, 2).reshape(b, t, -1)
         x = self.proj_out(x)
         
         return nn.functional.relu(x)
@@ -110,7 +100,6 @@ class SEDecoder(nn.Module):
         
         self.conv_channels = conv_channels
         self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
-        self.act_in = nn.ReLU()
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -125,17 +114,17 @@ class SEDecoder(nn.Module):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = self.act_in(x)
         
         x = x.unsqueeze(1)
         b, c, t, d = x.shape
         x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
+        
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
         
         b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
+        x = x.transpose(1, 2).reshape(b, t, -1)
         x = self.proj_out(x)
         
         return x
@@ -152,13 +141,13 @@ class SEConvModule(nn.Module):
             stride=2,
             padding=1,
             )
-        # self.conv = nn.Conv2d(
-        #     in_channels=out_channels,
-        #     out_channels=out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding=1,
-        # )
+        self.conv = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
         self.conv_out = nn.Conv2d(
             in_channels=out_channels,
             out_channels=out_channels * 2,
@@ -171,7 +160,7 @@ class SEConvModule(nn.Module):
         # x: (b, t, d)
         
         x = nn.functional.relu(self.conv_in(x))
-        # x = nn.functional.relu(self.conv(x))
+        x = nn.functional.relu(self.conv(x))
         x = nn.functional.glu(self.conv_out(x), dim=1)
 
         return x
@@ -188,13 +177,13 @@ class SEConvTransposedModule(nn.Module):
             stride=1,
             padding=0,
         )
-        # self.conv = nn.Conv2d(
-        #     in_channels=out_channels,
-        #     out_channels=out_channels,
-        #     kernel_size=3,
-        #     stride=1,
-        #     padding=1,
-        # )
+        self.conv = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
         self.conv_out = nn.ConvTranspose2d(
             in_channels=out_channels,
             out_channels=out_channels,
@@ -207,7 +196,7 @@ class SEConvTransposedModule(nn.Module):
         # x: (b, c, t, d)
 
         x = nn.functional.glu(self.conv_in(x), dim=1)
-        # x = nn.functional.relu(self.conv(x))
+        x = nn.functional.relu(self.conv(x))
         x = self.conv_out(x)
         
         return x

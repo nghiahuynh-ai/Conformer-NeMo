@@ -100,15 +100,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
-            # self.asr_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
-            # self.se_enc_out = nn.Linear(self._cfg.encoder.d_model, self._cfg.encoder.d_model)
+            self.pretrain = self._cfg.speech_enhance.pretrain
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
-            # self.asr_enc_out = None
-            # self.se_enc_out = None
+            self.pretrain = None
+
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -730,6 +729,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             del spec_clean, spec_hat
             
         # During training, loss must be computed, so decoder forward is necessary
+        # if not self.pretrain or (self.pretrain and batch_nb < 1):
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
 
         if hasattr(self, '_trainer') and self._trainer is not None:
@@ -791,7 +791,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
+            if self.pretrain and batch_nb > 0:
+                loss_value = loss_se
+            else:
+                loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 

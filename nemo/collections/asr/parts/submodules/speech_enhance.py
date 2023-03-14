@@ -122,7 +122,7 @@ class SEDecoder(nn.Module):
         x = self.proj_in(x)
         x = self.act_in(x)
         
-        x = x.unsqueeze(1)
+        # x = x.unsqueeze(1)
         b, c, t, d = x.shape
         x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
         for ith, layer in enumerate(self.layers):

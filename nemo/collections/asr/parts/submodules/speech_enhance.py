@@ -171,10 +171,9 @@ class SEConvTransposedModule(nn.Module):
         self.conv_out = nn.ConvTranspose2d(
             in_channels=conv_channels,
             out_channels=1,
-            kernel_size=3,
+            kernel_size=4,
             stride=2,
             padding=1,
-            output_padding=1,
             )
     
     def forward(self, x):

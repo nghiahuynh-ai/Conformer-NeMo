@@ -62,7 +62,7 @@ class SEEncoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SEConvModule(conv_channels=conv_channels, dim_in=int(dim_in / 2**ith))
+                SEConvModule(conv_channels=conv_channels)
             )
             
         self.layers_out = []
@@ -112,7 +112,7 @@ class SEDecoder(nn.Module):
     
     
 class SEConvModule(nn.Module):
-    def __init__(self, conv_channels, dim_in):
+    def __init__(self, conv_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
@@ -122,57 +122,52 @@ class SEConvModule(nn.Module):
             stride=2,
             padding=1,
             )
-        conv_channels = conv_channels * int(dim_in / 2)
-        self.conv_pointwise = nn.Conv1d(
+        self.conv = nn.Conv2d(
             in_channels=conv_channels,
             out_channels=conv_channels * 2,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            )
-        self.conv_depthwise = nn.Conv1d(
-            in_channels=conv_channels,
-            out_channels=1,
             kernel_size=3,
             stride=1,
             padding=1,
         )
-        self.activation = nn.ReLU()
+        self.conv_out = nn.Conv2d(
+            in_channels=conv_channels,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            )
     
     def forward(self, x):
-        # x: (b, t, d) -> (b, 1, t, d)
+        # x: (b, t, d)
 
         x = x.unsqueeze(1)
-        x = self.conv_in(x)
+        x = nn.functional.relu(self.conv_in(x))
+        x = nn.functional.relu(self.conv(x))
+        x = nn.functional.glu(self.conv_out(x), dim=1)
         b, c, t, d = x.shape
-        x = x.reshape(b, c * d, t)
-        x = self.activation(x)
-        x = self.conv_pointwise(x)
-        x = nn.functional.glu(x, dim=1)
-        x = self.conv_depthwise(x)
-        x = x.transpose(1, 2)
+        x = x.reshape(b, t, c * d)
 
-        return self.activation(x)
+        return x
     
     
 class SEConvTransposedModule(nn.Module):
     def __init__(self, conv_channels):
         super().__init__()
-
-        self.conv_depthwise = nn.Conv1d(
+        
+        self.conv_in = nn.Conv2d(
             in_channels=1,
+            out_channels=conv_channels * 2,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+        )
+        self.conv = nn.Conv2d(
+            in_channels=conv_channels,
             out_channels=conv_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )
-        self.conv_pointwise = nn.Conv1d(
-            in_channels=conv_channels,
-            out_channels=conv_channels * 2,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            )
         self.conv_out = nn.ConvTranspose2d(
             in_channels=conv_channels,
             out_channels=1,
@@ -181,18 +176,13 @@ class SEConvTransposedModule(nn.Module):
             padding=1,
             output_padding=1,
             )
-        self.activation = nn.ReLU()
     
     def forward(self, x):
         # x: (b, t, d)
 
-        x = x.transpose(1, 2)
-        x = self.conv_depthwise(x)
-        x = self.activation(x)
-        x = self.conv_pointwise(x)
-        x = nn.functional.glu(x, dim=1)
-        x = x.transpose(1, 2)
         x = x.unsqueeze(1)
+        x = nn.functional.glu(self.conv_in(x), dim=1)
+        x = nn.functional.relu(self.conv(x))
         x = self.conv_out(x)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)

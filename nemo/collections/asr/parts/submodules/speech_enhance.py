@@ -104,14 +104,16 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            nn.ConvTranspose2d(
-                in_channels=conv_channels,
-                out_channels=conv_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
+            self.layers.append(
+                nn.ConvTranspose2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                )    
             )
-        
+
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x, enc_out):

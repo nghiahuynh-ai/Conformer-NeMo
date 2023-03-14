@@ -30,7 +30,7 @@ class SpeechEnhance(nn.Module):
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
             dim_in=asr_d_model,
-            dim_narrow=int(n_features / scaling_factor)
+            dim_out=n_features,
         )
         
     def forward_encoder(self, x, length):

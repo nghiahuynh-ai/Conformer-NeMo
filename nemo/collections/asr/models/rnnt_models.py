@@ -101,14 +101,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             self.alpha = self._cfg.speech_enhance.alpha
             self.pretrain = self._cfg.speech_enhance.pretrain
-            self.multitask_steps = self._cfg.speech_enhance.multitask_steps
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
             self.alpha = None
             self.pretrain = None
-            self.multitask_steps = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))

@@ -124,14 +124,14 @@ class SEConvModule(nn.Module):
             )
         self.conv = nn.Conv2d(
             in_channels=conv_channels,
-            out_channels=conv_channels * 2,
+            out_channels=conv_channels,
             kernel_size=3,
             stride=1,
             padding=1,
         )
         self.conv_out = nn.Conv2d(
             in_channels=conv_channels,
-            out_channels=1,
+            out_channels=2,
             kernel_size=1,
             stride=1,
             padding=0,

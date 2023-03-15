@@ -51,6 +51,7 @@ model:
   speech_enhance:
     apply: true
     scaling_factor: 8
+    alpha: 0.999
     n_feats: ${model.preprocessor.features}
     d_model: ${model.encoder.d_model}
     n_heads: ${model.encoder.n_heads}

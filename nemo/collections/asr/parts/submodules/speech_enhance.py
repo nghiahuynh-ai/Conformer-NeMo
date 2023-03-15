@@ -11,8 +11,7 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
-        asr_n_heads=8,
-        conv_channels=512,
+        conv_channels=0,
         ):
         
         super().__init__()
@@ -20,20 +19,19 @@ class SpeechEnhance(nn.Module):
         self.n_features = n_features
         self.scaling_factor = scaling_factor
         
+        if conv_channels < 1:
+            conv_channels = asr_d_model
+        
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            d_model=asr_d_model,
-            n_heads=asr_n_heads,
-            conv_channels=conv_channels,
+            conv_channels=asr_d_model,
             dim_in=n_features,
             dim_out=asr_d_model,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            d_model=asr_d_model,
-            n_heads=asr_n_heads,
-            conv_channels=conv_channels,
+            conv_channels=asr_d_model,
             dim_in=asr_d_model,
             dim_out=n_features,
         )
@@ -60,139 +58,155 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, d_model, n_heads, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.layers_out = []
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = 1
         for ith in range(n_layers):
             self.layers.append(
-                SEEncoderLayer(
-                    dim_in=int(dim_in / 2**ith), 
-                    d_model=d_model, 
-                    n_heads=n_heads, 
-                    conv_channels=conv_channels,
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=conv_channels,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
                 )
             )
+            in_channels = conv_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
+        self.layers_out = []
+        
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
         
         self.layers_out.clear()
         
+        x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
             self.layers_out = [x] + self.layers_out
+        
+        b, c, t, d = x.shape
+        x = x.transpose(1, 2).reshape(b, t, -1)
         x = self.proj_out(x)
         
-        return x
+        return nn.functional.relu(x)
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, d_model, n_heads, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        dim_narrow = int(dim_out / scaling_factor)
-        self.proj_in = nn.Linear(dim_in, dim_narrow)
+        self.conv_channels = conv_channels
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SEDecoderLayer(
-                    dim_in=int(dim_narrow * 2**ith),
-                    d_model=d_model,
-                    n_heads=n_heads,
-                    conv_channels=conv_channels,
-                )  
+                nn.ConvTranspose2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                )    
             )
+
+        self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
 
-        x = nn.functional.relu(self.proj_in(x))
+        x = self.proj_in(x)
+        
+        x = x.unsqueeze(1)
+        b, c, t, d = x.shape
+        x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
         
+        b, c, t, d = x.shape
+        x = x.transpose(1, 2).reshape(b, t, -1)
+        x = self.proj_out(x)
+        
         return x
     
     
-class SEEncoderLayer(nn.Module):
-    def __init__(self, dim_in, d_model, n_heads, conv_channels):
+class SEConvModule(nn.Module):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
-            in_channels=1,
-            out_channels=conv_channels,
+            in_channels=in_channels,
+            out_channels=out_channels,
             kernel_size=3,
             stride=2,
             padding=1,
             )
+        self.conv = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
         self.conv_out = nn.Conv2d(
-            in_channels=conv_channels,
-            out_channels=conv_channels,
+            in_channels=out_channels,
+            out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
-        )
-        self.proj_in = nn.Linear(int(dim_in / 2) * conv_channels, d_model)
-        self.att = SETransModule(d_model=d_model, n_heads=n_heads)
-        self.proj_out = nn.Linear(d_model, int(dim_in / 2))
+            )
     
     def forward(self, x):
         # x: (b, t, d)
-        x = x.unsqueeze(1)
+        
         x = nn.functional.relu(self.conv_in(x))
-        x = nn.functional.relu(self.conv_out(x))
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = nn.functional.relu(self.proj_in(x))
-        x = nn.functional.relu(self.att(x))
-        x = nn.functional.relu(self.proj_out(x))
+        x = nn.functional.relu(self.conv(x))
+        x = nn.functional.glu(self.conv_out(x), dim=1)
 
         return x
     
     
-class SEDecoderLayer(nn.Module):
-    def __init__(self, dim_in, d_model, n_heads, conv_channels):
+class SEConvTransposedModule(nn.Module):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, d_model)
-        self.att = SETransModule(d_model=d_model, n_heads=n_heads)
-        self.proj_out = nn.Linear(d_model, dim_in)
         self.conv_in = nn.Conv2d(
-            in_channels=1,
-            out_channels=conv_channels,
+            in_channels=in_channels,
+            out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
         )
+        self.conv = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=conv_channels,
-            out_channels=conv_channels,
+            in_channels=out_channels,
+            out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
             )
-        self.out = nn.Linear(2 * dim_in * conv_channels, 2 * dim_in)
     
     def forward(self, x):
-        # x: (b, t, d)
+        # x: (b, c, t, d)
 
-        x = nn.functional.relu(self.proj_in(x))
-        x = nn.functional.relu(self.att(x))
-        x = nn.functional.relu(self.proj_out(x))
-        x = x.unsqueeze(1)
-        x = nn.functional.relu(self.conv_in(x))
-        x = nn.functional.relu(self.conv_out(x))
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = self.out(x)
+        x = nn.functional.glu(self.conv_in(x), dim=1)
+        x = nn.functional.relu(self.conv(x))
+        x = self.conv_out(x)
         
         return x
         
@@ -206,6 +220,7 @@ class SETransModule(nn.Module):
         self.ff_norm = nn.LayerNorm(d_model)
         self.ff = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
+        self.activation = nn.ReLU()
         
     def forward(self, x):
         residual = x
@@ -218,7 +233,7 @@ class SETransModule(nn.Module):
         x = self.ff(x)
         residual = residual + self.dropout(x)
         
-        return residual
+        return self.activation(residual)
 
 
 def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):

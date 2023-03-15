@@ -96,9 +96,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 scaling_factor=self._cfg.speech_enhance.scaling_factor,
                 n_features=self._cfg.speech_enhance.n_feats,
                 asr_d_model=self._cfg.encoder.d_model,
-                asr_n_heads=self._cfg.encoder.d_model,
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
+            
+            self.alpha = self._cfg.speech_enhance.alpha
 
         else:
             self.noise_mixer = None
@@ -783,7 +784,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_value.item() / loss_se.item() * loss_se
+            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 

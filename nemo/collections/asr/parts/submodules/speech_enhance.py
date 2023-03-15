@@ -103,7 +103,7 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            self.layers.ppend(
+            self.layers.append(
                 nn.Conv2d(
                     in_channels=1,
                     out_channels=2 * conv_channels,

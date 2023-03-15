@@ -111,17 +111,6 @@ class SEDecoder(nn.Module):
             )
             self.layers.append(nn.GLU(dim=1))
             self.layers.append(
-                nn.Conv2d(
-                    in_channels=conv_channels,
-                    out_channels=conv_channels,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                )
-            )
-            self.layers.append(nn.BatchNorm2d(conv_channels))
-            self.layers.append(nn.ReLU())
-            self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,
                     out_channels=1,

@@ -96,7 +96,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 scaling_factor=self._cfg.speech_enhance.scaling_factor,
                 n_features=self._cfg.speech_enhance.n_feats,
                 asr_d_model=self._cfg.encoder.d_model,
-                conv_channels=self._cfg.encoder.conv_channels,
+                conv_channels=self._cfg.speech_enhance.conv_channels,
             )
 
         else:

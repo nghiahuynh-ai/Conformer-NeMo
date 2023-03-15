@@ -95,14 +95,15 @@ class SEDecoder(nn.Module):
     def __init__(self, d_model, n_heads, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
+        dim_narrow = int(dim_out / scaling_factor)
+        self.proj_in = nn.Linear(dim_in, dim_narrow)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
                 SEDecoderLayer(
-                    dim_in=int(dim_in * 2**ith),
+                    dim_in=int(dim_narrow * 2**ith),
                     d_model=d_model,
                     n_heads=n_heads,
                     conv_channels=conv_channels,
@@ -149,12 +150,9 @@ class SEEncoderLayer(nn.Module):
         x = nn.functional.relu(self.conv_in(x))
         x = nn.functional.relu(self.conv_out(x))
         x = x.squeeze(1)
-        print(x.shape)
         x = nn.functional.relu(self.proj_in(x))
         x = nn.functional.relu(self.att(x))
         x = nn.functional.relu(self.proj_out(x))
-        print(x.shape)
-        print('-------------------------------------------')
 
         return x
     

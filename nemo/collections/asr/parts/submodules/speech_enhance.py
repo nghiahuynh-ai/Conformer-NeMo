@@ -194,7 +194,7 @@ class SEDecoderLayer(nn.Module):
         x = x.reshape(b, t, c * d)
         x = self.out(x)
         
-        return 
+        return x
         
 
 class SETransModule(nn.Module):

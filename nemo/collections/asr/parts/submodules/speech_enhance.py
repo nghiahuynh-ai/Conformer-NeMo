@@ -144,11 +144,12 @@ class SEEncoderLayer(nn.Module):
     
     def forward(self, x):
         # x: (b, t, d)
-        
+        print(x.shape)
         x = x.unsqueeze(1)
         x = nn.functional.relu(self.conv_in(x))
         x = nn.functional.relu(self.conv_out(x))
         x = x.squeeze(1)
+        print(x.shape)
         x = nn.functional.relu(self.proj(x))
         x = nn.functional.relu(self.att(x))
 

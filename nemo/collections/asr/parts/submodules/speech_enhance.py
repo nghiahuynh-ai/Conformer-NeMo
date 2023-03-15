@@ -139,8 +139,9 @@ class SEEncoderLayer(nn.Module):
             stride=1,
             padding=0,
         )
-        self.proj = nn.Linear(int(dim_in / 2), d_model)
+        self.proj_in = nn.Linear(int(dim_in / 2), d_model)
         self.att = SETransModule(d_model=d_model, n_heads=n_heads)
+        self.proj_out = nn.Linear(d_model, int(dim_in / 2))
     
     def forward(self, x):
         # x: (b, t, d)
@@ -150,8 +151,9 @@ class SEEncoderLayer(nn.Module):
         x = nn.functional.relu(self.conv_out(x))
         x = x.squeeze(1)
         print(x.shape)
-        x = nn.functional.relu(self.proj(x))
+        x = nn.functional.relu(self.proj_in(x))
         x = nn.functional.relu(self.att(x))
+        x = nn.functional.relu(self.proj_out(x))
 
         return x
     

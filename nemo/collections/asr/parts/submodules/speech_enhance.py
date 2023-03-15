@@ -135,12 +135,12 @@ class SEEncoderLayer(nn.Module):
             )
         self.conv_out = nn.Conv2d(
             in_channels=conv_channels,
-            out_channels=1,
+            out_channels=conv_channels,
             kernel_size=1,
             stride=1,
             padding=0,
         )
-        self.proj_in = nn.Linear(int(dim_in / 2), d_model)
+        self.proj_in = nn.Linear(int(dim_in / 2) * conv_channels, d_model)
         self.att = SETransModule(d_model=d_model, n_heads=n_heads)
         self.proj_out = nn.Linear(d_model, int(dim_in / 2))
     
@@ -149,10 +149,11 @@ class SEEncoderLayer(nn.Module):
         x = x.unsqueeze(1)
         x = nn.functional.relu(self.conv_in(x))
         x = nn.functional.relu(self.conv_out(x))
-        x = x.squeeze(1)
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
         x = nn.functional.relu(self.proj_in(x))
         x = nn.functional.relu(self.att(x))
-        x = nn.functional.relu(self.proj_out(x))
+        x = self.proj_out(x)
 
         return x
     
@@ -173,11 +174,12 @@ class SEDecoderLayer(nn.Module):
         )
         self.conv_out = nn.ConvTranspose2d(
             in_channels=conv_channels,
-            out_channels=1,
+            out_channels=conv_channels,
             kernel_size=4,
             stride=2,
             padding=1,
             )
+        self.out = nn.Linear(2 * dim_in * conv_channels, 2 * dim_in)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -187,10 +189,12 @@ class SEDecoderLayer(nn.Module):
         x = nn.functional.relu(self.proj_out(x))
         x = x.unsqueeze(1)
         x = nn.functional.relu(self.conv_in(x))
-        x = self.conv_out(x)
-        x = x.squeeze(1)
+        x = nn.functional.relu(self.conv_out(x))
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
+        x = self.out(x)
         
-        return x
+        return 
         
 
 class SETransModule(nn.Module):

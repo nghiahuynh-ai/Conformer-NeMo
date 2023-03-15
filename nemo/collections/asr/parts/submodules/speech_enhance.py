@@ -11,12 +11,16 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
+        conv_channels=0,
         ):
         
         super().__init__()
         
         self.n_features = n_features
         self.scaling_factor = scaling_factor
+        
+        if conv_channels < 1:
+            conv_channels = asr_d_model
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,

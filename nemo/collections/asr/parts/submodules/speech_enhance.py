@@ -133,8 +133,6 @@ class SEDecoder(nn.Module):
                     padding=1,
                 )    
             )
-
-        self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -147,10 +145,8 @@ class SEDecoder(nn.Module):
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
-        
-        b, c, t, d = x.shape
-        x = x.transpose(1, 2).reshape(b, t, -1)
-        x = self.proj_out(x)
+
+        x = x.squeeze(1)
         
         return x
     

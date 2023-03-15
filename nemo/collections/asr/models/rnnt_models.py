@@ -782,7 +782,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_se * torch.sqrt((loss_value.item())**2 - (loss_se.item())**2)
+            loss_value = loss_value + loss_se * torch.sqrt((loss_value.item() - loss_se.item())**2)
 
         return {'loss': loss_value}
 

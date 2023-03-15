@@ -11,7 +11,7 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
-        conv_channels=0,
+        conv_channels=80,
         ):
         
         super().__init__()
@@ -51,9 +51,9 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x)
     
     def compute_loss(self, x, x_hat):
-        lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
-        lmag = torch.nn.functional.l1_loss(x, x_hat)
-        return lsc + lmag
+        # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
+        # lmag = torch.nn.functional.l1_loss(x, x_hat)
+        return torch.nn.functional.mse_loss(x, x_hat)
 
 
 class SEEncoder(nn.Module):
@@ -74,8 +74,6 @@ class SEEncoder(nn.Module):
                 )
             )
             in_channels = conv_channels
-            
-        self.layers_out = []
         
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
             
@@ -97,8 +95,7 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.conv_channels = conv_channels
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
+        self.proj_in = nn.Linear(dim_in, conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -127,24 +124,26 @@ class SEDecoder(nn.Module):
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,
-                    out_channels=conv_channels,
+                    out_channels=1,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )    
             )
             
+        self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
+            
     def forward(self, x):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        
         x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
         x = x.squeeze(1)
+        x = self.proj_out(x)
         
         return x
     

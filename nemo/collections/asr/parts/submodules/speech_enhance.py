@@ -11,6 +11,7 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
+        asr_n_heads=8,
         conv_channels=0,
         ):
         
@@ -58,7 +59,7 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, d_model, n_heads, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
         self.layers = nn.ModuleList()
@@ -72,6 +73,11 @@ class SEEncoder(nn.Module):
                     kernel_size=3,
                     stride=2,
                     padding=1,
+                )
+            )
+            self.layers.append(
+                SETransModule(
+                    
                 )
             )
             in_channels = conv_channels
@@ -98,7 +104,7 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, d_model, n_heads, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
         self.conv_channels = conv_channels

@@ -197,7 +197,7 @@ class SEDecoderLayer(nn.Module):
         
 
 class SETransModule(nn.Module):
-    def __init__(self, dim_in, d_model, n_heads, dropout=0.1):
+    def __init__(self, d_model, n_heads, dropout=0.1):
         super().__init__()
         
         self.att_norm = nn.LayerNorm(d_model)

@@ -24,7 +24,7 @@ class SpeechEnhance(nn.Module):
             scaling_factor=scaling_factor,
             d_model=asr_d_model,
             n_heads=asr_n_heads,
-            conv_channels=asr_d_model,
+            conv_channels=conv_channels,
             dim_in=n_features,
             dim_out=asr_d_model,
         )
@@ -33,7 +33,7 @@ class SpeechEnhance(nn.Module):
             scaling_factor=scaling_factor,
             d_model=asr_d_model,
             n_heads=asr_n_heads,
-            conv_channels=asr_d_model,
+            conv_channels=conv_channels,
             dim_in=asr_d_model,
             dim_out=n_features,
         )
@@ -86,7 +86,7 @@ class SEEncoder(nn.Module):
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
             self.layers_out = [x] + self.layers_out
-        x = nn.functional.relu(self.proj_out(x))
+        x = self.proj_out(x)
         
         return x
         
@@ -153,7 +153,7 @@ class SEEncoderLayer(nn.Module):
         x = x.reshape(b, t, c * d)
         x = nn.functional.relu(self.proj_in(x))
         x = nn.functional.relu(self.att(x))
-        x = self.proj_out(x)
+        x = nn.functional.relu(self.proj_out(x))
 
         return x
     

@@ -31,7 +31,7 @@ class SpeechEnhance(nn.Module):
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=asr_d_model,
+            conv_channels=conv_channels,
             dim_in=asr_d_model,
             dim_out=n_features,
         )
@@ -51,7 +51,6 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x)
     
     def compute_loss(self, x, x_hat):
-        # x, x_hat: (b, t, d)
         lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
         lmag = torch.nn.functional.l1_loss(x, x_hat)
         return lsc + lmag
@@ -83,12 +82,9 @@ class SEEncoder(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
-        # self.layers_out.clear()
-        
         x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
-            # self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)
@@ -116,6 +112,7 @@ class SEDecoder(nn.Module):
                     padding=0,
                 )
             )
+            self.layers.append(nn.GLU(dim=1))
             self.layers.append(
                 nn.Conv2d(
                     in_channels=conv_channels,
@@ -125,6 +122,8 @@ class SEDecoder(nn.Module):
                     padding=1,
                 )
             )
+            self.layers.append(nn.BatchNorm2d(conv_channels))
+            self.layers.append(nn.ReLU())
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,
@@ -147,7 +146,6 @@ class SEDecoder(nn.Module):
         x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
         
         for ith, layer in enumerate(self.layers):
-            # x = x + enc_out[ith]
             x = layer(x)
         
         b, c, t, d = x.shape

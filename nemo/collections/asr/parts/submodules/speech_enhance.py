@@ -188,7 +188,7 @@ class SEDecoderLayer(nn.Module):
     
     def forward(self, x):
         
-        x = nn.functional.relu(self.att(x))
+        x = self.att(x)
         x = x.unsqueeze(1)
         x = nn.functional.glu(self.conv_in(x), dim=1)
         x = self.conv_out(x)

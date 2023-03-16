@@ -101,6 +101,13 @@ class SEDecoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
+                SETransModule(
+                    d_model=conv_channels * 2**ith,
+                    n_heads=4,
+                )
+            )
+            self.layers.append(nn.ReLU())
+            self.layers.append(
                 nn.Conv2d(
                     in_channels=1,
                     out_channels=2 * conv_channels,

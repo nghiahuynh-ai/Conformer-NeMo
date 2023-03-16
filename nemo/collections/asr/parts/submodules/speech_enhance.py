@@ -101,30 +101,11 @@ class SEDecoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SETransModule(
+                SEDecoderLayer(
                     d_model=conv_channels * 2**ith,
                     n_heads=4,
+                    conv_channels=conv_channels,
                 )
-            )
-            self.layers.append(nn.ReLU())
-            self.layers.append(
-                nn.Conv2d(
-                    in_channels=1,
-                    out_channels=2 * conv_channels,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
-            self.layers.append(nn.GLU(dim=1))
-            self.layers.append(
-                nn.ConvTranspose2d(
-                    in_channels=conv_channels,
-                    out_channels=1,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                )    
             )
             
         self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
@@ -133,12 +114,12 @@ class SEDecoder(nn.Module):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        # x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
-        x = x.squeeze(1)
+        # x = x.squeeze(1)
         x = self.proj_out(x)
         
         return x
@@ -180,38 +161,38 @@ class SEConvModule(nn.Module):
         return x
     
     
-class SEConvTransposedModule(nn.Module):
-    def __init__(self, in_channels, out_channels):
+class SEDecoderLayer(nn.Module):
+    def __init__(self, d_model, n_heads, conv_channels):
         super().__init__()
         
+        self.att = SETransModule(
+            d_model=d_model,
+            n_heads=n_heads,
+        )
+        
         self.conv_in = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels * 2,
+            in_channels=1,
+            out_channels=2 * conv_channels,
             kernel_size=1,
             stride=1,
             padding=0,
         )
-        self.conv = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-        )
+
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
+            in_channels=conv_channels,
+            out_channels=1,
             kernel_size=4,
             stride=2,
             padding=1,
-            )
+        )
     
     def forward(self, x):
-        # x: (b, c, t, d)
-
+        
+        x = nn.functional.relu(self.att(x))
+        x = x.unsqueeze(1)
         x = nn.functional.glu(self.conv_in(x), dim=1)
-        x = nn.functional.relu(self.conv(x))
         x = self.conv_out(x)
+        x = x.squeeze(1)
         
         return x
         

@@ -103,15 +103,17 @@ class SEDecoder(nn.Module):
             if ith == 0:
                 in_channels = 1
                 out_channels = conv_channels
-            elif ith == n_layers -1 :
-                in_channels = conv_channels
-                out_channels = 1
+            # elif ith == n_layers -1 :
+            #     in_channels = conv_channels
+            #     out_channels = 1
             else:
                 in_channels = conv_channels
                 out_channels = conv_channels
             self.layers.append(
                 SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
+        
+        self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -122,7 +124,9 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
-        x = x.squeeze(1)
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
+        x = self.proj_out(x)
         
         return x
     

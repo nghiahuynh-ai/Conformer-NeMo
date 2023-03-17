@@ -48,7 +48,7 @@ class SpeechEnhance(nn.Module):
         return self.encoder(x), length
     
     def forward_decoder(self, x):
-        return self.decoder(x)
+        return self.decoder(x, self.encoder.layers_out)
     
     def compute_loss(self, x, x_hat):
         # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
@@ -61,6 +61,7 @@ class SEEncoder(nn.Module):
         super().__init__()
         
         self.layers = nn.ModuleList()
+        self.layers_out = []
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
         for ith in range(n_layers):
@@ -80,9 +81,12 @@ class SEEncoder(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
+        self.layers_out.clear()
+        
         x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
+            self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)
@@ -115,13 +119,14 @@ class SEDecoder(nn.Module):
         
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
-    def forward(self, x):
+    def forward(self, x, enc_out):
         # x: (b, t, d)
 
         x = self.proj_in(x)
         x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
+            x = x + enc_out[ith]
             x = layer(x)
 
         b, c, t, d = x.shape

@@ -113,7 +113,7 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
-        x = x.squeeze(x)
+        x = x.squeeze(1)
         
         return x
     

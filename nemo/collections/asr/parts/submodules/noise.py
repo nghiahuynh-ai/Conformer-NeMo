@@ -13,22 +13,22 @@ class NoiseMixer:
         
         self.add_noise_methods = []
         if real_noise_filepath is not None and real_noise_snr[1] > real_noise_snr[0]:
-            self.add_noise_methods.append('add_real_noise')
+            self.add_noise_methods.append(self._add_real_noise)
             self.real_noise_corpus = np.load(real_noise_filepath, allow_pickle=True)
             self.real_noise_snr = real_noise_snr
         if white_noise_std[0] >= 0.0 and white_noise_std[1] > white_noise_std[0]:
-            self.add_noise_methods.append('add_white_noise')
+            self.add_noise_methods.append(self._add_white_noise)
             self.white_noise_mean = white_noise_mean
             self.white_noise_std = white_noise_std
     
     def __call__(self, signal):
         if len(self.add_noise_methods) < 1:
             return signal
-        method = np.random.choice(self.add_noise_methods, size=1)
-        if method == 'add_real_noise':
-            return self._add_real_noise(signal)
-        else:
-            return self._add_white_noise(signal)
+        method = np.random.choice(self.add_noise_methods)
+        # if method == 'add_real_noise':
+        #     return self._add_real_noise(signal)
+        # else:
+        return method(signal)
     
     def _add_real_noise(self, signal):
         signal_length = signal.size(1)

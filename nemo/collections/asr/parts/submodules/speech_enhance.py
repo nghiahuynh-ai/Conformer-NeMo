@@ -112,7 +112,7 @@ class SEDecoder(nn.Module):
         
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
-    def forward(self, x, enc_out):
+    def forward(self, x):
         # x: (b, t, d)
 
         x = self.proj_in(x)

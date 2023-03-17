@@ -100,17 +100,9 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                out_channels = conv_channels
-            else:
-                in_channels = conv_channels
-                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEDecoderLayer(conv_channels=conv_channels)
             )
-        
-        self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -121,9 +113,7 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = self.proj_out(x)
+        x = x.squeeze(x)
         
         return x
     
@@ -165,20 +155,30 @@ class SEConvModule(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, conv_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=2 * out_channels,
+            in_channels=1,
+            out_channels=2 * conv_channels,
             kernel_size=1,
             stride=1,
             padding=0,
         )
+        
+        self.norm = nn.BatchNorm2d(num_features=conv_channels)
+        
+        self.conv = nn.Conv2d(
+            in_channels=conv_channels,
+            out_channels=conv_channels,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
 
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
+            in_channels=conv_channels,
+            out_channels=1,
             kernel_size=4,
             stride=2,
             padding=1,
@@ -187,6 +187,8 @@ class SEDecoderLayer(nn.Module):
     def forward(self, x):
 
         x = nn.functional.glu(self.conv_in(x), dim=1)
+        x = self.conv(x)
+        x = nn.functional.relu(self.norm(x))
         x = self.conv_out(x)
         
         return x

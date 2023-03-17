@@ -206,6 +206,7 @@ class SETransModule(nn.Module):
         self.ff_norm = nn.LayerNorm(d_model)
         self.ff = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
+        self.norm_out = nn.LayerNorm(d_model)
         self.activation = nn.ReLU()
         
     def forward(self, x):
@@ -219,6 +220,7 @@ class SETransModule(nn.Module):
         x = self.ff(x)
         residual = residual + self.dropout(x)
         
+        x = self.norm_out(x)
         return self.activation(residual)
 
 

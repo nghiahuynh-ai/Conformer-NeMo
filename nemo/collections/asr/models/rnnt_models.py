@@ -42,6 +42,7 @@ from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
 from nemo.collections.asr.parts.submodules.speech_enhance import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
+from nemo.collections.asr.parts.submodules.grad_remedy import GradRemedy
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -98,10 +99,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 asr_d_model=self._cfg.encoder.d_model,
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
+            
+            self.grad_remedy = GradRemedy()
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
+            self.grad_remedy = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -715,8 +719,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         # del signal
         
+        asr_encoded = self.grad_remedy(encoded)
+        se_encoded = self.grad_remedy(encoded)
+        encoded = asr_encoded
+        
         if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            spec_hat = self.speech_enhance.forward_decoder(se_encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
             del spec_clean, spec_hat
             

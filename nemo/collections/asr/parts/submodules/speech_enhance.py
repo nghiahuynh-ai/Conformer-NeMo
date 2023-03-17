@@ -100,23 +100,29 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers -1 :
+                in_channels = conv_channels
+                out_channels = 1
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(conv_channels=conv_channels)
+                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
-            
-        # self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        # x = x.unsqueeze(1)
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
-        # x = x.squeeze(1)
-        x = self.proj_out(x)
+        x = x.squeeze(1)
         
         return x
     
@@ -158,37 +164,29 @@ class SEConvModule(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, conv_channels):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        # self.att = SETransModule(
-        #     d_model=d_model,
-        #     n_heads=n_heads,
-        # )
-        
         self.conv_in = nn.Conv2d(
-            in_channels=1,
-            out_channels=2 * conv_channels,
+            in_channels=in_channels,
+            out_channels=2 * out_channels,
             kernel_size=1,
             stride=1,
             padding=0,
         )
 
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=conv_channels,
-            out_channels=1,
+            in_channels=out_channels,
+            out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
     
     def forward(self, x):
-        
-        x = self.att(x)
-        x = x.unsqueeze(1)
+
         x = nn.functional.glu(self.conv_in(x), dim=1)
         x = self.conv_out(x)
-        x = x.squeeze(1)
         
         return x
         

@@ -80,8 +80,6 @@ class SEEncoder(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
-        self.layers_out.clear()
-        
         x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))

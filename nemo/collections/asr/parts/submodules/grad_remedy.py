@@ -17,7 +17,7 @@ class GradRemedy(nn.Module):
     def forward_se(self, x):
         def hook(grad):
             cos_phi = (self.grad_asr * grad).sum(1) / ((self.grad_asr**2).sum(1).sqrt() * (grad**2).sum(1).sqrt())
-            cos_phi_mask = (cos_phi <= 0.0).unsqueeze(-1).expand(grad.shape)
+            cos_phi_mask = (cos_phi <= 0.0).unsqueeze(1).expand(grad.shape)
             sin_phi = torch.sqrt(1 - cos_phi**2)
             tan_theta = (grad**2).sum(1).sqrt() / (self.grad_asr**2).sum(1).sqrt()
             grad_2 = (grad**2).sum(1).sqrt()

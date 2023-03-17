@@ -715,7 +715,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
-            processed_signal = self.spec_augmentation(input_spec=spec_clean, length=spec_clean_length)
+            spec_clean = self.spec_augmentation(input_spec=spec_clean, length=spec_clean_length)
 
         encoded, encoded_len = self.encoder(audio_signal=spec_clean, length=spec_clean_length)
         

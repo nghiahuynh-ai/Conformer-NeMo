@@ -100,12 +100,20 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
             
-            self.grad_remedy = GradRemedy()
+            self.alpha = self._cfg.speech_enhance.alpha
+            self.beta = self._cfg.speech_enhance.beta
+            self.scheduling_steps = self._cfg.speech_enhance.scheduling_steps
+            self.delta = (self.alpha - self.beta) / self.scheduling_steps
+            self.cur_step = -1
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
-            self.grad_remedy = None
+            self.alpha = None
+            self.beta = None
+            self.scheduling_steps = None
+            self.delta = None
+            self.cur_step = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -719,12 +727,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         # del signal
         
-        asr_encoded = self.grad_remedy.forward_asr(encoded)
-        se_encoded = self.grad_remedy.forward_se(encoded)
-        encoded = asr_encoded
+        # asr_encoded = self.grad_remedy.forward_asr(encoded)
+        # se_encoded = self.grad_remedy.forward_se(encoded)
+        # encoded = asr_encoded
         
         if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(se_encoded.transpose(1, 2))
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
             del spec_clean, spec_hat
             
@@ -790,7 +798,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_value + loss_se
+            self.cur_step = self.cur_step + 1
+            if self.cur_step < self.scheduling_steps:
+                self.alpha = self.alpha - self.delta
+            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
 
         return {'loss': loss_value}
 

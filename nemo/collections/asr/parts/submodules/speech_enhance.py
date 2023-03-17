@@ -99,22 +99,15 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
 
-        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor))
+        self.conv_channels = conv_channels
+        
+        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor) * conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                out_channels = conv_channels
-            # elif ith == n_layers -1 :
-            #     in_channels = conv_channels
-            #     out_channels = 1
-            else:
-                in_channels = conv_channels
-                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=conv_channels, out_channels=conv_channels)
             )
         
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
@@ -123,7 +116,8 @@ class SEDecoder(nn.Module):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        b, t, d = x.shape
+        x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]

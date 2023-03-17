@@ -94,21 +94,17 @@ class SEEncoder(nn.Module):
 class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
-        
-        self.proj_in = nn.Linear(dim_in, conv_channels)
+
+        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor))
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             self.layers.append(
-                SEDecoderLayer(
-                    d_model=conv_channels * 2**ith,
-                    n_heads=4,
-                    conv_channels=conv_channels,
-                )
+                SEDecoderLayer(conv_channels=conv_channels)
             )
             
-        self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
+        # self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -162,13 +158,13 @@ class SEConvModule(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, d_model, n_heads, conv_channels):
+    def __init__(self, conv_channels):
         super().__init__()
         
-        self.att = SETransModule(
-            d_model=d_model,
-            n_heads=n_heads,
-        )
+        # self.att = SETransModule(
+        #     d_model=d_model,
+        #     n_heads=n_heads,
+        # )
         
         self.conv_in = nn.Conv2d(
             in_channels=1,

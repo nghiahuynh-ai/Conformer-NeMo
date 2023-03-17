@@ -48,7 +48,7 @@ class SpeechEnhance(nn.Module):
         return self.encoder(x), length
     
     def forward_decoder(self, x):
-        return self.decoder(x, self.encoder.layers_out)
+        return self.decoder(x)
     
     def compute_loss(self, x, x_hat):
         # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
@@ -61,7 +61,6 @@ class SEEncoder(nn.Module):
         super().__init__()
         
         self.layers = nn.ModuleList()
-        self.layers_out = []
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
         for ith in range(n_layers):
@@ -86,7 +85,6 @@ class SEEncoder(nn.Module):
         x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
-            self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)
@@ -99,15 +97,19 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
 
-        self.conv_channels = conv_channels
-        
-        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor) * conv_channels)
+        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor))
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=conv_channels)
+                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
         
         self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
@@ -116,11 +118,9 @@ class SEDecoder(nn.Module):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        b, t, d = x.shape
-        x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
-            x = x + enc_out[ith]
             x = layer(x)
 
         b, c, t, d = x.shape

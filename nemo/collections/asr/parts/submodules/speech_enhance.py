@@ -138,7 +138,7 @@ class SEEncoderLayer(nn.Module):
         super().__init__()
         
         self.conv_in = nn.Conv1d(
-            in_channels=in_channels,
+            in_channels=1,
             out_channels=out_channels,
             kernel_size=3,
             stride=2,
@@ -147,7 +147,7 @@ class SEEncoderLayer(nn.Module):
         
         self.conv_out = nn.Conv1d(
             in_channels=out_channels,
-            out_channels=out_channels * 2,
+            out_channels=2,
             kernel_size=1,
             stride=1,
             padding=0,
@@ -167,7 +167,7 @@ class SEDecoderLayer(nn.Module):
         super().__init__()
         
         self.conv_in = nn.Conv1d(
-            in_channels=in_channels,
+            in_channels=1,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
@@ -176,7 +176,7 @@ class SEDecoderLayer(nn.Module):
 
         self.conv_out = nn.ConvTranspose1d(
             in_channels=out_channels,
-            out_channels=out_channels,
+            out_channels=1,
             kernel_size=4,
             stride=2,
             padding=1,

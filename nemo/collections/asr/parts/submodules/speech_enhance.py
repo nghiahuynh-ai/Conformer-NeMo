@@ -41,8 +41,8 @@ class SpeechEnhance(nn.Module):
     
     def forward(self, x):
         x_hat = self.encoder(x)
-        x_hat = self.pos_enc(x_hat)
-        x_hat = self.bottleneck(x_hat)
+        # x_hat = self.pos_enc(x_hat)
+        # x_hat = self.bottleneck(x_hat)
         x_hat = self.decoder(x_hat)
         return x_hat
     

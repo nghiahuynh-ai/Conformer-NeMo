@@ -253,7 +253,7 @@ class ConformerEncoder(NeuralModule, Exportable):
         return self.forward_for_export(audio_signal=audio_signal, length=length, pre_encode=pre_encode)
 
     @typecheck()
-    def forward_for_export(self, audio_signal, length, pre_encode=None):
+    def forward_for_export(self, audio_signal, length):
         max_audio_length: int = audio_signal.size(-1)
 
         if max_audio_length > self.max_audio_length:
@@ -266,19 +266,18 @@ class ConformerEncoder(NeuralModule, Exportable):
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
 
-        # if isinstance(self.pre_encode, ConvSubsampling):
-        #     audio_signal, length = self.pre_encode(audio_signal, length)
-        #     # print('conformer block: ', length)
-        # else:
-        #     audio_signal = self.pre_encode(audio_signal)
-
-        if self.pre_encode is not None:
-            if isinstance(self.pre_encode, ConvSubsampling):
-                audio_signal, length = self.pre_encode(audio_signal, length)
-            else:
-                audio_signal = self.pre_encode(audio_signal)
+        if isinstance(self.pre_encode, ConvSubsampling):
+            audio_signal, length = self.pre_encode(audio_signal, length)
         else:
-            audio_signal, length = pre_encode.forward_encoder(audio_signal, length)
+            audio_signal = self.pre_encode(audio_signal)
+
+        # if self.pre_encode is not None:
+        #     if isinstance(self.pre_encode, ConvSubsampling):
+        #         audio_signal, length = self.pre_encode(audio_signal, length)
+        #     else:
+        #         audio_signal = self.pre_encode(audio_signal)
+        # else:
+        #     audio_signal, length = pre_encode.forward_encoder(audio_signal, length)
             
         audio_signal, pos_emb = self.pos_enc(audio_signal)
         # adjust size

@@ -59,14 +59,8 @@ class SEEncoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                out_channels = conv_channels
-            else:
-                in_channels = conv_channels
-                out_channels = conv_channels
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEEncoderLayer(conv_channels)
             )
             
     def forward(self, x):
@@ -77,32 +71,35 @@ class SEEncoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
 
-        x = x.transpose(1, 2)
+        x = x.squeeze(1)
         
         return x
     
     
 class SEBottleNeck(nn.Module):
-    def __init__(self, n_layers, d_model, n_heads, dim_in, dim_out):
+    def __init__(self, n_layers, d_model, n_heads):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, d_model)
+        self.proj_in = nn.Linear(1, d_model)
         self.layers = nn.ModuleList()
         for ith in range(n_layers):
             self.layers.append(
                 SETransformerLayer(d_model=d_model, n_heads=n_heads)
             )
-        self.proj_out = nn.Linear(d_model, dim_out)
+        self.proj_out = nn.Linear(d_model, 1)
         
     def forward(self, x):
         #x: (b, l, d)
-        
+        x = x.unsqueeze(2)
         x = self.proj_in(x)
         
         for layer in self.layers:
             x = layer(x)
             
         x = self.proj_out(x)
+        x = x.squeeze(2)
+        
+        return x
         
     
 class SEDecoder(nn.Module):
@@ -112,12 +109,8 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            if ith == n_layers - 1:
-                out_channels = 1
-            else:
-                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(conv_channels)
             )
             
     def forward(self, x):
@@ -134,19 +127,19 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, conv_channels):
         super().__init__()
         
         self.conv_in = nn.Conv1d(
             in_channels=1,
-            out_channels=out_channels,
+            out_channels=conv_channels,
             kernel_size=3,
             stride=2,
             padding=1,
             )
         
         self.conv_out = nn.Conv1d(
-            in_channels=out_channels,
+            in_channels=conv_channels,
             out_channels=2,
             kernel_size=1,
             stride=1,

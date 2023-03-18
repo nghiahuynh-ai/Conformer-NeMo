@@ -45,7 +45,7 @@ __all__ = [
 ]
 
 
-def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
+def _speech_collate_fn(batch, pad_id, downsize_factor):
     """collate batch of audio sig, audio len, tokens, tokens len
     Args:
         batch (Optional[FloatTensor], Optional[LongTensor], LongTensor,
@@ -67,10 +67,8 @@ def _speech_collate_fn(batch, pad_id, hop_len, downsize_factor):
     #     max_audio_len = max(audio_lengths).item()
     if has_audio:
         max_audio_len = max(audio_lengths).item()
-        if hop_len is not None and downsize_factor is not None:
-            n_feats = int(max_audio_len / hop_len + 1)
-            max_feats = int(n_feats / downsize_factor + 1) * downsize_factor
-            max_audio_len = (max_feats - 1) * hop_len
+        if downsize_factor is not None:
+            max_audio_len = math.ceil(max_audio_len / downsize_factor) * downsize_factor
     max_tokens_len = max(tokens_lengths).item()
 
     audio_signal, tokens = [], []
@@ -267,7 +265,6 @@ class _AudioTextDataset(Dataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[int] = None,
         min_duration: Optional[int] = None,
-        hop_len: Optional[float] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         trim: bool = False,
@@ -293,11 +290,9 @@ class _AudioTextDataset(Dataset):
         self.trim = trim
         self.return_sample_id = return_sample_id
         
-        if hop_len is not None and downsize_factor is not None:
-            self.hop_len = int(float(hop_len) * sample_rate)
+        if downsize_factor is not None:
             self.downsize_factor = downsize_factor
         else:
-            self.hop_len = None
             self.downsize_factor = None
 
     def get_manifest_sample(self, sample_id):
@@ -328,7 +323,7 @@ class _AudioTextDataset(Dataset):
         return len(self.manifest_processor.collection)
 
     def _collate_fn(self, batch):
-        return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.hop_len, self.downsize_factor)
+        return _speech_collate_fn(batch, self.manifest_processor.pad_id, self.downsize_factor)
 
 
 class AudioToCharDataset(_AudioTextDataset):
@@ -383,7 +378,6 @@ class AudioToCharDataset(_AudioTextDataset):
         augmentor: 'nemo.collections.asr.parts.perturb.AudioAugmentor' = None,
         max_duration: Optional[float] = None,
         min_duration: Optional[float] = None,
-        hop_len: Optional[float] = None,
         downsize_factor: Optional[int] = None,
         max_utts: int = 0,
         blank_index: int = -1,
@@ -410,7 +404,6 @@ class AudioToCharDataset(_AudioTextDataset):
             augmentor=augmentor,
             max_duration=max_duration,
             min_duration=min_duration,
-            hop_len=hop_len,
             downsize_factor=downsize_factor,
             max_utts=max_utts,
             trim=trim,

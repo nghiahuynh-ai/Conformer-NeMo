@@ -95,9 +95,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             self.speech_enhance = SpeechEnhance(
                 scaling_factor=self._cfg.speech_enhance.scaling_factor,
-                n_features=self._cfg.speech_enhance.n_feats,
-                asr_d_model=self._cfg.encoder.d_model,
                 conv_channels=self._cfg.speech_enhance.conv_channels,
+                n_layers=self._cfg.speech_enhance.n_layers,
+                d_model=self._cfg.speech_enhance.d_model,
+                n_heads=self._cfg.speech_enhance.n_heads,
             )
             
             self.alpha = self._cfg.speech_enhance.alpha
@@ -699,13 +700,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
-        if self.speech_enhance is not None:
-            encoded, encoded_len = self.encoder(
-                audio_signal=processed_signal, 
-                length=processed_signal_length,
-                pre_encode=self.speech_enhance)
-        else:
-            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         
         return encoded, encoded_len
 
@@ -715,7 +710,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
-            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            perturbed_signal = self.speech_enhance(perturbed_signal)
+            loss_se = self.speech_enhance.compute_loss(signal, perturbed_signal)
             del signal
         else:
             perturbed_signal = signal
@@ -727,11 +723,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         # del signal
         
-        if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
-            del spec_clean, spec_hat
-            
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
 

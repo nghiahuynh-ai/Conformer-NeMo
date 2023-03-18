@@ -51,11 +51,13 @@ model:
   speech_enhance:
     apply: true
     scaling_factor: 8
+    conv_channels: 64
+    n_layers: 16
+    d_model: 512
+    n_heads: 8
     alpha: 0.999
     beta: 0.1
     scheduling_steps: 10000
-    n_feats: ${model.preprocessor.features}
-    conv_channels: ${model.encoder.d_model}
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds

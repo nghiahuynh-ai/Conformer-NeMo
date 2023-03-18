@@ -800,7 +800,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.cur_step = self.cur_step + 1
             if self.cur_step < self.scheduling_steps:
                 self.alpha = self.alpha - self.delta
-            loss_value = (1 - self.alpha) * loss_value + self.alpha * self.loss_se
+            loss_value = self.alpha * self.loss_se + (1 - self.alpha) * loss_value
 
         return {'loss': loss_value}
 

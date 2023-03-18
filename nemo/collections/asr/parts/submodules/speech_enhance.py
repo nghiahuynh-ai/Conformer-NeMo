@@ -119,7 +119,6 @@ class SEDecoder(nn.Module):
             self.layers.append(
                 SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
             )
-        self.proj_out = nn.Linear()
             
     def forward(self, x):
         # x: (b, l, c) -> (b, l)

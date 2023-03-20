@@ -138,7 +138,7 @@ class SEDecoder(nn.Module):
         x = x.reshape(b, self.conv_channels, t, self.dim_narrow)
         
         for ith, layer in enumerate(self.layers):
-            if ith % 2 == 0:
+            if ith % 3 == 0:
                 x = x + enc_out[ith]
             x = layer(x)
 

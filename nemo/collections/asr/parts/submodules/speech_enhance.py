@@ -139,8 +139,7 @@ class SEDecoder(nn.Module):
         
         for ith, layer in enumerate(self.layers):
             if ith % 3 == 0:
-                print(ith)
-                x = x + enc_out[ith]
+                x = x + enc_out[int(ith / 3)]
             x = layer(x)
 
         # b, c, t, d = x.shape

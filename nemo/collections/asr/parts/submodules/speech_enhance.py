@@ -99,17 +99,19 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        dim_narrow = int(dim_out / scaling_factor)
-        self.proj_in = nn.Linear(dim_in, dim_narrow)
+        self.conv_channels = conv_channels
+        
+        self.dim_narrow = int(dim_out / scaling_factor)
+        self.proj_in = nn.Linear(dim_in, self.dim_narrow * conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            in_channels = 1 if ith == 0 else conv_channels
+            out_channels = 1 if ith == n_layers - 1 else conv_channels
             self.layers.append(
                 nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=2 * conv_channels,
+                    in_channels=conv_channels,
+                    out_channels=2 * out_channels,
                     kernel_size=1,
                     stride=1,
                     padding=0,
@@ -118,30 +120,32 @@ class SEDecoder(nn.Module):
             self.layers.append(nn.GLU(dim=1))
             self.layers.append(
                 nn.ConvTranspose2d(
-                    in_channels=conv_channels,
-                    out_channels=conv_channels,
+                    in_channels=out_channels,
+                    out_channels=out_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )    
             )
             
-        self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
+        # self.proj_out = nn.Linear(dim_out * conv_channels, dim_out)
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        b, t, _ = x.shape
+        x = x.reshape(b, self.conv_channels, t, self.dim_narrow)
         
         for ith, layer in enumerate(self.layers):
             if ith % 2 == 0:
                 x = x + enc_out[ith]
             x = layer(x)
 
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = self.proj_out(x)
+        # b, c, t, d = x.shape
+        # x = x.reshape(b, t, c * d)
+        # x = self.proj_out(x)
+        x = x.squeeze(1)
         
         return x
     

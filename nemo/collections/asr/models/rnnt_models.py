@@ -881,8 +881,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         logs = self.validation_step(batch, batch_idx, dataloader_idx=dataloader_idx)
         test_logs = {
-            'test_wer_num': logs['val_wer_num'],
-            'test_wer_denom': logs['val_wer_denom'],
+            # 'test_wer_num': logs['val_wer_num'],
+            # 'test_wer_denom': logs['val_wer_denom'],
             # 'test_wer': logs['val_wer'],
         }
         if 'val_loss' in logs:
@@ -895,9 +895,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             val_loss_log = {'val_loss': val_loss_mean}
         else:
             val_loss_log = {}
-        wer_num = torch.stack([x['val_wer_num'] for x in outputs]).sum()
-        wer_denom = torch.stack([x['val_wer_denom'] for x in outputs]).sum()
-        tensorboard_logs = {**val_loss_log, 'val_wer': wer_num.float() / wer_denom}
+        # wer_num = torch.stack([x['val_wer_num'] for x in outputs]).sum()
+        # wer_denom = torch.stack([x['val_wer_denom'] for x in outputs]).sum()
+        # tensorboard_logs = {**val_loss_log, 'val_wer': wer_num.float() / wer_denom}
+        tensorboard_logs = {**val_loss_log}
         return {**val_loss_log, 'log': tensorboard_logs}
 
     def multi_test_epoch_end(self, outputs, dataloader_idx: int = 0):
@@ -906,9 +907,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             test_loss_log = {'test_loss': test_loss_mean}
         else:
             test_loss_log = {}
-        wer_num = torch.stack([x['test_wer_num'] for x in outputs]).sum()
-        wer_denom = torch.stack([x['test_wer_denom'] for x in outputs]).sum()
-        tensorboard_logs = {**test_loss_log, 'test_wer': wer_num.float() / wer_denom}
+        # wer_num = torch.stack([x['test_wer_num'] for x in outputs]).sum()
+        # wer_denom = torch.stack([x['test_wer_denom'] for x in outputs]).sum()
+        # tensorboard_logs = {**test_loss_log, 'test_wer': wer_num.float() / wer_denom}
+        tensorboard_logs = {**test_loss_log}
         return {**test_loss_log, 'log': tensorboard_logs}
 
     def _setup_transcribe_dataloader(self, config: Dict) -> 'torch.utils.data.DataLoader':

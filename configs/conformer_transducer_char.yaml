@@ -88,6 +88,8 @@ model:
   validation_ds:
     manifest_filepath: ???
     sample_rate: ${model.sample_rate}
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     batch_size: 16
     shuffle: true
     num_workers: 8
@@ -96,6 +98,8 @@ model:
   test_ds:
     manifest_filepath: null
     sample_rate: ${model.sample_rate}
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     batch_size: 16
     shuffle: true
     num_workers: 8

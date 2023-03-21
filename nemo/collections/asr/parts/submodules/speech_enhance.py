@@ -79,6 +79,7 @@ class SEEncoder(nn.Module):
         
         x = x.unsqueeze(1)
         for ith, layer in enumerate(self.layers):
+            x = layer(x)
             self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
@@ -115,7 +116,7 @@ class SEDecoder(nn.Module):
         
         for ith, layer in enumerate(self.layers):
             if ith % 3 == 0:
-                x = x + enc_out[int(ith / 3)]
+                x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)

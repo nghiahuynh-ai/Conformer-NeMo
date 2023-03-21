@@ -129,7 +129,7 @@ class SEEncoderLayer(nn.Module):
         super().__init__()
           
         self.conv_in = nn.Conv2d(
-            in_channels=out_channels,
+            in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=3,
             stride=2,
@@ -137,7 +137,7 @@ class SEEncoderLayer(nn.Module):
         )
         
         self.conv_out = nn.Conv2d(
-            in_channels=in_channels,
+            in_channels=out_channels,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,

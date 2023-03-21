@@ -67,7 +67,7 @@ class SEEncoder(nn.Module):
             self.layers.append(
                 nn.Conv2d(
                     in_channels=in_channels,
-                    out_channels=conv_channels,
+                    out_channels=conv_channels * 2,
                     kernel_size=1,
                     stride=1,
                     padding=0,

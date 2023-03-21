@@ -68,11 +68,22 @@ class SEEncoder(nn.Module):
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=conv_channels,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                )    
+            )
+            self.layers.append(nn.GLU(dim=1))
+            self.layers.append(
+                nn.Conv2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
                     kernel_size=3,
                     stride=2,
                     padding=1,
                 )
             )
+            self.layers.append(nn.ReLU())
             in_channels = conv_channels
         self.layers_out = []
         
@@ -84,9 +95,10 @@ class SEEncoder(nn.Module):
         self.layers_out.clear()
         
         x = x.unsqueeze(1)
-        for layer in self.layers:
-            x = nn.functional.relu(layer(x))
-            self.layers_out = [x] + self.layers_out
+        for ith, layer in enumerate(self.layers):
+            x = layer(x)
+            if ith % 3 == 0 and ith > 0:
+                self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)

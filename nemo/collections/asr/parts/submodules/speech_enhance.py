@@ -79,7 +79,7 @@ class SEEncoder(nn.Module):
         
         for layer in self.layers:
             x = layer(x)
-            self.layers_out.append(x)
+            self.layers_out = [x] + self.layers_out
 
         # b, c, t, d = x.shape
         # x = x.reshape(b, t, c * d)
@@ -124,11 +124,12 @@ class SEDecoder(nn.Module):
             in_channels = out_channels
             out_channels = int(out_channels / 2)
             
-    def forward(self, x):
+    def forward(self, x, enc_out):
         # in: (b, c, t, d)
         # out: (b, t, d)
         
         for ith, layer in enumerate(self.layers):
+            x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)

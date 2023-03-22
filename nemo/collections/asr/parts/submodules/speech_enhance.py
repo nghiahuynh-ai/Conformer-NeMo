@@ -77,6 +77,8 @@ class SEEncoder(nn.Module):
         # in: (b, t, d)
         # out: (b, c, t, d)
         
+        print(x.shape)
+        
         self.layers_out.clear()
         
         x = x.unsqueeze(1)
@@ -87,6 +89,7 @@ class SEEncoder(nn.Module):
 
         # b, c, t, d = x.shape
         # x = x.reshape(b, t, c * d)
+        print(x.shape)
         x = self.proj_out(x)
         
         return x

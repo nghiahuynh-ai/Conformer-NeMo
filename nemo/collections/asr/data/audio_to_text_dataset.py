@@ -91,6 +91,7 @@ def get_char_dataset(config: dict, augmentor: Optional['AudioAugmentor'] = None)
         augmentor=augmentor,
         max_duration=config.get('max_duration', None),
         min_duration=config.get('min_duration', None),
+        hop_len=config.get('hop_len', None),
         downsize_factor=config.get('downsize_factor', None),
         max_utts=config.get('max_utts', 0),
         blank_index=config.get('blank_index', -1),

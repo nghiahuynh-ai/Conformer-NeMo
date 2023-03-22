@@ -115,7 +115,7 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.n_channels = int(conv_channels * scaling_factor / 2)
+        self.n_channels = conv_channels * scaling_factor
         self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * self.n_channels)
 
         self.layers = nn.ModuleList()

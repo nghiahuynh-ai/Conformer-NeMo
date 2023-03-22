@@ -717,8 +717,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=perturb_signal, length=signal_len,
             )
             spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
-            # spec_hat = spec_hat.transpose(1, 2)
-            loss_se = self.speech_enhance.compute_loss(clean_spec.transpose(1, 2), spec_hat)
+            spec_hat = spec_hat.transpose(1, 2)
+            # loss_se = self.speech_enhance.compute_loss(clean_spec, spec_hat)
+            loss_se = 0
             del signal, perturb_signal, clean_spec, noise_spec
         else:
             perturb_signal = signal
@@ -727,7 +728,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
             encoded, encoded_len = self.forward(processed_signal=perturb_signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(processed_signal=spec_hat.transpose(1, 2), processed_signal_length=spec_len)
+            encoded, encoded_len = self.forward(processed_signal=spec_hat, processed_signal_length=spec_len)
         del spec_hat
         
         # During training, loss must be computed, so decoder forward is necessary

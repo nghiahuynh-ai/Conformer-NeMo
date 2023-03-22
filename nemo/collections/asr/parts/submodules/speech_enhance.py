@@ -183,7 +183,7 @@ class SEDecoderLayer(nn.Module):
             padding=0,
         )
 
-        self.conv_out = nn.ConvTranspose1d(
+        self.conv_out = nn.ConvTranspose2d(
             in_channels=out_channels,
             out_channels=out_channels,
             kernel_size=4,

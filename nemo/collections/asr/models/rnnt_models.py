@@ -630,30 +630,34 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self._test_dl = self._setup_dataloader_from_config(config=test_data_config)
 
-    @property
-    def input_types(self) -> Optional[Dict[str, NeuralType]]:
-        if hasattr(self.preprocessor, '_sample_rate'):
-            input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
-        else:
-            input_signal_eltype = AudioSignal()
+    # @property
+    # def input_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     if hasattr(self.preprocessor, '_sample_rate'):
+    #         input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
+    #     else:
+    #         input_signal_eltype = AudioSignal()
 
-        return {
-            "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
-            "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-            "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
-            "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-        }
+    #     return {
+    #         "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
+    #         "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #         "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
+    #         "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #     }
 
-    @property
-    def output_types(self) -> Optional[Dict[str, NeuralType]]:
-        return {
-            "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-            "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-        }
+    # @property
+    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     return {
+    #         "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+    #         "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+    #     }
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+        self, 
+        input_signal=None, 
+        input_signal_length=None, 
+        processed_signal=None, 
+        processed_signal_length=None,
     ):
         """
         Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
@@ -690,11 +694,22 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 f"{self} Arguments ``input_signal`` and ``input_signal_length`` are mutually exclusive "
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
-        
+            
         if not has_processed_signal:
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+            
+        if self.speech_enhance is not None:
+            perturb_signal = self.noise_mixer(input_signal)
+            noise_spec, _ = self.preprocessor(
+                input_signal=perturb_signal, length=input_signal_length,
+            )
+            spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
+            spec_hat = spec_hat.transpose(1, 2)
+            self.loss_se = self.speech_enhance.compute_loss(processed_signal, spec_hat)
+            processed_signal = spec_hat.clone().detach()
+            del perturb_signal, noise_spec, spec_hat
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -707,29 +722,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
-        
-        if self.speech_enhance is not None:
-            perturb_signal = self.noise_mixer(signal)
-            clean_spec, _ = self.preprocessor(
-                input_signal=signal, length=signal_len,
-            )
-            noise_spec, spec_len = self.preprocessor(
-                input_signal=perturb_signal, length=signal_len,
-            )
-            spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
-            spec_hat = spec_hat.transpose(1, 2)
-            processed_signal = spec_hat.clone().detach()
-            loss_se = self.speech_enhance.compute_loss(clean_spec, spec_hat)
-            del signal, perturb_signal, clean_spec, noise_spec, spec_hat
-        else:
-            perturb_signal = signal
-    
+
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=perturb_signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(processed_signal=processed_signal, processed_signal_length=spec_len)
-        # del spec_hat
+            encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        del signal
         
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -753,7 +752,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if self.speech_enhance is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': self.loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if (sample_id + 1) % log_every_n_steps == 0:
                 self.wer.update(encoded, encoded_len, transcript, transcript_len)
@@ -780,7 +779,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if self.speech_enhance is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': self.loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if compute_wer:
                 tensorboard_logs.update({'training_batch_wer': wer})
@@ -796,7 +795,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.cur_step = self.cur_step + 1
             if self.cur_step < self.scheduling_steps:
                 self.alpha = self.alpha - self.delta
-            loss_value = (1 - self.alpha) * loss_value + self.alpha * loss_se
+            loss_value = (1 - self.alpha) * loss_value + self.alpha * self.loss_se
 
         return {'loss': loss_value}
 

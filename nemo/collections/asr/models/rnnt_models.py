@@ -708,7 +708,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
             spec_hat = spec_hat.transpose(1, 2)
             self.loss_se = self.speech_enhance.compute_loss(processed_signal, spec_hat)
-            processed_signal = spec_hat.clone().detach()
+            processed_signal = spec_hat.clone()
             del perturb_signal, noise_spec, spec_hat
         
         # Spec augment is not applied during evaluation/testing

@@ -83,7 +83,9 @@ class SEEncoder(nn.Module):
             self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
+        print(x.shape)
         x = x.transpose(1, 2).reshape(b, t, -1)
+        print(x.shape)
         x = self.proj_out(x)
         
         return nn.functional.relu(x)

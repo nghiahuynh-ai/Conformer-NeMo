@@ -84,9 +84,11 @@ class SEEncoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
             self.layers_out = [x] + self.layers_out
-
+        
+        print(x.shape)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
+        print(x.shape)
         x = self.proj_out(x)
         
         return x

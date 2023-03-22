@@ -23,6 +23,8 @@ class SpeechEnhance(nn.Module):
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
+            dim_in=n_features,
+            dim_out=d_model,
         )
         
         self.pos_enc = PositionalEncoding2D(d_model)
@@ -36,6 +38,8 @@ class SpeechEnhance(nn.Module):
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
+            dim_in=d_model,
+            dim_out=n_features,
         )
     
     def forward(self, x):
@@ -52,7 +56,7 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in=None, dim_out=None):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
         self.layers = nn.ModuleList()
@@ -66,7 +70,7 @@ class SEEncoder(nn.Module):
             in_channels = out_channels
             out_channels = 2 * out_channels
             
-        # self.proj_out = nn.Linear(int(dim_in / scaling_factor) * in_channels, dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -83,7 +87,7 @@ class SEEncoder(nn.Module):
 
         # b, c, t, d = x.shape
         # x = x.reshape(b, t, c * d)
-        # x = self.proj_out(x)
+        x = self.proj_out(x)
         
         return x
     
@@ -108,8 +112,10 @@ class SEBottleNeck(nn.Module):
         return x
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in=None, dim_out=None):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
+        
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))

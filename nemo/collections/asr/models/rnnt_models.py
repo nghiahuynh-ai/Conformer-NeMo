@@ -710,14 +710,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             perturb_signal = self.noise_mixer(signal)
-            clean_spec, spec_len = self.preprocessor(
+            clean_spec, _ = self.preprocessor(
                 input_signal=signal, length=signal_len,
             )
-            noise_spec, _ = self.preprocessor(
+            noise_spec, spec_len = self.preprocessor(
                 input_signal=perturb_signal, length=signal_len,
             )
             spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(clean_spec, spec_hat.transpose(1, 2))
+            print(clean_spec.shape)
+            print(noise_spec.shape)
             del signal, clean_spec, noise_spec
         else:
             perturb_signal = signal

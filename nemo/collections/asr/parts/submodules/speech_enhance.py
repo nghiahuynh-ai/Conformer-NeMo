@@ -46,7 +46,7 @@ class SpeechEnhance(nn.Module):
         x_hat = self.encoder(x)
         x_hat = self.pos_enc(x_hat)
         x_hat = self.bottleneck(x_hat)
-        x_hat = self.decoder(x_hat)
+        x_hat = self.decoder(x_hat, self.encoder.layers_out)
         return x_hat
     
     def compute_loss(self, x, x_hat):

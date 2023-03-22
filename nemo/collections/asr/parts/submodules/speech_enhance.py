@@ -48,7 +48,7 @@ class SpeechEnhance(nn.Module):
         return self.encoder(x), length
     
     def forward_decoder(self, x):
-        return self.decoder(x)
+        return self.decoder(x, self.encoder.layers_out)
     
     def compute_loss(self, x, x_hat):
         # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
@@ -75,14 +75,18 @@ class SEEncoder(nn.Module):
             )
             in_channels = conv_channels
         
+        self.layers_out = []
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
         
+        self.layers_out.clear()
+        
         x = x.unsqueeze(1)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
+            self.layers_out = [x] + self.layers_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)
@@ -95,44 +99,38 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, conv_channels)
+        self.conv_channels = conv_channels
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            self.layers.append(
-                nn.Conv2d(
-                    in_channels=1,
-                    out_channels=2 * conv_channels,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
-            self.layers.append(nn.GLU(dim=1))
+            out_channels = 1 if ith == n_layers - 1 else conv_channels
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,
-                    out_channels=1,
+                    out_channels=out_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )    
             )
             
-        self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
+        # self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
             
-    def forward(self, x):
+    def forward(self, x, enc_out):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        b, t, d = x.shape
+        x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
         
         for ith, layer in enumerate(self.layers):
+            x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)
-        x = self.proj_out(x)
+        # x = self.proj_out(x)
         
         return x
     

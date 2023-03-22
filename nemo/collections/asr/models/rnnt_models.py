@@ -698,8 +698,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
-            print(processed_signal.shape)
-            print(processed_signal_length)
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
         encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
@@ -719,10 +717,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=perturb_signal, length=signal_len,
             )
             spec_hat = self.speech_enhance(noise_spec.transpose(1, 2))
-            loss_se = self.speech_enhance.compute_loss(clean_spec, spec_hat.transpose(1, 2))
-            print(clean_spec.shape)
-            print(noise_spec.shape)
-            del signal, clean_spec, noise_spec
+            spec_hat = spec_hat.transpose(1, 2)
+            loss_se = self.speech_enhance.compute_loss(clean_spec, spec_hat)
+            del signal, perturb_signal, clean_spec, noise_spec
         else:
             perturb_signal = signal
     
@@ -731,7 +728,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=perturb_signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(processed_signal=spec_hat, processed_signal_length=spec_len)
-        del perturb_signal
+        del spec_hat
         
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

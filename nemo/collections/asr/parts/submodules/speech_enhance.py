@@ -60,17 +60,15 @@ class SEEncoder(nn.Module):
         super().__init__()
         
         self.layers = nn.ModuleList()
-        in_channels = 1
-        out_channels = conv_channels
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = 1
         for ith in range(n_layers):
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
             )
-            in_channels = out_channels
-            out_channels = 2 * out_channels
+            in_channels = conv_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels * int(scaling_factor / 2), dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -115,21 +113,18 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.n_channels = conv_channels * scaling_factor
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * self.n_channels)
+        self.n_channels = conv_channels
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
-        in_channels = conv_channels * scaling_factor
-        out_channels = int(in_channels / 2)
+        out_channels = conv_channels
         for ith in range(n_layers):
             if ith == n_layers - 1:
                 out_channels = 1
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
             )
-            in_channels = out_channels
-            out_channels = int(out_channels / 2)
             
     def forward(self, x, enc_out):
         # in: (b, t, d)

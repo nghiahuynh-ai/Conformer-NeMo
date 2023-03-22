@@ -70,7 +70,7 @@ class SEEncoder(nn.Module):
             in_channels = out_channels
             out_channels = 2 * out_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -85,8 +85,8 @@ class SEEncoder(nn.Module):
             x = layer(x)
             self.layers_out = [x] + self.layers_out
 
-        # b, c, t, d = x.shape
-        # x = x.reshape(b, t, c * d)
+        b, c, t, d = x.shape
+        x = x.reshape(b, t, c * d)
         x = self.proj_out(x)
         
         return x
@@ -103,8 +103,8 @@ class SEBottleNeck(nn.Module):
             )
         
     def forward(self, x):
-        # in: (b, c, t, d)
-        # out: (b, c, t, d)
+        # in: (b, t, d)
+        # out: (b, t, d)
         
         for layer in self.layers:
             x = layer(x)
@@ -115,7 +115,8 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
+        self.n_channels = conv_channels * scaling_factor
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * self.n_channels)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -131,8 +132,11 @@ class SEDecoder(nn.Module):
             out_channels = int(out_channels / 2)
             
     def forward(self, x, enc_out):
-        # in: (b, c, t, d)
+        # in: (b, t, d)
         # out: (b, t, d)
+        x = self.proj_in(x)
+        b, t, d = x.shape
+        x = x.reshape(b, self.n_channels, t, int(d / self.n_channels))
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]

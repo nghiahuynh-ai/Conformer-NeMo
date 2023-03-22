@@ -716,8 +716,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             perturb_signal, _ = self.preprocessor(
                 input_signal=perturb_signal, length=signal_len,
             )
-            perturb_signal = self.speech_enhance(perturb_signal)
-            loss_se = self.speech_enhance.compute_loss(clean_spec, perturb_signal)
+            perturb_signal = self.speech_enhance(perturb_signal.transpose(1, 2))
+            loss_se = self.speech_enhance.compute_loss(clean_spec, perturb_signal.transpose(1, 2))
             del signal, clean_spec
         else:
             perturb_signal = signal

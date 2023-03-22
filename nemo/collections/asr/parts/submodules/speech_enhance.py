@@ -70,7 +70,7 @@ class SEEncoder(nn.Module):
             in_channels = out_channels
             out_channels = 2 * out_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels * scaling_factor, dim_out)
         self.layers_out = []
         
     def forward(self, x):

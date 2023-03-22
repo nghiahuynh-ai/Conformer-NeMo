@@ -70,7 +70,7 @@ class SEEncoder(nn.Module):
             in_channels = out_channels
             out_channels = 2 * out_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels * scaling_factor, dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels * int(scaling_factor / 2), dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -85,10 +85,8 @@ class SEEncoder(nn.Module):
             x = layer(x)
             self.layers_out = [x] + self.layers_out
         
-        print(x.shape)
         b, c, t, d = x.shape
         x = x.reshape(b, t, c * d)
-        print(x.shape)
         x = self.proj_out(x)
         
         return x
@@ -117,7 +115,7 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.n_channels = conv_channels * scaling_factor
+        self.n_channels = int(conv_channels * scaling_factor / 2)
         self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * self.n_channels)
 
         self.layers = nn.ModuleList()

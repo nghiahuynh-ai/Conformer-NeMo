@@ -37,7 +37,7 @@ class SpeechEnhance(nn.Module):
         length = calc_length(
             lengths=length,
             padding=1,
-            kernel_size=3,
+            kernel_size=4,
             ceil_mode=False,
             stride=2,
             repeat_num=int(math.log(self.scaling_factor, 2)),

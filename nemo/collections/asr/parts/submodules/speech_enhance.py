@@ -31,7 +31,7 @@ class SpeechEnhance(nn.Module):
         
         self.bottleneck = SEBottleNeck(
             n_layers=n_layers,
-            d_model=d_model,
+            d_model=int(n_features / scaling_factor),
             n_heads=n_heads,
         )
         

@@ -61,14 +61,21 @@ class SEEncoder(nn.Module):
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
-        in_channels = 1
         for ith in range(n_layers):
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers - 1:
+                in_channels = conv_channels
+                out_channels = 1
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
-            in_channels = conv_channels
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -82,10 +89,9 @@ class SEEncoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
             self.layers_out = [x] + self.layers_out
-        
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = self.proj_out(x)
+
+        x = x.squeeze(1)
+        x = nn.functional.relu(self.proj_out(x))
         
         return x
     
@@ -112,26 +118,31 @@ class SEBottleNeck(nn.Module):
 class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
-        
-        self.n_channels = conv_channels
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
+
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         out_channels = conv_channels
         for ith in range(n_layers):
-            if ith == n_layers - 1:
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers - 1:
+                in_channels = conv_channels
                 out_channels = 1
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
             
     def forward(self, x, enc_out):
         # in: (b, t, d)
         # out: (b, t, d)
         x = self.proj_in(x)
-        b, t, d = x.shape
-        x = x.reshape(b, self.n_channels, t, int(d / self.n_channels))
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
@@ -143,19 +154,19 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, inter_channels, out_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
             in_channels=in_channels,
-            out_channels=out_channels,
+            out_channels=inter_channels,
             kernel_size=3,
             stride=2,
             padding=1,
             )
         
         self.conv_out = nn.Conv2d(
-            in_channels=out_channels,
+            in_channels=inter_channels,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
@@ -172,19 +183,19 @@ class SEEncoderLayer(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, inter_channels, out_channels):
         super().__init__()
         
         self.conv_in = nn.Conv2d(
             in_channels=in_channels,
-            out_channels=out_channels * 2,
+            out_channels=inter_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
         )
 
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=out_channels,
+            in_channels=inter_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,

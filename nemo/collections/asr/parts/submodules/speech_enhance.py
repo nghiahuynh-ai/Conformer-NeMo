@@ -108,14 +108,14 @@ class SEBottleNeck(nn.Module):
     def forward(self, x):
         # in: (b, c, t, d)
         # out: (b, c, t, d)
-        
+        print(x.shape)
         x = x.permute(0, 2, 3, 1)
-        
+        print(x.shape)
         for layer in self.layers:
             x = layer(x)
             
         x = x.permute(0, 3, 1, 2)
-        
+        print(x.shape)
         return x
     
 class SEDecoder(nn.Module):

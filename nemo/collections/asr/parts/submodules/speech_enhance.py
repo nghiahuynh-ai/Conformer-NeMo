@@ -70,7 +70,7 @@ class SEEncoder(nn.Module):
                 in_channels = conv_channels
                 out_channels = conv_channels
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEEncoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
         self.layers_out = []
         
@@ -109,7 +109,7 @@ class SEDecoder(nn.Module):
                 in_channels = conv_channels
                 out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
 
             
@@ -128,19 +128,19 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, inter_channels, out_channels):
         super().__init__()
           
         self.conv_in = nn.Conv2d(
             in_channels=in_channels,
-            out_channels=out_channels,
+            out_channels=inter_channels,
             kernel_size=3,
             stride=2,
             padding=1,
         )
         
         self.conv_out = nn.Conv2d(
-            in_channels=out_channels,
+            in_channels=inter_channels,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
@@ -157,18 +157,18 @@ class SEEncoderLayer(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, inter_channels, out_channels):
         super().__init__()
         
         self.conv_in =  nn.Conv2d(
             in_channels=in_channels,
-            out_channels=2 * in_channels,
+            out_channels=2 * inter_channels,
             kernel_size=1,
             stride=1,
             padding=0,
         )
         self.conv_out = nn.ConvTranspose2d(
-            in_channels=in_channels,
+            in_channels=inter_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,

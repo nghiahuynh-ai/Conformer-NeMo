@@ -24,7 +24,7 @@ class SpeechEnhance(nn.Module):
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=asr_d_model,
+            conv_channels=conv_channels,
             dim_in=n_features,
             dim_out=asr_d_model,
         )

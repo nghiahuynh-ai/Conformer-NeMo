@@ -109,7 +109,7 @@ class SEDecoder(nn.Module):
             else:
                 in_channels = int(self.conv_channels / 2**ith)
                 inter_channels = int(self.conv_channels / 2**ith)
-                out_channels = int(self.conv_channels / 2**ith)
+                out_channels = int(self.conv_channels / 2**(ith + 1))
             self.layers.append(
                 SEDecoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
             )

@@ -27,7 +27,7 @@ class SpeechEnhance(nn.Module):
             dim_out=d_model,
         )
         
-        self.pos_enc = PositionalEncoding1D(int(n_features / scaling_factor))
+        self.pos_enc = PositionalEncoding2D(int(n_features / scaling_factor))
         
         self.bottleneck = SEBottleNeck(
             n_layers=n_layers,

@@ -8,10 +8,10 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHead
 class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        scaling_factor=8,
-        conv_channels=16,
+        scaling_factor=16,
+        conv_channels=64,
         n_features=80,
-        n_layers=16,
+        n_layers=4,
         d_model=512,
         n_heads=8,
         ):
@@ -59,39 +59,41 @@ class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
+        self.norm = nn.LayerNorm(dim_in)
+        
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             if ith == 0:
                 in_channels = 1
+                inter_channels = conv_channels
                 out_channels = conv_channels
-            elif ith == n_layers - 1:
-                in_channels = conv_channels
-                out_channels = 1
             else:
-                in_channels = conv_channels
-                out_channels = conv_channels
+                in_channels = conv_channels * 2**(ith - 1)
+                inter_channels = conv_channels * 2**ith
+                out_channels = conv_channels * 2**ith
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
+                SEEncoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
             )
             
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
+        self.out = nn.Conv2d(conv_channels * 2**int(scaling_factor / 2), dim_out, kernel_size=1)
         self.layers_out = []
         
     def forward(self, x):
-        # in: (b, t, d)
+        # in: (b, d, t)
         # out: (b, c, t, d)
         
         self.layers_out.clear()
         
+        x = x.transpose(1, 2)
+        x = self.norm(x)
         x = x.unsqueeze(1)
         
         for layer in self.layers:
             x = layer(x)
             self.layers_out = [x] + self.layers_out
 
-        x = x.squeeze(1)
-        x = nn.functional.relu(self.proj_out(x))
+        x = self.out(x)
         
         return x
     
@@ -107,11 +109,15 @@ class SEBottleNeck(nn.Module):
             )
         
     def forward(self, x):
-        # in: (b, t, d)
-        # out: (b, t, d)
+        # in: (b, c, t, d)
+        # out: (b, c, t, d)
+        
+        x = x.permute(0, 2, 3, 1)
         
         for layer in self.layers:
             x = layer(x)
+            
+        x = x.permute(0, 3, 1, 2)
         
         return x
     
@@ -119,36 +125,36 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
 
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
+        self.conv_channels = conv_channels * 2**int(scaling_factor / 2)
+        self._in = nn.Conv2d(dim_in, self.conv_channels)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
-        out_channels = conv_channels
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                out_channels = conv_channels
-            elif ith == n_layers - 1:
+            if ith == n_layers - 1:
                 in_channels = conv_channels
+                inter_channels = conv_channels
                 out_channels = 1
             else:
-                in_channels = conv_channels
-                out_channels = conv_channels
+                in_channels = int(self.conv_channels / 2**ith)
+                inter_channels = int(self.conv_channels / 2**ith)
+                out_channels = int(self.conv_channels / 2**(ith + 1))
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
             )
             
     def forward(self, x, enc_out):
-        # in: (b, t, d)
-        # out: (b, t, d)
-        x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        # in: (b, c, t, d)
+        # out: (b, d, t)
+        
+        x = self._in(x)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)
+        x = x.transpose(1, 2)
         
         return x
     
@@ -160,11 +166,10 @@ class SEEncoderLayer(nn.Module):
         self.conv_in = nn.Conv2d(
             in_channels=in_channels,
             out_channels=inter_channels,
-            kernel_size=3,
+            kernel_size=4,
             stride=2,
             padding=1,
             )
-        
         self.conv_out = nn.Conv2d(
             in_channels=inter_channels,
             out_channels=out_channels * 2,
@@ -172,6 +177,8 @@ class SEEncoderLayer(nn.Module):
             stride=1,
             padding=0,
             )
+        weight_scaling_init(self.conv_in)
+        weight_scaling_init(self.conv_out)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -193,7 +200,6 @@ class SEDecoderLayer(nn.Module):
             stride=1,
             padding=0,
         )
-
         self.conv_out = nn.ConvTranspose2d(
             in_channels=inter_channels,
             out_channels=out_channels,
@@ -201,6 +207,8 @@ class SEDecoderLayer(nn.Module):
             stride=2,
             padding=1,
         )
+        weight_scaling_init(self.conv_in)
+        weight_scaling_init(self.conv_out)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -334,3 +342,13 @@ def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
         else:
             lengths = torch.floor(lengths)
     return lengths.to(dtype=torch.int)
+
+
+def weight_scaling_init(layer):
+    """
+    weight rescaling initialization from https://arxiv.org/abs/1911.13254
+    """
+    w = layer.weight.detach()
+    alpha = 10.0 * w.std()
+    layer.weight.data /= torch.sqrt(alpha)
+    layer.bias.data /= torch.sqrt(alpha)

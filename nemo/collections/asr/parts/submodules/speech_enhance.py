@@ -126,7 +126,7 @@ class SEDecoder(nn.Module):
         super().__init__()
 
         self.conv_channels = conv_channels * 2**int(scaling_factor / 2)
-        self._in = nn.Conv2d(dim_in, self.conv_channels)
+        self._in = nn.Conv2d(dim_in, self.conv_channels, kernel_size=1)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))

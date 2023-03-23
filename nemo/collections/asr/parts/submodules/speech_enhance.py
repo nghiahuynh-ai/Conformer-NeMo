@@ -19,7 +19,7 @@ class SpeechEnhance(nn.Module):
         super().__init__()
         
         self.scaling_factor = scaling_factor
-        
+        print('init encoder')
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
@@ -28,13 +28,13 @@ class SpeechEnhance(nn.Module):
         )
         
         self.pos_enc = PositionalEncoding1D(d_model)
-        
+        print('init body')
         self.bottleneck = SEBottleNeck(
             n_layers=n_layers,
             d_model=d_model,
             n_heads=n_heads,
         )
-        
+        print('init decoder')
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,

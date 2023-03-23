@@ -791,10 +791,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            self.cur_step = self.cur_step + 1
-            if self.cur_step < self.scheduling_steps:
-                self.alpha = self.alpha - self.delta
-            loss_value = (1 - self.alpha) * loss_value + self.alpha * self.loss_se
+            # self.cur_step = self.cur_step + 1
+            # if self.cur_step < self.scheduling_steps:
+            #     self.alpha = self.alpha - self.delta
+            loss_value = loss_value + self.loss_se
 
         return {'loss': loss_value}
 

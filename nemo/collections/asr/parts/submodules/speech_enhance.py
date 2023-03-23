@@ -11,7 +11,7 @@ class SpeechEnhance(nn.Module):
         scaling_factor=8,
         n_features=80,
         asr_d_model=512,
-        conv_channels=80,
+        conv_channels=256,
         ):
         
         super().__init__()
@@ -62,15 +62,20 @@ class SEEncoder(nn.Module):
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
-        in_channels = 1
         for ith in range(n_layers):
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers - 1:
+                in_channels = conv_channels
+                out_channels = 1
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
-            in_channels = conv_channels
         self.layers_out = []
-        
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -81,42 +86,39 @@ class SEEncoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = layer(x)
             self.layers_out = [x] + self.layers_out
+        x = x.squeeze(1)
         
-        b, c, t, d = x.shape
-        x = x.transpose(1, 2).reshape(b, t, -1)
-        x = self.proj_out(x)
-        
-        return nn.functional.relu(x)
+        return x
         
     
 class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.conv_channels = conv_channels
-        
-        self.dim_narrow = int(dim_out / scaling_factor)
-        self.proj_in = nn.Linear(dim_in, self.dim_narrow * conv_channels)
-        
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            out_channels = 1 if ith == n_layers - 1 else conv_channels
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers - 1:
+                in_channels = conv_channels
+                out_channels = 1
+            else:
+                in_channels = conv_channels
+                out_channels = conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
 
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
-
-        x = self.proj_in(x)
-        b, t, _ = x.shape
-        x = x.reshape(b, self.conv_channels, t, self.dim_narrow)
+        
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
-            if ith % 3 == 0:
-                x = x + enc_out[ith]
+            x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)

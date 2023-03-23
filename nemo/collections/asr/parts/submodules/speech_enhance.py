@@ -62,16 +62,18 @@ class SEEncoder(nn.Module):
         for ith in range(n_layers):
             if ith == 0:
                 in_channels = 1
+                inter_channels = conv_channels
                 out_channels = conv_channels
             else:
-                in_channels = conv_channels
-                out_channels = conv_channels
+                in_channels = conv_channels * 2**ith
+                inter_channels = conv_channels * 2**ith
+                out_channels = conv_channels * 2**ith
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
+                SEEncoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
             )
         self.layers_out = []
         
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+        self.proj_out = nn.Linear(int(dim_in/scaling_factor) * conv_channels * int(scaling_factor/2), dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -94,8 +96,8 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.conv_channels = conv_channels
-        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor) * conv_channels)
+        self.conv_channels = conv_channels * int(scaling_factor/2)
+        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor) * self.conv_channels)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -104,8 +106,8 @@ class SEDecoder(nn.Module):
                 in_channels = conv_channels
                 out_channels = 1
             else:
-                in_channels = conv_channels
-                out_channels = conv_channels
+                in_channels = int(self.conv_channels / 2**ith)
+                out_channels = int(self.conv_channels / 2**ith)
             self.layers.append(
                 SEDecoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
@@ -136,14 +138,15 @@ class SEEncoderLayer(nn.Module):
             stride=2,
             padding=1,
         )
-        
         self.conv_out = nn.Conv2d(
             in_channels=inter_channels,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
-        )  
+        )
+        weight_scaling_init(self.conv_in)
+        weight_scaling_init(self.conv_out)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -171,7 +174,9 @@ class SEDecoderLayer(nn.Module):
             kernel_size=4,
             stride=2,
             padding=1,
-        )    
+        )
+        weight_scaling_init(self.conv_in)
+        weight_scaling_init(self.conv_out)
     
     def forward(self, x):
         # x: (b, c, t, d)
@@ -218,6 +223,16 @@ def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
         else:
             lengths = torch.floor(lengths)
     return lengths.to(dtype=torch.int)
+
+
+def weight_scaling_init(layer):
+    """
+    weight rescaling initialization from https://arxiv.org/abs/1911.13254
+    """
+    w = layer.weight.detach()
+    alpha = 10.0 * w.std()
+    layer.weight.data /= torch.sqrt(alpha)
+    layer.bias.data /= torch.sqrt(alpha)
 
 
 # class PositionalEncoding2D(nn.Module):

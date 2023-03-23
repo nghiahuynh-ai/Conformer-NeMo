@@ -19,9 +19,6 @@ class SpeechEnhance(nn.Module):
         self.n_features = n_features
         self.scaling_factor = scaling_factor
         
-        if conv_channels < 1:
-            conv_channels = asr_d_model
-        
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
@@ -76,6 +73,8 @@ class SEEncoder(nn.Module):
                 SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
         self.layers_out = []
+        
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -88,12 +87,14 @@ class SEEncoder(nn.Module):
             self.layers_out = [x] + self.layers_out
         x = x.squeeze(1)
         
-        return x
+        return self.proj_out(x)
         
     
 class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
+        
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -114,6 +115,8 @@ class SEDecoder(nn.Module):
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
+        
+        x = self.proj_in(x)
         
         x = x.unsqueeze(1)
         for ith, layer in enumerate(self.layers):

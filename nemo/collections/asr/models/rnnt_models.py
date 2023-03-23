@@ -719,7 +719,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
             del spec_clean, spec_hat
-            tensorboard_logs = {'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

@@ -27,11 +27,11 @@ class SpeechEnhance(nn.Module):
             dim_out=d_model,
         )
         
-        self.pos_enc = PositionalEncoding2D(int(n_features / scaling_factor))
+        self.pos_enc = PositionalEncoding1D(d_model)
         
         self.bottleneck = SEBottleNeck(
             n_layers=n_layers,
-            d_model=int(n_features / scaling_factor),
+            d_model=d_model,
             n_heads=n_heads,
         )
         
@@ -65,9 +65,9 @@ class SEEncoder(nn.Module):
             if ith == 0:
                 in_channels = 1
                 out_channels = conv_channels
-            # elif ith == n_layers - 1:
-            #     in_channels = conv_channels
-            #     out_channels = 1
+            elif ith == n_layers - 1:
+                in_channels = conv_channels
+                out_channels = 1
             else:
                 in_channels = conv_channels
                 out_channels = conv_channels
@@ -75,7 +75,7 @@ class SEEncoder(nn.Module):
                 SEEncoderLayer(in_channels=in_channels, inter_channels=conv_channels, out_channels=out_channels)
             )
             
-        # self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor), dim_out)
         self.layers_out = []
         
     def forward(self, x):
@@ -90,8 +90,8 @@ class SEEncoder(nn.Module):
             x = layer(x)
             self.layers_out = [x] + self.layers_out
 
-        # x = x.squeeze(1)
-        # x = nn.functional.relu(self.proj_out(x))
+        x = x.squeeze(1)
+        x = nn.functional.relu(self.proj_out(x))
         
         return x
     
@@ -119,16 +119,16 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
 
-        # self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
+        self.proj_in = nn.Linear(dim_in, int(dim_out / scaling_factor))
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         out_channels = conv_channels
         for ith in range(n_layers):
-            # if ith == 0:
-            #     in_channels = 1
-            #     out_channels = conv_channels
-            if ith == n_layers - 1:
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            elif ith == n_layers - 1:
                 in_channels = conv_channels
                 out_channels = 1
             else:
@@ -141,8 +141,8 @@ class SEDecoder(nn.Module):
     def forward(self, x, enc_out):
         # in: (b, t, d)
         # out: (b, t, d)
-        # x = self.proj_in(x)
-        # x = x.unsqueeze(1)
+        x = self.proj_in(x)
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]

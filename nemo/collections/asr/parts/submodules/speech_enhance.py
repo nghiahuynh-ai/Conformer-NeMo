@@ -105,10 +105,10 @@ class SEBottleNeck(nn.Module):
         return x
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in):
+    def __init__(self, scaling_factor, dim_in):
         super().__init__()
 
-        self.conv_in = nn.Conv1d(dim_in, conv_channels, kernel_size=1)
+        self.conv_in = nn.Conv1d(dim_in, scaling_factor, kernel_size=1)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))

@@ -68,7 +68,7 @@ class SEEncoder(nn.Module):
         # in: (b, l)
         # out: (b, l, c)
         
-        std = x.std(dim=2, keepdim=True) + 1e-3
+        std = x.std(dim=1, keepdim=True) + 1e-3
         x /= std
         
         self.layers_out.clear()

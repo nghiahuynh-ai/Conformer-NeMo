@@ -8,9 +8,8 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHead
 class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        scaling_factor=1024,
+        scaling_factor=256,
         conv_channels=64,
-        n_features=80,
         n_layers=4,
         d_model=512,
         n_heads=8,
@@ -22,11 +21,10 @@ class SpeechEnhance(nn.Module):
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
-            dim_in=n_features,
             dim_out=d_model,
         )
         
-        self.pos_enc = PositionalEncoding2D(d_model)
+        self.pos_enc = PositionalEncoding1D(d_model)
         self.bottleneck = SEBottleNeck(
             n_layers=n_layers,
             d_model=d_model,
@@ -36,7 +34,6 @@ class SpeechEnhance(nn.Module):
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
             dim_in=d_model,
-            dim_out=n_features,
         )
     
     def forward(self, x):
@@ -53,44 +50,40 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, dim_out):
         super().__init__()
-        
-        self.norm = nn.LayerNorm(dim_in)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = 1
+        out_channels = 2
         for ith in range(n_layers):
-            if ith == 0:
-                in_channels = 1
-                inter_channels = conv_channels
-                out_channels = conv_channels
-            else:
-                in_channels = conv_channels * 2**(ith - 1)
-                inter_channels = conv_channels * 2**ith
-                out_channels = conv_channels * 2**ith
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
+                SEEncoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
+            in_channels = out_channels
+            out_channels *= 2
             
-        self.out = nn.Conv2d(conv_channels * int(scaling_factor / 2), dim_out, kernel_size=1)
+        self.conv_out = nn.Conv1d(in_channels=in_channels, out_channels=dim_out, kernel_size=1)
         self.layers_out = []
         
     def forward(self, x):
-        # in: (b, d, t)
-        # out: (b, c, t, d)
+        # in: (b, l)
+        # out: (b, l, c)
+        
+        std = x.std(dim=2, keepdim=True) + 1e-3
+        x /= std
         
         self.layers_out.clear()
         
-        x = x.transpose(1, 2)
-        x = self.norm(x)
         x = x.unsqueeze(1)
         
         for layer in self.layers:
             x = layer(x)
             self.layers_out = [x] + self.layers_out
 
-        x = self.out(x)
+        x = self.conv_out(x)
+        x = x.transpose(1, 2)
         
         return x
     
@@ -106,70 +99,60 @@ class SEBottleNeck(nn.Module):
             )
         
     def forward(self, x):
-        # in: (b, c, t, d)
-        # out: (b, c, t, d)
-        print(x.shape)
-        x = x.permute(0, 2, 3, 1)
-        print(x.shape)
+        # in: (b, l, c)
+        # out: (b, l, c)
+        
         for layer in self.layers:
             x = layer(x)
             
-        x = x.permute(0, 3, 1, 2)
-        print(x.shape)
         return x
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, dim_in):
         super().__init__()
 
-        self.conv_channels = conv_channels * int(scaling_factor / 2)
-        self._in = nn.Conv2d(dim_in, self.conv_channels, kernel_size=1)
+        self.conv_in = nn.Conv1d(dim_in, conv_channels, kernel_size=1)
 
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = scaling_factor
+        out_channels = int(scaling_factor / 2)
         for ith in range(n_layers):
-            if ith == n_layers - 1:
-                in_channels = conv_channels
-                inter_channels = conv_channels
-                out_channels = 1
-            else:
-                in_channels = int(self.conv_channels / 2**ith)
-                inter_channels = int(self.conv_channels / 2**ith)
-                out_channels = int(self.conv_channels / 2**(ith + 1))
             self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=in_channels, out_channels=out_channels)
             )
-        print(self.layers)
+            in_channels = out_channels
+            out_channels = int(out_channels / 2)
             
     def forward(self, x, enc_out):
-        # in: (b, c, t, d)
-        # out: (b, d, t)
+        # in: (b, l, c)
+        # out: (b, l)
         
-        x = self._in(x)
+        x = x.transpose(1, 2)
+        x = self.conv_in(x)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)
-        x = x.transpose(1, 2)
         
         return x
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, inter_channels, out_channels):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv_in = nn.Conv2d(
+        self.conv_in = nn.Conv1d(
             in_channels=in_channels,
-            out_channels=inter_channels,
+            out_channels=in_channels,
             kernel_size=4,
             stride=2,
             padding=1,
             )
-        self.conv_out = nn.Conv2d(
-            in_channels=inter_channels,
+        self.conv_out = nn.Conv1d(
+            in_channels=in_channels,
             out_channels=out_channels * 2,
             kernel_size=1,
             stride=1,
@@ -188,18 +171,18 @@ class SEEncoderLayer(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, inter_channels, out_channels):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv_in = nn.Conv2d(
+        self.conv_in = nn.Conv1d(
             in_channels=in_channels,
-            out_channels=inter_channels * 2,
+            out_channels=in_channels * 2,
             kernel_size=1,
             stride=1,
             padding=0,
         )
-        self.conv_out = nn.ConvTranspose2d(
-            in_channels=inter_channels,
+        self.conv_out = nn.ConvTranspose1d(
+            in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,

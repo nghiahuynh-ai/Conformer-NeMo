@@ -695,20 +695,17 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
             
+        if self.speech_enhance is not None:
+            perturb_signal = self.noise_mixer(input_signal)
+            signal_hat = self.speech_enhance(perturb_signal)
+            self.loss_se = self.speech_enhance.compute_loss(input_signal, signal_hat)
+            input_signal = signal_hat.clone()
+            del perturb_signal, signal_hat
+            
         if not has_processed_signal:
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-            
-        if self.speech_enhance is not None:
-            perturb_signal = self.noise_mixer(input_signal)
-            noise_spec, _ = self.preprocessor(
-                input_signal=perturb_signal, length=input_signal_length,
-            )
-            spec_hat = self.speech_enhance(noise_spec)
-            self.loss_se = self.speech_enhance.compute_loss(processed_signal, spec_hat)
-            processed_signal = spec_hat.clone()
-            del perturb_signal, noise_spec, spec_hat
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

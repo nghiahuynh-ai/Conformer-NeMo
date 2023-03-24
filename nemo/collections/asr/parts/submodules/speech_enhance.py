@@ -57,9 +57,11 @@ class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.layers = nn.ModuleList()
-        n_layers = int(math.log(scaling_factor, 2))
-        for ith in range(n_layers):
+        assert dim_out == conv_channels * scaling_factor / 2
+        
+        self.enc_layers = nn.ModuleList()
+        n_enc_layers = int(math.log(scaling_factor, 2))
+        for ith in range(n_enc_layers):
             if ith == 0:
                 in_channels = 1
                 inter_channels = conv_channels
@@ -68,12 +70,19 @@ class SEEncoder(nn.Module):
                 in_channels = conv_channels * 2**(ith - 1)
                 inter_channels = conv_channels * 2**ith
                 out_channels = conv_channels * 2**ith
-            self.layers.append(
+            self.enc_layers.append(
                 SEEncoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
             )
         self.layers_out = []
         
-        self.proj_out = nn.Linear(int(dim_in/scaling_factor) * conv_channels * int(scaling_factor/2), dim_out)
+        self.proj_out = nn.ModuleList()
+        inner_dim = int(dim_in / scaling_factor)
+        n_out_layers = int(inner_dim / 5)
+        for ith in range(n_out_layers):
+            in_features = inner_dim - ith * 5
+            out_features = max(1, in_features - 5)
+            self.proj_out.append(nn.Linear(in_features, out_features))
+            self.proj_out.append(nn.ReLU())
             
     def forward(self, x):
         # x: (b, t, d)
@@ -81,23 +90,37 @@ class SEEncoder(nn.Module):
         self.layers_out.clear()
         
         x = x.unsqueeze(1)
-        for ith, layer in enumerate(self.layers):
+        for ith, layer in enumerate(self.enc_layers):
             x = layer(x)
             self.layers_out = [x] + self.layers_out
+            
+        for ith, layer in enumerate(self.proj_out):
+            x = layer(x)
         
-        b, c, t, d = x.shape
-        x = x.reshape(b, t, c * d)
-        x = self.proj_out(x)
+        b, c, t, _ = x.shape
+        x = x.reshape(b, t, c)
         
-        return nn.functional.relu(x)
+        return x
         
     
 class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
+        assert dim_in == conv_channels * scaling_factor / 2
+        
         self.conv_channels = conv_channels * int(scaling_factor/2)
-        self.proj_in = nn.Linear(dim_in, int(dim_out/scaling_factor) * self.conv_channels)
+        
+        self.proj_in = nn.ModuleList()
+        inner_dim = int(dim_out / scaling_factor)
+        n_in_layers = int(inner_dim / 5)
+        in_features = 1
+        out_features = 5
+        for _ in range(n_in_layers):
+            self.proj_in.append(in_features, out_features)
+            self.proj_in.append(nn.ReLU())
+            in_features = out_features
+            out_features += 5
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -117,9 +140,10 @@ class SEDecoder(nn.Module):
     def forward(self, x, enc_out):
         # x: (b, t, d)
         
-        x = self.proj_in(x)
-        b, t, d = x.shape
-        x = x.reshape(b, self.conv_channels, t, int(d / self.conv_channels))
+        b, t, c = x.shape
+        x = x.reshape(b, c, t, 1)
+        for ith, layer in enumerate(self.proj_in):
+            x = layer(x)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]

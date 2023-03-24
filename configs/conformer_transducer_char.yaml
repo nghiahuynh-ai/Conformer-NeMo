@@ -50,14 +50,10 @@ model:
 
   speech_enhance:
     apply: true
-    scaling_factor: 8
-    conv_channels: 64
+    scaling_factor: 1024
     n_layers: 4
     d_model: 512
     n_heads: 8
-    alpha: 0.999
-    beta: 0.1
-    scheduling_steps: 10000
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds

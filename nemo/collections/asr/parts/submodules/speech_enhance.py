@@ -9,7 +9,6 @@ class SpeechEnhance(nn.Module):
     def __init__(
         self,
         scaling_factor=256,
-        conv_channels=64,
         n_layers=4,
         d_model=512,
         n_heads=8,
@@ -20,7 +19,6 @@ class SpeechEnhance(nn.Module):
         self.scaling_factor = scaling_factor
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
             dim_out=d_model,
         )
         
@@ -32,7 +30,6 @@ class SpeechEnhance(nn.Module):
         )
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
             dim_in=d_model,
         )
     

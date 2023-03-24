@@ -8,7 +8,7 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHead
 class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        scaling_factor=16,
+        scaling_factor=1024,
         conv_channels=64,
         n_features=80,
         n_layers=4,

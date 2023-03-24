@@ -117,7 +117,7 @@ class SEDecoder(nn.Module):
         in_features = 1
         out_features = 5
         for _ in range(n_in_layers):
-            self.proj_in.append(in_features, out_features)
+            self.proj_in.append(nn.Linear(in_features, out_features))
             self.proj_in.append(nn.ReLU())
             in_features = out_features
             out_features += 5

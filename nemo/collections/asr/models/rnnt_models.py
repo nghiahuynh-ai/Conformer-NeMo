@@ -95,7 +95,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             self.speech_enhance = SpeechEnhance(
                 scaling_factor=self._cfg.speech_enhance.scaling_factor,
-                conv_channels=self._cfg.speech_enhance.conv_channels,
                 n_layers=self._cfg.speech_enhance.n_layers,
                 d_model=self._cfg.speech_enhance.d_model,
                 n_heads=self._cfg.speech_enhance.n_heads,

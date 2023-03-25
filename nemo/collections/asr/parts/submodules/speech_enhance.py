@@ -101,7 +101,7 @@ class SEDecoder(nn.Module):
     def forward(self, x, enc_out):
         # x: (b, t, d)
         
-        x = x.trasnpose(1, 2)
+        x = x.transpose(1, 2)
         
         for ith, layer in enumerate(self.dec_layers):
             x = x + enc_out[ith]

@@ -53,18 +53,22 @@ class SEEncoder(nn.Module):
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
-        in_channels = conv_channels
-        for _ in range(n_enc_layers):
+        for ith in range(n_enc_layers):
+            if ith == 0:
+                in_channels = 1
+                out_channels = conv_channels
+            else:
+                in_channels = out_channels
+                out_channels = out_channels * 2
             self.enc_layers.append(
                 nn.Conv2d(
                     in_channels=in_channels,
-                    out_channels=in_channels * 2,
+                    out_channels=out_channels,
                     kernel_size=(4, 3),
                     stride=(2, 1),
                     padding=1,
                 )
             )
-            in_channels *= 2
         self.enc_out = []
         
         self.conv_out = nn.ModuleList()

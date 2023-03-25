@@ -9,22 +9,21 @@ class SpeechEnhance(nn.Module):
     def __init__(
         self,
         scaling_factor=8,
-        n_features=512,
+        conv_channels=512,
         ):
         
         super().__init__()
         
-        self.n_features = n_features
         self.scaling_factor = scaling_factor
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=n_features,
+            conv_channels=conv_channels,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=n_features,
+            conv_channels=conv_channels,
         )
         
     def forward_encoder(self, x, length):

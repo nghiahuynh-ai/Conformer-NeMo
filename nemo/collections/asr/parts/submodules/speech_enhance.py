@@ -59,8 +59,9 @@ class SEEncoder(nn.Module):
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=in_channels * 2,
+                    kernel_size=(4, 3),
                     stride=(2, 1),
-                    padding=(1, 0)
+                    padding=1,
                 )
             )
             in_channels *= 2
@@ -73,6 +74,7 @@ class SEEncoder(nn.Module):
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=in_channels // 2,
+                    kernel_size=1,
                     stride=1,
                     padding=0,
                 )
@@ -109,6 +111,7 @@ class SEDecoder(nn.Module):
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=in_channels * 2,
+                    kernel_size=1,
                     stride=1,
                     padding=0,
                 )
@@ -123,11 +126,11 @@ class SEDecoder(nn.Module):
             else:
                 out_channels = in_channels // 2
             self.dec_layers.append(
-                nn.ConvTranspose1d(
+                nn.ConvTranspose2d(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    kernel_size=4,
-                    stride=2,
+                    kernel_size=(4, 3),
+                    stride=(2, 1),
                     padding=1,
                 )
             )

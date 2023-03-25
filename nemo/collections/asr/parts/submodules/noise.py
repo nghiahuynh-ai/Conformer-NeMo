@@ -25,9 +25,6 @@ class NoiseMixer:
         if len(self.add_noise_methods) < 1:
             return signal
         method = np.random.choice(self.add_noise_methods)
-        # if method == 'add_real_noise':
-        #     return self._add_real_noise(signal)
-        # else:
         return method(signal)
     
     def _add_real_noise(self, signal):

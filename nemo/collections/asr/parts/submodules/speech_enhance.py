@@ -70,20 +70,12 @@ class SEEncoder(nn.Module):
             )
         self.enc_out = []
         
-        self.conv_out = nn.ModuleList()
-        n_out_layers = int(math.log(out_channels, 2))
-        in_channels = out_channels
-        for _ in range(n_out_layers):
-            self.conv_out.append(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=in_channels // 2,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
-            in_channels = in_channels // 2
+        self.conv_out = nn.Conv2d(
+            in_channels=out_channels,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+        )
             
     def forward(self, x):
         # x: (b, t, d)
@@ -95,8 +87,7 @@ class SEEncoder(nn.Module):
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
         
-        for ith, layer in enumerate(self.conv_out):
-            x = layer(x)
+        x = self.conv_out(x)
         
         x = x.squeeze(1)
         
@@ -109,20 +100,12 @@ class SEDecoder(nn.Module):
         
         n_dec_layers = int(math.log(scaling_factor, 2))
         
-        self.conv_in = nn.ModuleList()
-        n_in_layers = int(math.log(conv_channels * n_dec_layers, 2)) 
-        in_channels = 1
-        for _ in range(n_in_layers):
-            self.conv_in.append(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=in_channels * 2,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
-            in_channels *= 2
+        self.conv_in = nn.Conv2d(
+            in_channels=1,
+            out_channels=conv_channels*n_dec_layers,
+            kernel_size=1,
+            stride=1,
+        )
         
         self.dec_layers = nn.ModuleList()
         for ith in range(n_dec_layers):
@@ -146,8 +129,7 @@ class SEDecoder(nn.Module):
         
         x = x.unsqueeze(1)
         
-        for ith, layer in enumerate(self.conv_in):
-            x = layer(x)   
+        x = self.conv_in(x)
         
         for ith, layer in enumerate(self.dec_layers):
             x = x + enc_out[ith]

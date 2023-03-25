@@ -128,8 +128,6 @@ class SEDecoder(nn.Module):
     def forward(self, x, enc_out):
         # x: (b, t, d)
         
-        print(x.shape)
-        
         x = x.unsqueeze(1)
         
         x = self.conv_in(x)
@@ -139,8 +137,6 @@ class SEDecoder(nn.Module):
             x = layer(x)
         
         x = x.squeeze(1)
-        
-        print(x.shape)
         
         return x
     

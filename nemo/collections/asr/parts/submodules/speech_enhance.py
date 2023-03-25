@@ -102,11 +102,12 @@ class SEDecoder(nn.Module):
         
         self.conv_in = nn.Conv2d(
             in_channels=1,
-            out_channels=conv_channels*n_dec_layers,
+            out_channels=conv_channels * n_dec_layers,
             kernel_size=1,
             stride=1,
         )
         
+        in_channels = conv_channels * n_dec_layers
         self.dec_layers = nn.ModuleList()
         for ith in range(n_dec_layers):
             if ith == n_dec_layers - 1:

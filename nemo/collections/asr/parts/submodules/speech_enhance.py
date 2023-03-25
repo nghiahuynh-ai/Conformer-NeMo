@@ -71,7 +71,8 @@ class SEEncoder(nn.Module):
         self.enc_out = []
         
         self.conv_out = nn.ModuleList()
-        n_out_layers = int(math.log(in_channels, 2))
+        n_out_layers = int(math.log(out_channels, 2))
+        in_channels = out_channels
         for _ in range(n_out_layers):
             self.conv_out.append(
                 nn.Conv2d(
@@ -106,8 +107,10 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels):
         super().__init__()
         
+        n_dec_layers = int(math.log(scaling_factor, 2))
+        
         self.conv_in = nn.ModuleList()
-        n_in_layers = int(math.log(conv_channels * scaling_factor, 2)) 
+        n_in_layers = int(math.log(conv_channels * n_dec_layers, 2)) 
         in_channels = 1
         for _ in range(n_in_layers):
             self.conv_in.append(
@@ -122,7 +125,6 @@ class SEDecoder(nn.Module):
             in_channels *= 2
         
         self.dec_layers = nn.ModuleList()
-        n_dec_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_dec_layers):
             if ith == n_dec_layers - 1:
                 out_channels = 1

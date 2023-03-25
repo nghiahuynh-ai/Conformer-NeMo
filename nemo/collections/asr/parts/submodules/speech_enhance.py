@@ -53,30 +53,46 @@ class SEEncoder(nn.Module):
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
+        in_channels = conv_channels
         for _ in range(n_enc_layers):
             self.enc_layers.append(
-                nn.Conv1d(
-                    in_channels=conv_channels,
-                    out_channels=conv_channels,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels * 2,
+                    stride=(2, 1),
+                    padding=(1, 0)
                 )
             )
+            in_channels *= 2
         self.enc_out = []
+        
+        self.conv_out = nn.ModuleList()
+        n_out_layers = int(math.log(in_channels, 2))
+        for _ in range(n_out_layers):
+            self.conv_out.append(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels // 2,
+                    stride=1,
+                    padding=0,
+                )
+            )
+            in_channels = in_channels // 2
             
     def forward(self, x):
         # x: (b, t, d)
         
         self.enc_out.clear()
-        
-        x = x.transpose(1, 2)
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.enc_layers):
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
-            
-        x = x.transpose(1, 2)
+        
+        for ith, layer in enumerate(self.conv_out):
+            x = layer(x)
+        
+        x = x.squeeze(1)
         
         return x
         
@@ -85,29 +101,51 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels):
         super().__init__()
         
+        self.conv_in = nn.ModuleList()
+        n_in_layers = int(math.log(conv_channels * scaling_factor, 2)) 
+        in_channels = 1
+        for _ in range(n_in_layers):
+            self.conv_in.append(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels * 2,
+                    stride=1,
+                    padding=0,
+                )
+            )
+            in_channels *= 2
+        
         self.dec_layers = nn.ModuleList()
         n_dec_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_dec_layers):
+            if ith == n_dec_layers - 1:
+                out_channels = 1
+            else:
+                out_channels = in_channels // 2
             self.dec_layers.append(
                 nn.ConvTranspose1d(
-                    in_channels=conv_channels,
-                    out_channels=conv_channels,
+                    in_channels=in_channels,
+                    out_channels=out_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )
             )
+            in_channels = in_channels // 2
 
     def forward(self, x, enc_out):
         # x: (b, t, d)
         
-        x = x.transpose(1, 2)
+        x = x.unsqueeze(1)
+        
+        for ith, layer in enumerate(self.conv_in):
+            x = layer(x)   
         
         for ith, layer in enumerate(self.dec_layers):
             x = x + enc_out[ith]
             x = layer(x)
-            
-        x = x.transpose(1, 2)
+        
+        x = x.squeeze(1)
         
         return x
     

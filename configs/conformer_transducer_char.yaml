@@ -108,7 +108,7 @@ model:
     window_size: 0.025
     window_stride: 0.01
     window: "hann"
-    features: 80
+    features: ${model.encoder.d_model}
     n_fft: 512
     frame_splicing: 1
     dither: 0.00001

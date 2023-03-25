@@ -45,7 +45,7 @@ class SpeechEnhance(nn.Module):
         return self.encoder(x), length
     
     def forward_decoder(self, x):
-        return self.decoder(x, self.encoder.layers_out)
+        return self.decoder(x, self.encoder.enc_out)
     
     def compute_loss(self, x, x_hat):
         # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
@@ -54,100 +54,105 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels):
         super().__init__()
-        
-        assert dim_out == conv_channels * scaling_factor / 2
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
-        for ith in range(n_enc_layers):
-            if ith == 0:
-                in_channels = 1
-                inter_channels = conv_channels
-                out_channels = conv_channels
-            else:
-                in_channels = conv_channels * 2**(ith - 1)
-                inter_channels = conv_channels * 2**ith
-                out_channels = conv_channels * 2**ith
+        in_channels = 1
+        for _ in range(n_enc_layers):
             self.enc_layers.append(
-                SEEncoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=conv_channels,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                )
             )
-        self.layers_out = []
+            in_channels = conv_channels
+        self.enc_out = []
         
-        self.proj_out = nn.ModuleList()
-        inner_dim = int(dim_in / scaling_factor)
-        n_out_layers = int(inner_dim / 5)
-        for ith in range(n_out_layers):
-            in_features = inner_dim - ith * 5
-            out_features = max(1, in_features - 5)
-            self.proj_out.append(nn.Linear(in_features, out_features))
-            self.proj_out.append(nn.ReLU())
+        self.conv_out = nn.ModuleList()
+        n_out_layers = int(math.log(conv_channels, 2))
+        for _ in range(n_out_layers):
+            self.enc_layers.append(
+                nn.Conv2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels // 2,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                )
+            )
             
     def forward(self, x):
         # x: (b, t, d)
         
-        self.layers_out.clear()
+        self.enc_out.clear()
         
         x = x.unsqueeze(1)
+        
         for ith, layer in enumerate(self.enc_layers):
             x = layer(x)
-            self.layers_out = [x] + self.layers_out
+            self.enc_out = [x] + self.enc_out
             
-        for ith, layer in enumerate(self.proj_out):
+        for ith, layer in enumerate(self.conv_out):
             x = layer(x)
-        
-        b, c, t, _ = x.shape
-        x = x.reshape(b, t, c)
+            
+        x = x.squeeze(1)
         
         return x
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels):
         super().__init__()
         
-        assert dim_in == conv_channels * scaling_factor / 2
-        
-        self.conv_channels = conv_channels * int(scaling_factor/2)
-        
-        self.proj_in = nn.ModuleList()
-        inner_dim = int(dim_out / scaling_factor)
-        n_in_layers = int(inner_dim / 5)
-        in_features = 1
-        out_features = 5
+        self.conv_in = nn.ModuleList()
+        n_in_layers = int(math.log(conv_channels, 2))
+        in_channels = 1
         for _ in range(n_in_layers):
-            self.proj_in.append(nn.Linear(in_features, out_features))
-            self.proj_in.append(nn.ReLU())
-            in_features = out_features
-            out_features += 5
+            self.conv_in.append(
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=in_channels * 2,
+                    kernel_size=1,
+                    stride=1,
+                    padding=1,
+                )
+            )
+            in_channels *= 2
         
-        self.layers = nn.ModuleList()
-        n_layers = int(math.log(scaling_factor, 2))
-        for ith in range(n_layers):
-            if ith == n_layers - 1:
-                in_channels = conv_channels
-                inter_channels = conv_channels
+        self.dec_layers = nn.ModuleList()
+        n_dec_layers = int(math.log(scaling_factor, 2))
+        for ith in range(n_dec_layers):
+            if ith == n_dec_layers - 1:
                 out_channels = 1
             else:
-                in_channels = int(self.conv_channels / 2**ith)
-                inter_channels = int(self.conv_channels / 2**ith)
-                out_channels = int(self.conv_channels / 2**(ith + 1))
-            self.layers.append(
-                SEDecoderLayer(in_channels=in_channels, inter_channels=inter_channels, out_channels=out_channels)
+                out_channels = conv_channels
+            self.dec_layers.append(
+                nn.ConvTranspose2d(
+                    in_channels=conv_channels,
+                    out_channels=out_channels,
+                    kernel_size=4,
+                    stride=2,
+                    padding=1,
+                )
             )
 
     def forward(self, x, enc_out):
         # x: (b, t, d)
         
-        b, t, c = x.shape
-        x = x.reshape(b, c, t, 1)
-        for ith, layer in enumerate(self.proj_in):
+        x = x.unsqueeze(1)
+        
+        for ith, layer in enumerate(self.conv_in):
             x = layer(x)
         
-        for ith, layer in enumerate(self.layers):
+        for ith, layer in enumerate(self.dec_layers):
             x = x + enc_out[ith]
             x = layer(x)
+            
         x = x.squeeze(1)
         
         return x

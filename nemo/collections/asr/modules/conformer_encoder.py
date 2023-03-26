@@ -249,7 +249,7 @@ class ConformerEncoder(NeuralModule, Exportable):
 
     @typecheck()
     def forward(self, audio_signal, length=None, pre_encode=None):
-        self.update_max_seq_length(seq_length=audio_signal.size(2), device=audio_signal.device)
+        self.update_max_seq_length(seq_length=audio_signal.size(-1), device=audio_signal.device)
         return self.forward_for_export(audio_signal=audio_signal, length=length, pre_encode=pre_encode)
 
     @typecheck()
@@ -264,7 +264,7 @@ class ConformerEncoder(NeuralModule, Exportable):
                 audio_signal.size(0), max_audio_length, dtype=torch.int32, device=self.seq_range.device
             )
 
-        audio_signal = torch.transpose(audio_signal, 1, 2)
+        # audio_signal = torch.transpose(audio_signal, 1, 2)
 
         # if isinstance(self.pre_encode, ConvSubsampling):
         #     audio_signal, length = self.pre_encode(audio_signal, length)

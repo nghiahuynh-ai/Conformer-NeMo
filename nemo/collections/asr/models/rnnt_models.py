@@ -615,26 +615,26 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self._test_dl = self._setup_dataloader_from_config(config=test_data_config)
 
-    @property
-    def input_types(self) -> Optional[Dict[str, NeuralType]]:
-        # if hasattr(self.preprocessor, '_sample_rate'):
-        #     input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
-        # else:
-        input_signal_eltype = AudioSignal()
+    # @property
+    # def input_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     if hasattr(self.preprocessor, '_sample_rate'):
+    #         input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
+    #     else:
+    #         input_signal_eltype = AudioSignal()
 
-        return {
-            "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
-            "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-            "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
-            "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-        }
+    #     return {
+    #         "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
+    #         "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #         "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
+    #         "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #     }
 
-    @property
-    def output_types(self) -> Optional[Dict[str, NeuralType]]:
-        return {
-            "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-            "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-        }
+    # @property
+    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     return {
+    #         "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+    #         "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+    #     }
 
     @typecheck()
     def forward(
@@ -687,11 +687,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             encoded, encoded_len = self.encoder(
-                audio_signal=processed_signal, 
-                length=processed_signal_length,
+                audio_signal=input_signal, 
+                length=input_signal_length,
                 pre_encode=self.speech_enhance)
         else:
-            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+            encoded, encoded_len = self.encoder(audio_signal=input_signal, length=input_signal_length)
         
         return encoded, encoded_len
 

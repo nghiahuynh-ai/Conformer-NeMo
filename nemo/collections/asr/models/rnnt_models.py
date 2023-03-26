@@ -68,7 +68,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         super().__init__(cfg=cfg, trainer=trainer)
 
         # Initialize components
-        self.preprocessor = EncDecRNNTModel.from_config_dict(self.cfg.preprocessor)
+        # self.preprocessor = EncDecRNNTModel.from_config_dict(self.cfg.preprocessor)
         self.encoder = EncDecRNNTModel.from_config_dict(self.cfg.encoder)
 
         # Update config values required by components dynamically
@@ -94,7 +94,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             self.speech_enhance = SpeechEnhance(
                 scaling_factor=self._cfg.speech_enhance.scaling_factor,
-                conv_channels=self._cfg.speech_enhance.conv_channels,
+                d_model=self._cfg.speech_enhance.d_model,
             )
 
         else:
@@ -108,10 +108,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             num_classes=self.joint.num_classes_with_blank - 1, loss_name=loss_name, loss_kwargs=loss_kwargs
         )
 
-        if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
-            self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
-        else:
-            self.spec_augmentation = None
+        # if hasattr(self.cfg, 'spec_augment') and self._cfg.spec_augment is not None:
+        #     self.spec_augmentation = EncDecRNNTModel.from_config_dict(self.cfg.spec_augment)
+        # else:
+        #     self.spec_augmentation = None
 
         # Setup decoding objects
         self.decoding = RNNTDecoding(
@@ -676,14 +676,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 " with ``processed_signal`` and ``processed_signal_len`` arguments."
             )
         
-        if not has_processed_signal:
-            processed_signal, processed_signal_length = self.preprocessor(
-                input_signal=input_signal, length=input_signal_length,
-            )
+        # if not has_processed_signal:
+        #     processed_signal, processed_signal_length = self.preprocessor(
+        #         input_signal=input_signal, length=input_signal_length,
+        #     )
         
-        # Spec augment is not applied during evaluation/testing
-        if (self.spec_augmentation is not None) and self.training:
-            processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
+        # # Spec augment is not applied during evaluation/testing
+        # if (self.spec_augmentation is not None) and self.training:
+        #     processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
         if self.speech_enhance is not None:
             encoded, encoded_len = self.encoder(
@@ -701,8 +701,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
-            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
-            del signal
         else:
             perturbed_signal = signal
     
@@ -711,12 +709,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
-        # del signal
+        del perturbed_signal
         
         if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
-            del spec_clean, spec_hat
+            sig_hat = self.speech_enhance.forward_decoder(encoded)
+            loss_se = self.speech_enhance.compute_loss(signal, sig_hat)
+            del sig_hat, signal
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

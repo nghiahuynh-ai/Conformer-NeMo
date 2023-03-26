@@ -50,8 +50,8 @@ model:
 
   speech_enhance:
     apply: true
-    scaling_factor: 8
-    conv_channels: 128
+    scaling_factor: 1024
+    d_model: ${model.encoder.d_model}
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds
@@ -107,7 +107,7 @@ model:
     window_size: 0.025
     window_stride: 0.01
     window: "hann"
-    features: ${model.encoder.d_model}
+    features: 80
     n_fft: 512
     frame_splicing: 1
     dither: 0.00001

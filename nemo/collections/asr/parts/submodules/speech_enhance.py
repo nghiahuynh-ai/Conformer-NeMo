@@ -249,8 +249,13 @@ def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
 
 
 def weight_scaling_init(layer):
+    # w = layer.weight.detach()
+    # alpha = 10.0 * w.std()
+    # layer.weight.data /= torch.sqrt(alpha)
+    # layer.bias.data /= torch.sqrt(alpha)
+    
     torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
-    torch.nn.init.xavier_uniform_(layer.bias, gain=0.05)
+    layer.bias.data = -0.08 * torch.rand(layer.bias.data.size()) + 0.08
 
 
 # class PositionalEncoding2D(nn.Module):

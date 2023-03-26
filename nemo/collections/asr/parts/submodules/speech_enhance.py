@@ -106,8 +106,9 @@ class SEDecoder(nn.Module):
             in_channels = in_channels // 2
 
     def forward(self, x, enc_out):
-        # x: (b, l, d) -> (b, l)
-        print(x.shape)
+        # x: (b, d, l) -> (b, l)
+
+        x = x.transpose(1, 2)
         x = self.proj_in(x)
         x = x.transpose(1, 2)
         

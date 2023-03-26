@@ -32,9 +32,9 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
-        for layer in self.modules():
-            if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
-                weight_scaling_init(layer)
+        # for layer in self.modules():
+        #     if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+        #         weight_scaling_init(layer)
         
     def forward_encoder(self, x, length):
         length = calc_length(
@@ -250,7 +250,7 @@ def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
 
 def weight_scaling_init(layer):
     w = layer.weight.detach()
-    alpha = 100.0 * w.std()
+    alpha = 10.0 * w.std()
     layer.weight.data /= torch.sqrt(alpha)
     layer.bias.data /= torch.sqrt(alpha)
     

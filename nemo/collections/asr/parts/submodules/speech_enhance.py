@@ -9,22 +9,25 @@ class SpeechEnhance(nn.Module):
     def __init__(
         self,
         scaling_factor=8,
-        n_features=512,
+        n_features=80,
+        conv_channels=512,
+        d_model=512,
         ):
         
         super().__init__()
         
-        self.n_features = n_features
-        self.scaling_factor = scaling_factor
-        
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=n_features,
+            conv_channels=conv_channels,
+            dim_in=n_features,
+            dim_out=d_model,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=n_features,
+            conv_channels=conv_channels,
+            dim_in=d_model,
+            dim_out=n_features,
         )
         
     def forward_encoder(self, x, length):
@@ -48,15 +51,16 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
-        for _ in range(n_enc_layers):
+        for ith in range(n_enc_layers):
+            in_channels = 1 if ith == 0 else conv_channels       
             self.enc_layers.append(
-                nn.Conv1d(
-                    in_channels=conv_channels,
+                nn.Conv2d(
+                    in_channels=in_channels,
                     out_channels=conv_channels,
                     kernel_size=4,
                     stride=2,
@@ -64,50 +68,75 @@ class SEEncoder(nn.Module):
                 )
             )
         self.enc_out = []
+        
+        self.conv_out = nn.Conv2d(
+            in_channels=conv_channels,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+        )
+        
+        self.proj_out = nn.Linear(dim_in // scaling_factor, dim_out)
             
     def forward(self, x):
-        # x: (b, t, d)
+        # x: (b, t, d) -> (b, t, d)
         
         self.enc_out.clear()
-        
-        x = x.transpose(1, 2)
+        x = x.unsqueeze(1)
         
         for ith, layer in enumerate(self.enc_layers):
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
-            
-        x = x.transpose(1, 2)
+        
+        x = self.conv_out(x)
+        x = x.squeeze(1)
+        x = self.proj_out(x)
         
         return x
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
+        
+        self.proj_in = nn.Linear(dim_in, dim_out // scaling_factor)
+        
+        self.conv_in = nn.Conv2d(
+            in_channels=1,
+            out_channels=conv_channels,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+        )
         
         self.dec_layers = nn.ModuleList()
         n_dec_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_dec_layers):
+            in_channels = conv_channels if ith == 0 else 1
             self.dec_layers.append(
                 nn.ConvTranspose1d(
-                    in_channels=conv_channels,
+                    in_channels=in_channels,
                     out_channels=conv_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )
             )
+            
 
     def forward(self, x, enc_out):
-        # x: (b, t, d)
+        # x: (b, t, d) -> (b, t, d)
         
-        x = x.transpose(1, 2)
+        x = self.proj_in(x)
+        x = x.unsqueeze(1)
+        x = self.conv_in(x)
         
         for ith, layer in enumerate(self.dec_layers):
             x = x + enc_out[ith]
             x = layer(x)
             
-        x = x.transpose(1, 2)
+        x = x.squeeze(1)
         
         return x
     

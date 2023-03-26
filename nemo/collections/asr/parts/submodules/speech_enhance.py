@@ -87,7 +87,7 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, d_model):
         super().__init__()
         
-        self.proj_in = (d_model, scaling_factor)
+        self.proj_in = nn.Linear(d_model, scaling_factor)
         
         n_dec_layers = int(math.log(scaling_factor, 2))
         self.dec_layers = nn.ModuleList()

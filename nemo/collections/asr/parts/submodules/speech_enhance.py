@@ -117,7 +117,7 @@ class SEDecoder(nn.Module):
         for ith in range(n_dec_layers):
             out_channels = conv_channels if ith == 0 else 1
             self.dec_layers.append(
-                nn.ConvTranspose1d(
+                nn.ConvTranspose2d(
                     in_channels=conv_channels,
                     out_channels=out_channels,
                     kernel_size=4,

@@ -107,7 +107,7 @@ class SEDecoder(nn.Module):
 
     def forward(self, x, enc_out):
         # x: (b, l, d) -> (b, l)
-        
+        print(x.shape)
         x = self.proj_in(x)
         x = x.transpose(1, 2)
         

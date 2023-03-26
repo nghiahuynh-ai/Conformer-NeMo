@@ -255,7 +255,7 @@ def weight_scaling_init(layer):
     # layer.bias.data /= torch.sqrt(alpha)
     
     torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
-    layer.bias.data = -0.08 * torch.rand(layer.bias.data.size()) + 0.08
+    layer.bias.data = -0.16 * torch.rand(layer.bias.data.size()) + 0.08
 
 
 # class PositionalEncoding2D(nn.Module):

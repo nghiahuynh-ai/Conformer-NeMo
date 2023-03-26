@@ -32,6 +32,10 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+                weight_scaling_init(layer)
+        
     def forward_encoder(self, x, length):
         length = calc_length(
             lengths=length,
@@ -55,6 +59,8 @@ class SpeechEnhance(nn.Module):
 class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
+        
+        self.norm = nn.BatchNorm2d(1)
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
@@ -86,6 +92,7 @@ class SEEncoder(nn.Module):
         
         self.enc_out.clear()
         x = x.unsqueeze(1)
+        x = self.norm(x)
         
         for ith, layer in enumerate(self.enc_layers):
             x = nn.functional.relu(layer(x))

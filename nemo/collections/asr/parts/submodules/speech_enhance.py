@@ -16,6 +16,8 @@ class SpeechEnhance(nn.Module):
         
         super().__init__()
         
+        self.scaling_factor = scaling_factor
+        
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
@@ -113,11 +115,11 @@ class SEDecoder(nn.Module):
         self.dec_layers = nn.ModuleList()
         n_dec_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_dec_layers):
-            in_channels = conv_channels if ith == 0 else 1
+            out_channels = conv_channels if ith == 0 else 1
             self.dec_layers.append(
                 nn.ConvTranspose1d(
-                    in_channels=in_channels,
-                    out_channels=conv_channels,
+                    in_channels=conv_channels,
+                    out_channels=out_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,

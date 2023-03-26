@@ -64,6 +64,7 @@ class SEEncoder(nn.Module):
                 )
             )
             in_channels *= 2
+        self.enc_out = []
             
         self.proj_out = nn.Linear(scaling_factor, d_model)
             

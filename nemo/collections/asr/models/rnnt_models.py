@@ -724,6 +724,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 torch.save(spec, f"spec_{ith}.pt")
             for ith, spec in enumerate(spec_hat):
                 torch.save(spec, f"spechat_{ith}.pt")
+            raise
             
             del spec_clean, spec_hat
             

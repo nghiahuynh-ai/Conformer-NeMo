@@ -93,7 +93,7 @@ class SEDecoder(nn.Module):
         for ith in range(n_dec_layers):
             in_channels = scaling_factor if ith == 0 else in_channels // 2
             self.dec_layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=in_channels // 2)
+                SEDecoderLayer(in_channels=in_channels, out_channels=in_channels // 2)
             )
 
     def forward(self, x, enc_out):

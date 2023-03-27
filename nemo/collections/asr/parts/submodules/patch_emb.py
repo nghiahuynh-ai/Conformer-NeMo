@@ -14,7 +14,14 @@ class PatchEmb(nn.Module):
         
     def patchify(self, x):
         n, c, h, w = x.shape
+        
         n_patches = w // self.patch_size[2]
+        patches = torch.zeros(n, n_patches, h * w * c // n_patches)
         
-        
+        for idx, x in enumerate(x):
+            for i in range(n_patches):
+                for j in range(n_patches):
+                    patch = x[:, i * patch_size: (i + 1) * patch_size, j * patch_size: (j + 1) * patch_size]
+                    patches[idx, i * n_patches + j] = patch.flatten()
+        return patches
         

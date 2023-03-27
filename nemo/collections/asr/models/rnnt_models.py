@@ -717,7 +717,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            spec_hat = mask_pad(spec_hat, spec_len, -80)
+            spec_hat = mask_pad(spec_hat, spec_len)
             loss_se = self.speech_enhance.compute_loss(spec_clean, spec_hat)
             del spec_hat, spec_clean, spec_len
             
@@ -992,7 +992,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
 
 
-def mask_pad(spec, spec_len, mask_value):
+def mask_pad(spec, spec_len):
     for i in range(len(spec)):
-        spec[i, :, spec_len[i]:] = mask_value
+        spec[i, :, spec_len[i]:] = 0.0
     return spec

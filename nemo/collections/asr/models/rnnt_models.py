@@ -703,7 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
-            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
             del signal
         else:
             perturbed_signal = signal
@@ -717,7 +717,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            loss_se = self.speech_enhance.compute_loss(spec_clean.transpose(1, 2), spec_hat)
+            spec_hat = mask_pad(spec_hat, spec_len, -80)
+            loss_se = self.speech_enhance.compute_loss(spec_clean, spec_hat)
+            del spec_hat, spec_clean, spec_len
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -988,4 +990,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             **kwargs,
         )
         return encoder_exp + decoder_exp, encoder_descr + decoder_descr
-    
+
+
+def mask_pad(spec, spec_len, mask_value):
+    for i in range(len(spec)):
+        spec[i, :, spec_len[i]:] = mask_value
+    return spec

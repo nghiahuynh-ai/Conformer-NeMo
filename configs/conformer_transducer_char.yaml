@@ -51,7 +51,6 @@ model:
   speech_enhance:
     apply: true
     scaling_factor: 512
-    conv_channels: 512
     d_model: ${model.encoder.d_model}
     real_noise:
       filepath: null 

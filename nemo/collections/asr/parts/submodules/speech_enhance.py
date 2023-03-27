@@ -9,7 +9,6 @@ class SpeechEnhance(nn.Module):
     def __init__(
         self,
         scaling_factor=512,
-        conv_channels=512,
         d_model=512,
         ):
         
@@ -19,13 +18,11 @@ class SpeechEnhance(nn.Module):
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
             d_model=d_model,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
-            conv_channels=conv_channels,
             d_model=d_model,
         )
         
@@ -48,7 +45,7 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, d_model):
+    def __init__(self, scaling_factor, d_model):
         super().__init__()
         
         self.enc_layers = nn.ModuleList()
@@ -83,10 +80,10 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, d_model):
+    def __init__(self, scaling_factor, d_model):
         super().__init__()
         
-        self.proj_in = nn.Linear(d_model, conv_channels)
+        self.proj_in = nn.Linear(d_model, scaling_factor)
         
         n_dec_layers = int(math.log(scaling_factor, 2))
         self.dec_layers = nn.ModuleList()

@@ -8,7 +8,8 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHead
 class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        scaling_factor=1024,
+        scaling_factor=512,
+        conv_channels=512,
         d_model=512,
         ):
         
@@ -18,11 +19,13 @@ class SpeechEnhance(nn.Module):
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
+            conv_channels=conv_channels,
             d_model=d_model,
         )
         
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
+            conv_channels=conv_channels,
             d_model=d_model,
         )
         
@@ -41,35 +44,30 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x, self.encoder.enc_out)
     
     def compute_loss(self, x, x_hat):
-        # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
-        # lmag = torch.nn.functional.l1_loss(x, x_hat)
         return torch.nn.functional.mse_loss(x, x_hat)
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, d_model):
+    def __init__(self, scaling_factor, conv_channels, d_model):
         super().__init__()
         
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
-        in_channels = 1
         for ith in range(n_enc_layers):
+            in_channels = 1 if ith == 0 else conv_channels
             self.enc_layers.append(
-                nn.Conv1d(
-                    in_channels=in_channels,
-                    out_channels=in_channels * 2,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                )
+                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
             )
-            in_channels *= 2
         self.enc_out = []
             
-        self.proj_out = nn.Linear(scaling_factor, d_model)
+        self.proj_out = nn.Linear(conv_channels, d_model)
             
     def forward(self, x):
         # x: (b, l) -> (b, l, d)
+        
+        # normalize
+        std = x.std(dim=2, keepdim=True) + 1e-3
+        x /= std
         
         self.enc_out.clear()
         x = x.unsqueeze(1)
@@ -85,25 +83,18 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, d_model):
+    def __init__(self, scaling_factor, conv_channels, d_model):
         super().__init__()
         
-        self.proj_in = nn.Linear(d_model, scaling_factor)
+        self.proj_in = nn.Linear(d_model, conv_channels)
         
         n_dec_layers = int(math.log(scaling_factor, 2))
         self.dec_layers = nn.ModuleList()
-        in_channels = scaling_factor
         for ith in range(n_dec_layers):
+            out_channels = 1 if ith == n_dec_layers - 1 else conv_channels
             self.dec_layers.append(
-                nn.ConvTranspose1d(
-                    in_channels=in_channels,
-                    out_channels=in_channels // 2,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                )
+                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
             )
-            in_channels = in_channels // 2
 
     def forward(self, x, enc_out):
         # x: (b, d, l) -> (b, l)
@@ -122,63 +113,48 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, inter_channels, out_channels):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
           
-        self.conv_in = nn.Conv2d(
+        self.conv = nn.Conv1d(
             in_channels=in_channels,
-            out_channels=inter_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
-        )
-        self.conv_out = nn.Conv2d(
-            in_channels=inter_channels,
-            out_channels=out_channels * 2,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-        )
-        weight_scaling_init(self.conv_in)
-        weight_scaling_init(self.conv_out)
-    
-    def forward(self, x):
-        # x: (b, t, d)
-        
-        x = nn.functional.relu(self.conv_in(x))
-        x = nn.functional.glu(self.conv_out(x), dim=1)
-
-        return x
-    
-    
-class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, inter_channels, out_channels):
-        super().__init__()
-        
-        self.conv_in =  nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=2 * inter_channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-        )
-        self.conv_out = nn.ConvTranspose2d(
-            in_channels=inter_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
-        weight_scaling_init(self.conv_in)
-        weight_scaling_init(self.conv_out)
+        self.norm = nn.LayerNorm(out_channels)
+        self.act = nn.GELU()
+        
+        weight_scaling_init(self.conv)
     
     def forward(self, x):
-        # x: (b, c, t, d)
-
-        x = nn.functional.glu(self.conv_in(x), dim=1)
-        x = self.conv_out(x)
+        # x: (b, t, d)
+        
+        x = self.conv(x)
+        x = x.transpose(1, 2)
+        x = self.norm(x)
+        x = x.transpose(1, 2)
+        x = self.act(x)
         
         return x
+    
+    
+class SEDecoderLayer(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        
+        self.conv =  nn.ConvTranspose1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+        )
+        weight_scaling_init(self.conv)
+    
+    def forward(self, x):
+        return self.conv(x)
         
 
 class SETransModule(nn.Module):

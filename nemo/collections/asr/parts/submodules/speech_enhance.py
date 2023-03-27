@@ -66,7 +66,7 @@ class SEEncoder(nn.Module):
         # x: (b, l) -> (b, l, d)
         
         # normalize
-        std = x.std(dim=2, keepdim=True) + 1e-3
+        std = x.std(dim=1, keepdim=True) + 1e-3
         x /= std
         
         self.enc_out.clear()

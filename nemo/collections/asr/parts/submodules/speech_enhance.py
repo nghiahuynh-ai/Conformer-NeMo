@@ -7,19 +7,16 @@ from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHead
 class SpeechEnhance(nn.Module):
     def __init__(
         self,
-        scaling_factor=8,
+        scaling_factor=4,
         n_features=80,
         asr_d_model=512,
-        conv_channels=80,
+        conv_channels=512,
         ):
         
         super().__init__()
         
         self.n_features = n_features
         self.scaling_factor = scaling_factor
-        
-        if conv_channels < 1:
-            conv_channels = asr_d_model
         
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
@@ -35,11 +32,15 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
+        for layer in self.modules():
+            if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+                torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
+        
     def forward_encoder(self, x, length):
         length = calc_length(
             lengths=length,
             padding=1,
-            kernel_size=3,
+            kernel_size=4,
             ceil_mode=False,
             stride=2,
             repeat_num=int(math.log(self.scaling_factor, 2)),
@@ -50,14 +51,14 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x)
     
     def compute_loss(self, x, x_hat):
-        # lsc = torch.norm(x - x_hat, p="fro") / torch.norm(x, p="fro")
-        # lmag = torch.nn.functional.l1_loss(x, x_hat)
         return torch.nn.functional.mse_loss(x, x_hat)
 
 
 class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
+        
+        self.norm = nn.BatchNorm1d(1)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -67,7 +68,7 @@ class SEEncoder(nn.Module):
                 nn.Conv2d(
                     in_channels=in_channels,
                     out_channels=conv_channels,
-                    kernel_size=3,
+                    kernel_size=4,
                     stride=2,
                     padding=1,
                 )
@@ -80,6 +81,8 @@ class SEEncoder(nn.Module):
         # x: (b, t, d)
         
         x = x.unsqueeze(1)
+        x = self.norm(x)
+        
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
         
@@ -94,44 +97,35 @@ class SEDecoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.proj_in = nn.Linear(dim_in, conv_channels)
+        self.conv_channels = conv_channels
+        self.proj_in = nn.Linear(dim_in, conv_channels * dim_out // scaling_factor)
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            self.layers.append(
-                nn.Conv2d(
-                    in_channels=1,
-                    out_channels=2 * conv_channels,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
-            self.layers.append(nn.GLU(dim=1))
+            out_channels = 1 if ith == n_layers - 1 else conv_channels
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,
-                    out_channels=1,
+                    out_channels=out_channels,
                     kernel_size=4,
                     stride=2,
                     padding=1,
                 )    
             )
             
-        self.proj_out = nn.Linear(scaling_factor * conv_channels, dim_out)
-            
     def forward(self, x):
         # x: (b, t, d)
 
         x = self.proj_in(x)
-        x = x.unsqueeze(1)
+        b, t, d = x.shape
+        x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
         
         for ith, layer in enumerate(self.layers):
             x = layer(x)
 
         x = x.squeeze(1)
-        x = self.proj_out(x)
+        x = x.transpose(1, 2)
         
         return x
     

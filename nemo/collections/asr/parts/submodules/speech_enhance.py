@@ -1,5 +1,4 @@
 import math
-import numpy as np
 import torch
 import torch.nn as nn
 from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention

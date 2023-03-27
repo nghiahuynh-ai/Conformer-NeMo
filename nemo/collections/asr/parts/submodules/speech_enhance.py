@@ -54,13 +54,13 @@ class SEEncoder(nn.Module):
         self.enc_layers = nn.ModuleList()
         n_enc_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_enc_layers):
-            in_channels = 1 if ith == 0 else conv_channels
+            in_channels = 1 if ith == 0 else in_channels * 2
             self.enc_layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(in_channels=in_channels, out_channels=in_channels * 2)
             )
         self.enc_out = []
             
-        self.proj_out = nn.Linear(conv_channels, d_model)
+        self.proj_out = nn.Linear(in_channels * 2, d_model)
             
     def forward(self, x):
         # x: (b, l) -> (b, l, d)
@@ -91,9 +91,9 @@ class SEDecoder(nn.Module):
         n_dec_layers = int(math.log(scaling_factor, 2))
         self.dec_layers = nn.ModuleList()
         for ith in range(n_dec_layers):
-            out_channels = 1 if ith == n_dec_layers - 1 else conv_channels
+            in_channels = scaling_factor if ith == 0 else in_channels // 2
             self.dec_layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(in_channels=conv_channels, out_channels=in_channels // 2)
             )
 
     def forward(self, x, enc_out):

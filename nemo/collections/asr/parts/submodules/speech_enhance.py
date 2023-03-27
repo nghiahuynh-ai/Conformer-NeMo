@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import torch
 import torch.nn as nn
 from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention
@@ -99,6 +100,16 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
+            self.layers.append(
+                nn.Conv2d(
+                    in_channels=1,
+                    out_channels=2 * conv_channels,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                )
+            )
+            self.layers.append(nn.GLU(dim=1))
             self.layers.append(
                 nn.ConvTranspose2d(
                     in_channels=conv_channels,

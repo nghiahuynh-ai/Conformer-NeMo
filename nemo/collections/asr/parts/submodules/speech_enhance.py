@@ -82,6 +82,8 @@ class SEEncoder(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
+        self.enc_out.clear()
+        
         x = x.unsqueeze(1)
         x = self.norm(x)
         

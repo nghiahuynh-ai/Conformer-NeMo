@@ -35,6 +35,7 @@ class SpeechEnhance(nn.Module):
         for layer in self.modules():
             if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
                 torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
+                layer.bias.data.fill_(0.08)
         
     def forward_encoder(self, x, length):
         length = calc_length(
@@ -48,7 +49,7 @@ class SpeechEnhance(nn.Module):
         return self.encoder(x), length
     
     def forward_decoder(self, x):
-        return self.decoder(x)
+        return self.decoder(x, self.encoder.enc_out)
     
     def compute_loss(self, x, x_hat):
         return torch.nn.functional.mse_loss(x, x_hat)
@@ -74,6 +75,7 @@ class SEEncoder(nn.Module):
                 )
             )
             in_channels = conv_channels
+        self.enc_out = []
         
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
             
@@ -85,6 +87,7 @@ class SEEncoder(nn.Module):
         
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
+            self.enc_out = [x] + self.enc_out
         
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, t, -1)
@@ -114,7 +117,7 @@ class SEDecoder(nn.Module):
                 )    
             )
             
-    def forward(self, x):
+    def forward(self, x, enc_out):
         # x: (b, t, d)
 
         x = self.proj_in(x)
@@ -122,6 +125,7 @@ class SEDecoder(nn.Module):
         x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
         
         for ith, layer in enumerate(self.layers):
+            x = x + enc_out[ith]
             x = layer(x)
 
         x = x.squeeze(1)

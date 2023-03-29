@@ -61,8 +61,6 @@ class SEEncoder(nn.Module):
     def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
         super().__init__()
         
-        self.norm = nn.BatchNorm2d(1)
-        
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
@@ -79,9 +77,7 @@ class SEEncoder(nn.Module):
         # x: (b, t, d)
         
         self.enc_out.clear()
-        
         x = x.unsqueeze(1)
-        x = self.norm(x)
         
         for layer in self.layers:
             x = nn.functional.relu(layer(x))

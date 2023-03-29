@@ -20,7 +20,7 @@ class SpeechEnhance(nn.Module):
         
         self.conv_in = nn.Conv1d(
             in_channels=n_features,
-            out_channels=1,
+            out_channels=n_features,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -42,7 +42,7 @@ class SpeechEnhance(nn.Module):
         
         self.conv_out = nn.Conv1d(
             in_channels=n_features,
-            out_channels=1,
+            out_channels=n_features,
             kernel_size=3,
             stride=1,
             padding=1,
@@ -70,8 +70,8 @@ class SpeechEnhance(nn.Module):
     def forward_loss(self, x, x_hat, x_len):
         for i in range(len(x)):
             x_hat[i, :, x_len[i]:] = 0.0
-        x = self.conv_in(x).squeeze(1)
-        x_hat = self.conv_out(x_hat).squeeze(1)
+        x = self.conv_in(x)
+        x_hat = self.conv_out(x_hat)
         return torch.nn.functional.mse_loss(x, x_hat)
 
 

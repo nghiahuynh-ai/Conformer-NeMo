@@ -18,14 +18,6 @@ class SpeechEnhance(nn.Module):
         self.n_features = n_features
         self.scaling_factor = scaling_factor
         
-        self.conv_in = nn.Conv1d(
-            in_channels=n_features,
-            out_channels=n_features,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-        )
-        
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=asr_d_model,
@@ -40,18 +32,10 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
-        self.conv_out = nn.Conv1d(
-            in_channels=n_features,
-            out_channels=n_features,
-            kernel_size=3,
-            stride=1,
-            padding=1,
-        )
-        
-        for layer in self.modules():
-            if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
-                torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
-                layer.bias.data.fill_(0.08)
+        # for layer in self.modules():
+        #     if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+        #         torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
+        #         layer.bias.data.fill_(0.08)
         
     def forward_encoder(self, x, length):
         length = calc_length(
@@ -70,8 +54,6 @@ class SpeechEnhance(nn.Module):
     def forward_loss(self, x, x_hat, x_len):
         for i in range(len(x)):
             x_hat[i, :, x_len[i]:] = 0.0
-        x = self.conv_in(x)
-        x_hat = self.conv_out(x_hat)
         return torch.nn.functional.mse_loss(x, x_hat)
 
 
@@ -86,13 +68,7 @@ class SEEncoder(nn.Module):
         in_channels = 1
         for ith in range(n_layers):
             self.layers.append(
-                nn.Conv2d(
-                    in_channels=in_channels,
-                    out_channels=conv_channels,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                )
+                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
             )
             in_channels = conv_channels
         self.enc_out = []
@@ -115,7 +91,7 @@ class SEEncoder(nn.Module):
         x = x.transpose(1, 2).reshape(b, t, -1)
         x = self.proj_out(x)
         
-        return nn.functional.relu(x)
+        return x
         
     
 class SEDecoder(nn.Module):
@@ -130,13 +106,7 @@ class SEDecoder(nn.Module):
         for ith in range(n_layers):
             out_channels = 1 if ith == n_layers - 1 else conv_channels
             self.layers.append(
-                nn.ConvTranspose2d(
-                    in_channels=conv_channels,
-                    out_channels=out_channels,
-                    kernel_size=4,
-                    stride=2,
-                    padding=1,
-                )    
+                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
             )
             
     def forward(self, x, enc_out):
@@ -156,74 +126,84 @@ class SEDecoder(nn.Module):
         return x
     
     
-class SEConvModule(nn.Module):
+class SEEncoderLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv_in = nn.Conv2d(
+        self.conv1 = nn.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
-            kernel_size=3,
+            kernel_size=4,
             stride=2,
             padding=1,
-            )
-        self.conv = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
         )
-        self.conv_out = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels * 2,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            )
+        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv2 = nn.Conv2d(
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
+        )
+        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv3 = nn.Conv2d(
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
+        )
+        self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
     
     def forward(self, x):
         # x: (b, t, d)
         
-        x = nn.functional.relu(self.conv_in(x))
-        x = nn.functional.relu(self.conv(x))
-        x = nn.functional.glu(self.conv_out(x), dim=1)
+        x = self.conv1(x)
+        x = nn.functional.relu(self.batchnorm1(x))
+        x = x + self.conv2(x)
+        x = nn.functional.relu(self.batchnorm2(x))
+        x = x + self.conv3(x)
+        x = nn.functional.relu(self.batchnorm3(x))
 
         return x
     
     
-class SEConvTransposedModule(nn.Module):
+class SEDecoderLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv_in = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=out_channels * 2,
-            kernel_size=1,
-            stride=1,
-            padding=0,
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
         )
-        self.conv = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=3,
-            stride=1,
-            padding=1,
+        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv2 = nn.Conv2d(
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
         )
-        self.conv_out = nn.ConvTranspose2d(
+        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv3 = nn.ConvTranspose2d(
             in_channels=out_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
-            )
+        )
     
     def forward(self, x):
         # x: (b, c, t, d)
 
-        x = nn.functional.glu(self.conv_in(x), dim=1)
-        x = nn.functional.relu(self.conv(x))
-        x = self.conv_out(x)
+        x = x + self.conv1(x)
+        x = nn.functional.relu(self.batchnorm1(x))
+        x = x + self.conv2(x)
+        x = nn.functional.relu(self.batchnorm2(x))
+        x = self.conv3(x)
         
         return x
         

@@ -69,9 +69,23 @@ class SEEncoder(nn.Module):
                 SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
             )
             in_channels = conv_channels
+        
+        self.conv_out = nn.ModuleList()
+        n_layers = int(math.log((dim_in // scaling_factor) // 5, 2))
+        for ith in range(n_layers):
+            self.conv_out.append(
+                nn.Conv2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=(3, 4),
+                    stride=(1, 2),
+                    padding=1,
+                )
+            )
+            
         self.enc_out = []
         
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+        self.proj_out = nn.Linear(5 * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -80,6 +94,10 @@ class SEEncoder(nn.Module):
         x = x.unsqueeze(1)
         
         for layer in self.layers:
+            x = nn.functional.relu(layer(x))
+            self.enc_out = [x] + self.enc_out
+        
+        for layer in self.conv_out:
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
         
@@ -95,7 +113,20 @@ class SEDecoder(nn.Module):
         super().__init__()
         
         self.conv_channels = conv_channels
-        self.proj_in = nn.Linear(dim_in, conv_channels * dim_out // scaling_factor)
+        self.proj_in = nn.Linear(dim_in, 5 * conv_channels)
+        
+        self.conv_in = nn.ModuleList()
+        n_layers = int(math.log((dim_out // scaling_factor) // 5, 2))
+        for ith in range(n_layers):
+            self.conv_in.append(
+                nn.ConvTranspose2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=(3, 4),
+                    stride=(1, 2),
+                    padding=1,
+                )
+            )
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
@@ -112,13 +143,17 @@ class SEDecoder(nn.Module):
         b, t, d = x.shape
         x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
         
+        for layer in self.conv_in:
+            x = x + enc_out.pop(0)
+            x = nn.functional.relu(layer(x))
+        
         for ith, layer in enumerate(self.layers):
-            x = x + enc_out[ith]
+            x = x + enc_out.pop(0)
             x = layer(x)
-        print(x.shape)
+
         x = x.squeeze(1)
         x = x.transpose(1, 2)
-        print(x.shape)
+        
         return x
     
     
@@ -142,14 +177,11 @@ class SEEncoderLayer(nn.Module):
             padding=1
         )
         self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
-        self.conv3 = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
+        self.pooling = nn.MaxPool2d(
             kernel_size=4,
             stride=2,
             padding=1,
         )
-        self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -158,8 +190,7 @@ class SEEncoderLayer(nn.Module):
         x = nn.functional.relu(self.batchnorm1(x))
         x = x + self.conv2(x)
         x = nn.functional.relu(self.batchnorm2(x))
-        x = self.conv3(x)
-        x = nn.functional.relu(self.batchnorm3(x))
+        x = self.pooling(x)
 
         return x
     
@@ -168,38 +199,30 @@ class SEDecoderLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv1 = nn.ConvTranspose2d(
-            in_channels=in_channels,
-            out_channels=in_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
-        )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv2 = nn.Conv2d(
+        self.upsampling = nn.Upsample(scale_factor=2)
+        self.conv1 = nn.Conv2d(
             in_channels=in_channels, 
             out_channels=in_channels, 
             kernel_size=3, 
             stride=1, 
             padding=1
         )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv3 = nn.Conv2d(
+        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
+        self.conv2 = nn.Conv2d(
             in_channels=in_channels, 
             out_channels=out_channels, 
             kernel_size=3, 
             stride=1, 
             padding=1
         )
-
+    
     def forward(self, x):
         # x: (b, c, t, d)
 
-        x = self.conv1(x)
+        x = self.upsampling(x)
+        x = x + self.conv1(x)
         x = nn.functional.relu(self.batchnorm1(x))
         x = x + self.conv2(x)
-        x = nn.functional.relu(self.batchnorm2(x))
-        x = x + self.conv3(x)
         
         return x
         

@@ -118,7 +118,7 @@ class SEDecoder(nn.Module):
 
         x = x.squeeze(1)
         x = x.transpose(1, 2)
-        
+        print(x.shape)
         return x
     
     

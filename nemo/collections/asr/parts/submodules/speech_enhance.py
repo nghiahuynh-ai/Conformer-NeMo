@@ -52,6 +52,8 @@ class SpeechEnhance(nn.Module):
         return self.decoder(x, self.encoder.enc_out)
 
     def forward_loss(self, x, x_hat, x_len):
+        print(x.shape)
+        print(x_hat.shape)
         for i in range(len(x)):
             x_hat[i, :, x_len[i]:] = 0.0
         return torch.nn.functional.mse_loss(x, x_hat)

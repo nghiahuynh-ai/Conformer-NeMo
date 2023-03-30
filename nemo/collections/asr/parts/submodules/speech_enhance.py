@@ -115,10 +115,10 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
-            
+        print(x.shape)
         x = x.squeeze(1)
         x = x.transpose(1, 2)
-
+        print(x.shape)
         return x
     
     

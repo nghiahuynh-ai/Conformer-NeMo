@@ -166,13 +166,13 @@ class SEEncoderLayer(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
 
-        residual = x
         x = nn.functional.relu(self.conv1(x))
+        residual = x
         x = self.batchnorm1(self.conv2(x))
         x = nn.functional.relu(x)
         x = residual + self.batchnorm2(self.conv3(x))
         x = nn.functional.relu(x)
-
+        
         return x
     
     

@@ -147,13 +147,15 @@ class SEDecoder(nn.Module):
             x = x + enc_out.pop(0)
             x = nn.functional.relu(layer(x))
         print(x.shape)
+        print('====================================')
         for ith, layer in enumerate(self.layers):
+            print(x.shape)
             x = x + enc_out.pop(0)
             x = layer(x)
-        print(x.shape)
+            print(x.shape)
         x = x.squeeze(1)
         x = x.transpose(1, 2)
-        print(x.shape)
+        
         return x
     
     

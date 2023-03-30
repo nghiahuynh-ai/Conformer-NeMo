@@ -138,21 +138,19 @@ class SEDecoder(nn.Module):
             
     def forward(self, x, enc_out):
         # x: (b, t, d)
-        print(x.shape)
+
         x = self.proj_in(x)
         b, t, d = x.shape
         x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
-        print(x.shape)
+
         for layer in self.conv_in:
             x = x + enc_out.pop(0)
             x = nn.functional.relu(layer(x))
-        print(x.shape)
-        print('====================================')
+
         for ith, layer in enumerate(self.layers):
-            print(x.shape)
             x = x + enc_out.pop(0)
             x = layer(x)
-            print(x.shape)
+
         x = x.squeeze(1)
         x = x.transpose(1, 2)
         
@@ -224,7 +222,7 @@ class SEDecoderLayer(nn.Module):
         x = self.upsampling(x)
         x = x + self.conv1(x)
         x = nn.functional.relu(self.batchnorm1(x))
-        x = x + self.conv2(x)
+        x = self.conv2(x)
         
         return x
         

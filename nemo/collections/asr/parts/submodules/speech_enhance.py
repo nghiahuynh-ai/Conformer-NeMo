@@ -78,7 +78,6 @@ class SEEncoder(nn.Module):
     
         x = x.unsqueeze(1)
         
-        self.enc_out = [x]
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
@@ -115,7 +114,6 @@ class SEDecoder(nn.Module):
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]
             x = layer(x)
-        x = x + enc_out[-1]
 
         x = x.squeeze(1)
         x = x.transpose(1, 2)

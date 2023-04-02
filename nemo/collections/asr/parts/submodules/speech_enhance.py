@@ -74,18 +74,20 @@ class SEEncoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
+        out_channels = conv_channels // 2**(n_layers - 1)
         for ith in range(n_layers):
             self.layers.append(
                 SEEncoderLayer(
                     in_channels=in_channels, 
-                    out_channels=conv_channels,
+                    out_channels=out_channels,
                     d_model=d_model,
                     n_heads=n_heads,
                     patch_size=patch_size,
                     spec_width=dim_in // 2**(ith + 1)
                 )
             )
-            in_channels = conv_channels
+            in_channels = out_channels
+            out_channels *= 2
         self.enc_out = []
         
         self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
@@ -115,11 +117,13 @@ class SEDecoder(nn.Module):
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
+        in_channels = conv_channels
+        out_channels = in_channels // 2
         for ith in range(n_layers):
-            out_channels = 1 if ith == n_layers - 1 else conv_channels
+            out_channels = 1 if ith == n_layers - 1 else out_channels
             self.layers.append(
                 SEDecoderLayer(
-                    in_channels=conv_channels, 
+                    in_channels=in_channels, 
                     out_channels=out_channels,
                     d_model=d_model,
                     n_heads=n_heads,
@@ -127,6 +131,8 @@ class SEDecoder(nn.Module):
                     spec_width=dim_out // scaling_factor * 2**ith
                 )
             )
+            in_channels = out_channels
+            out_channels = in_channels // 2
             
     def forward(self, x, enc_out):
         # x: (b, t, d)

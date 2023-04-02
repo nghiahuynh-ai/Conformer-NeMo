@@ -231,7 +231,7 @@ class SEPatchTransformer(nn.Module):
             n_heads=n_heads,
         )
         
-        self.norm_out = nn.BatchNorm2d(conv_channels)
+        self.norm_out = nn.LayerNorm(conv_channels * patch_size**2)
         self.proj_out = nn.Linear(d_model, conv_channels * patch_size**2)
         self.unpatchify = Rearrange(
             'b (h w) (p1 p2 c) -> b c (h p1) (w p2)', 

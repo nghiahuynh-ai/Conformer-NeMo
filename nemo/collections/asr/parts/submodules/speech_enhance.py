@@ -217,7 +217,7 @@ class SEPatchTransformer(nn.Module):
         
         super().__init__()
         
-        self.patchiy = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size, w=spec_width)
+        self.patchify = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size, w=spec_width)
         self.norm_in = nn.LayerNorm(conv_channels * patch_size**2)
         self.proj_in = nn.Linear(conv_channels * patch_size**2, d_model)
         
@@ -228,18 +228,20 @@ class SEPatchTransformer(nn.Module):
         
         self.norm_out = nn.BatchNorm2d(conv_channels)
         self.proj_out = nn.Linear(d_model, conv_channels * patch_size**2)
-        self.unpatchiy = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1=patch_size, p2=patch_size, w=spec_width)
+        self.unpatchify = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1=patch_size, p2=patch_size, w=spec_width)
         
     def forward(self, x):
         #x: (b, c, t, d)
         
-        x = self.patchiy(x)
+        print(x.shape)
+        
+        x = self.patchify(x)
         x = nn.functional.relu(self.proj_in(self.norm_in(x)))
 
         x = self.att(x)
         
         x = nn.functional.relu(self.proj_out(self.norm_out(x)))
-        x = self.unpatchiy(x)
+        x = self.unpatchify(x)
         
         return x
         

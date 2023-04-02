@@ -96,6 +96,7 @@ model:
     shuffle: true
     num_workers: 8
     pin_memory: true
+    patch_size: ${model.speech_enhance.patch_size}
 
   test_ds:
     manifest_filepath: null
@@ -104,6 +105,7 @@ model:
     shuffle: true
     num_workers: 8
     pin_memory: true
+    patch_size: ${model.speech_enhance.patch_size}
 
   preprocessor:
     _target_: nemo.collections.asr.modules.AudioToMelSpectrogramPreprocessor

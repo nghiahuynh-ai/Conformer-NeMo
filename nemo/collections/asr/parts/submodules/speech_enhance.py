@@ -12,6 +12,9 @@ class SpeechEnhance(nn.Module):
         n_features=80,
         asr_d_model=512,
         conv_channels=512,
+        d_model=512,
+        n_heads=8,
+        patch_size=5,
         ):
         
         super().__init__()
@@ -22,6 +25,9 @@ class SpeechEnhance(nn.Module):
         self.encoder = SEEncoder(
             scaling_factor=scaling_factor,
             conv_channels=asr_d_model,
+            d_model=d_model,
+            n_heads=n_heads,
+            patch_size=patch_size,
             dim_in=n_features,
             dim_out=asr_d_model,
         )
@@ -29,6 +35,9 @@ class SpeechEnhance(nn.Module):
         self.decoder = SEDecoder(
             scaling_factor=scaling_factor,
             conv_channels=conv_channels,
+            d_model=d_model,
+            n_heads=n_heads,
+            patch_size=patch_size,
             dim_in=asr_d_model,
             dim_out=n_features,
         )
@@ -59,7 +68,7 @@ class SpeechEnhance(nn.Module):
 
 
 class SEEncoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, d_model, n_heads, patch_size, dim_in, dim_out):
         super().__init__()
         
         self.layers = nn.ModuleList()
@@ -67,7 +76,13 @@ class SEEncoder(nn.Module):
         in_channels = 1
         for ith in range(n_layers):
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(
+                    in_channels=in_channels, 
+                    out_channels=conv_channels,
+                    d_model=d_model,
+                    n_heads=n_heads,
+                    patch_size=patch_size,
+                )
             )
             in_channels = conv_channels
         self.enc_out = []
@@ -91,7 +106,7 @@ class SEEncoder(nn.Module):
         
     
 class SEDecoder(nn.Module):
-    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+    def __init__(self, scaling_factor, conv_channels, d_model, n_heads, patch_size, dim_in, dim_out):
         super().__init__()
         
         self.conv_channels = conv_channels
@@ -102,7 +117,13 @@ class SEDecoder(nn.Module):
         for ith in range(n_layers):
             out_channels = 1 if ith == n_layers - 1 else conv_channels
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(
+                    in_channels=conv_channels, 
+                    out_channels=out_channels,
+                    d_model=d_model,
+                    n_heads=n_heads,
+                    patch_size=patch_size,
+                )
             )
             
     def forward(self, x, enc_out):

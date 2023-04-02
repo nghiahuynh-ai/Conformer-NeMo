@@ -96,6 +96,8 @@ model:
     shuffle: true
     num_workers: 8
     pin_memory: true
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     patch_size: ${model.speech_enhance.patch_size}
 
   test_ds:
@@ -105,6 +107,8 @@ model:
     shuffle: true
     num_workers: 8
     pin_memory: true
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     patch_size: ${model.speech_enhance.patch_size}
 
   preprocessor:

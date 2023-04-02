@@ -32,11 +32,6 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
-        # for layer in self.modules():
-        #     if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
-        #         torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
-        #         layer.bias.data.fill_(0.08)
-        
     def forward_encoder(self, x, length):
         length = calc_length(
             lengths=length,
@@ -69,9 +64,24 @@ class SEEncoder(nn.Module):
                 SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
             )
             in_channels = conv_channels
-        self.enc_out = []
         
-        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+        n_out_layers = int(math.log(dim_in // (scaling_factor * 5), 2))
+        for ith in range(n_out_layers):
+            self.layers.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_channels=conv_channels,
+                        out_channels=conv_channels,
+                        kernel_size=(3, 4),
+                        stride=(1, 2),
+                        padding=1,
+                    ),
+                    nn.ReLU()
+                )
+            )
+            
+        self.enc_out = []
+        self.proj_out = nn.Linear(5 * conv_channels, dim_out)
             
     def forward(self, x):
         # x: (b, t, d)
@@ -80,7 +90,7 @@ class SEEncoder(nn.Module):
         x = x.unsqueeze(1)
         
         for layer in self.layers:
-            x = nn.functional.relu(layer(x))
+            x = layer(x)
             self.enc_out = [x] + self.enc_out
         
         b, c, t, d = x.shape
@@ -95,9 +105,25 @@ class SEDecoder(nn.Module):
         super().__init__()
         
         self.conv_channels = conv_channels
-        self.proj_in = nn.Linear(dim_in, conv_channels * dim_out // scaling_factor)
         
         self.layers = nn.ModuleList()
+        self.proj_in = nn.Linear(dim_in, 5 * conv_channels)
+        
+        n_in_layers = int(math.log(dim_out // (scaling_factor * 5), 2))
+        for ith in range(n_in_layers):
+            self.layers.append(
+                nn.Sequential(
+                    nn.ConvTranspose2d(
+                        in_channels=conv_channels,
+                        out_channels=conv_channels,
+                        kernel_size=(3, 4),
+                        stride=(1, 2),
+                        padding=1,
+                    ),
+                    nn.ReLU()
+                )
+            )
+        
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
             out_channels = 1 if ith == n_layers - 1 else conv_channels
@@ -110,7 +136,7 @@ class SEDecoder(nn.Module):
 
         x = self.proj_in(x)
         b, t, d = x.shape
-        x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
+        x = x.reshape(b, self.conv_channels, t, 5)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out[ith]

@@ -82,6 +82,7 @@ class SEEncoder(nn.Module):
                     d_model=d_model,
                     n_heads=n_heads,
                     patch_size=patch_size,
+                    spec_width=dim_in // 2**(ith + 1)
                 )
             )
             in_channels = conv_channels
@@ -123,6 +124,7 @@ class SEDecoder(nn.Module):
                     d_model=d_model,
                     n_heads=n_heads,
                     patch_size=patch_size,
+                    spec_width=dim_in * 2**(ith + 1)
                 )
             )
             
@@ -144,7 +146,7 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size):
+    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size, spec_width):
         super().__init__()
         
         self.downsampling = nn.Conv2d(
@@ -161,6 +163,7 @@ class SEEncoderLayer(nn.Module):
             d_model=d_model,
             n_heads=n_heads,
             patch_size=patch_size,
+            spec_width=spec_width,
         )
     
     def forward(self, x):
@@ -174,7 +177,7 @@ class SEEncoderLayer(nn.Module):
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size):
+    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size, spec_width):
         super().__init__()
         
         self.tfm = SEPatchTransformer(
@@ -182,6 +185,7 @@ class SEDecoderLayer(nn.Module):
             d_model=d_model,
             n_heads=n_heads,
             patch_size=patch_size,
+            spec_width=spec_width,
         )
         
         self.upsampling = nn.ConvTranspose2d(
@@ -208,11 +212,12 @@ class SEPatchTransformer(nn.Module):
         d_model,
         n_heads,
         patch_size,
+        spec_width,
         ):
         
         super().__init__()
         
-        self.patchiy = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size)
+        self.patchiy = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size, w=spec_width)
         self.norm_in = nn.LayerNorm(conv_channels * patch_size**2)
         self.proj_in = nn.Linear(conv_channels * patch_size**2, d_model)
         
@@ -223,7 +228,7 @@ class SEPatchTransformer(nn.Module):
         
         self.norm_out = nn.BatchNorm2d(conv_channels)
         self.proj_out = nn.Linear(d_model, conv_channels * patch_size**2)
-        self.unpatchiy = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1=patch_size, p2=patch_size)
+        self.unpatchiy = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1=patch_size, p2=patch_size, w=spec_width)
         
     def forward(self, x):
         #x: (b, c, t, d)

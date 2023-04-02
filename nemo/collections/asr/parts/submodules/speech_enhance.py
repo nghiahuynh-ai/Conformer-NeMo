@@ -124,7 +124,7 @@ class SEDecoder(nn.Module):
                     d_model=d_model,
                     n_heads=n_heads,
                     patch_size=patch_size,
-                    spec_width=dim_out // scaling_factor * 2**(ith + 1)
+                    spec_width=dim_out // scaling_factor * 2**ith
                 )
             )
             

@@ -53,6 +53,7 @@ model:
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}
     conv_channels: ${model.encoder.d_model}
+    patch_size: 5
     real_noise:
       filepath: null 
       snr: [0, 5] # signal to noise ratio bounds
@@ -77,6 +78,7 @@ model:
     min_duration: 0.1
     hop_len: ${model.preprocessor.window_stride}
     downsize_factor: ${model.speech_enhance.scaling_factor}
+    patch_size: ${model.speech_enhance.patch_size}
     # tarred datasets
     is_tarred: false
     tarred_audio_filepaths: null

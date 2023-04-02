@@ -93,6 +93,7 @@ def get_char_dataset(config: dict, augmentor: Optional['AudioAugmentor'] = None)
         min_duration=config.get('min_duration', None),
         hop_len=config.get('hop_len', None),
         downsize_factor=config.get('downsize_factor', None),
+        patch_size=config.get('patch_size', None),
         max_utts=config.get('max_utts', 0),
         blank_index=config.get('blank_index', -1),
         unk_index=config.get('unk_index', -1),

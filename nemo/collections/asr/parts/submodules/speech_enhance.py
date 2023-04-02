@@ -1,4 +1,5 @@
 import math
+from einops.layers.torch import Rearrange
 import torch
 import torch.nn as nn
 from nemo.collections.asr.parts.submodules.multi_head_attention import MultiHeadAttention
@@ -122,68 +123,47 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size):
         super().__init__()
         
-        self.conv1 = nn.Conv2d(
+        self.downsampling = nn.Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
-        self.conv2 = nn.Conv2d(
-            in_channels=out_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
+        self.batchnorm = nn.BatchNorm2d(num_features=out_channels)
+        
+        self.tfm = SEPatchTransformer(
+            conv_channels=out_channels,
+            d_model=d_model,
+            n_heads=n_heads,
+            patch_size=patch_size,
         )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
-        self.conv3 = nn.Conv2d(
-            in_channels=out_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
-        self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
     
     def forward(self, x):
         # x: (b, t, d)
         
-        x = self.conv1(x)
-        x = nn.functional.relu(self.batchnorm1(x))
-        x = x + self.conv2(x)
-        x = nn.functional.relu(self.batchnorm2(x))
-        x = x + self.conv3(x)
-        x = nn.functional.relu(self.batchnorm3(x))
+        x = self.downsampling(x)
+        x = nn.functional.relu(self.batchnorm(x))
+        x = x + self.tfm(x)
 
         return x
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, d_model, n_heads, patch_size):
         super().__init__()
         
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=in_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
+        self.tfm = SEPatchTransformer(
+            conv_channels=in_channels,
+            d_model=d_model,
+            n_heads=n_heads,
+            patch_size=patch_size,
         )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv2 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=in_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv3 = nn.ConvTranspose2d(
+        
+        self.upsampling = nn.ConvTranspose2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=4,
@@ -193,17 +173,52 @@ class SEDecoderLayer(nn.Module):
     
     def forward(self, x):
         # x: (b, c, t, d)
+        
+        x = x + self.tfm(x)
+        x = self.upsampling(x)
+        
+        return x
 
-        x = x + self.conv1(x)
-        x = nn.functional.relu(self.batchnorm1(x))
-        x = x + self.conv2(x)
-        x = nn.functional.relu(self.batchnorm2(x))
-        x = self.conv3(x)
+
+class SEPatchTransformer(nn.Module):
+    def __init__(
+        self,
+        conv_channels,
+        d_model,
+        n_heads,
+        patch_size,
+        ):
+        
+        super().__init__()
+        
+        self.patchiy = Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_size, p2=patch_size)
+        self.norm_in = nn.LayerNorm(conv_channels * patch_size**2)
+        self.proj_in = nn.Linear(conv_channels * patch_size**2, d_model)
+        
+        self.att = SETransformer(
+            d_model=d_model,
+            n_heads=n_heads,
+        )
+        
+        self.norm_out = nn.BatchNorm2d(conv_channels)
+        self.proj_out = nn.Linear(d_model, conv_channels * patch_size**2)
+        self.unpatchiy = Rearrange('b (h w) (p1 p2 c) -> b c (h p1) (w p2)', p1=patch_size, p2=patch_size)
+        
+    def forward(self, x):
+        #x: (b, c, t, d)
+        
+        x = self.patchiy(x)
+        x = nn.functional.relu(self.proj_in(self.norm_in(x)))
+
+        x = self.att(x)
+        
+        x = nn.functional.relu(self.proj_out(self.norm_out(x)))
+        x = self.unpatchiy(x)
         
         return x
         
 
-class SETransModule(nn.Module):
+class SETransformer(nn.Module):
     def __init__(self, d_model, n_heads, dropout=0.1):
         super().__init__()
         

@@ -79,8 +79,8 @@ class SEEncoder(nn.Module):
                 nn.Conv1d(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    kernel_size=4,
-                    stride=2,
+                    kernel_size=3,
+                    stride=1,
                     padding=1,
                 )
             )
@@ -130,8 +130,8 @@ class SEDecoder(nn.Module):
                 nn.ConvTranspose1d(
                     in_channels=in_channels,
                     out_channels=out_channels,
-                    kernel_size=4,
-                    stride=2,
+                    kernel_size=3,
+                    stride=1,
                     padding=1,
                 )
             )

@@ -155,8 +155,8 @@ class SEDecoder(nn.Module):
         for layer in self.in_layers:
             x = enc_out.pop(0) + nn.functional.relu(layer(x))
         
-        b, t, d = x.shape
-        x = x.reshape(b, self.conv_channels, t, -1)
+        b, d, t = x.shape
+        x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)
         
         for ith, layer in enumerate(self.layers):
             x = x + enc_out.pop(0)

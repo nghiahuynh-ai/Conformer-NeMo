@@ -165,22 +165,22 @@ class SEDecoderLayer(nn.Module):
         
         self.conv1 = nn.ConvTranspose2d(
             in_channels=in_channels,
-            out_channels=out_channels,
+            out_channels=in_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
         self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
         self.conv2 = nn.Conv2d(
-            in_channels=out_channels, 
-            out_channels=out_channels, 
+            in_channels=in_channels, 
+            out_channels=in_channels, 
             kernel_size=3, 
             stride=1, 
             padding=1
         )
         self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
         self.conv3 = nn.Conv2d(
-            in_channels=out_channels, 
+            in_channels=in_channels, 
             out_channels=out_channels, 
             kernel_size=3, 
             stride=1, 

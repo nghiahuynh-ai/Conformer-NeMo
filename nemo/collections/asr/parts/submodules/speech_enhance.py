@@ -152,9 +152,8 @@ class SEDecoder(nn.Module):
         x = x.transpose(1, 2)
         
         for layer in self.in_layers:
-            print(x.shape)
-            print(enc_out[0].shape)
-            x = enc_out.pop(0) + nn.functional.relu(layer(x))
+            x = x + enc_out.pop(0)
+            x = nn.functional.relu(layer(x))
         
         b, d, t = x.shape
         x = x.reshape(b, self.conv_channels, t, d // self.conv_channels)

@@ -719,7 +719,6 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             
-            spec_hat = spec_hat.transpose(1, 2)
             for ith, spec in enumerate(spec_clean):
                 torch.save(spec, f"spec_{ith}.pt")
             for ith, spec in enumerate(spec_hat):

@@ -198,7 +198,7 @@ class SEDecoderLayer(nn.Module):
                 self.res_blocks.append(
                     nn.Conv2d(
                         in_channels=in_channels,
-                        out_channels=1, 
+                        out_channels=out_channels, 
                         kernel_size=3,
                         stride=1,
                         padding=1,

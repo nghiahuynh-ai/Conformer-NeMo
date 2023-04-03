@@ -149,12 +149,12 @@ class SEEncoderLayer(nn.Module):
     def forward(self, x):
         # x: (b, t, d)
         
-        x = x + self.conv1(x)
-        x = nn.functional.relu(self.batchnorm1(x))
-        x = x + self.conv2(x)
-        x = nn.functional.relu(self.batchnorm2(x))
-        x = self.conv3(x)
-        x = nn.functional.relu(self.batchnorm3(x))
+        x = x + self.batchnorm1(self.conv1(x))
+        x = nn.functional.relu(x)
+        x = x + self.batchnorm2(self.conv2(x))
+        x = nn.functional.relu(x)
+        x = self.batchnorm3(self.conv3(x))
+        x = nn.functional.relu(x)
 
         return x
     
@@ -191,10 +191,10 @@ class SEDecoderLayer(nn.Module):
     def forward(self, x):
         # x: (b, c, t, d)
 
-        x = self.conv1(x)
-        x = nn.functional.relu(self.batchnorm1(x))
-        x = x + self.conv2(x)
-        x = nn.functional.relu(self.batchnorm2(x))
+        x = self.batchnorm1(self.conv1(x))
+        x = nn.functional.relu(x)
+        x = x + self.batchnorm2(self.conv2(x))
+        x = nn.functional.relu(x)
         x = self.conv3(x)
         
         return x

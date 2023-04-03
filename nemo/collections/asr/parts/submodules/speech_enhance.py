@@ -92,25 +92,25 @@ class SEEncoder(nn.Module):
             
     def forward(self, x):
         # x: (b, t, d)
-        
+        print(x.shape)
         self.enc_out.clear()
         x = x.unsqueeze(1)
-        
+        print(x.shape)
         for layer in self.layers:
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
-        
+        print(x.shape)
         b, c, t, d = x.shape
         x = x.transpose(1, 2).reshape(b, -1, t)
-        
+        print(x.shape)
         for layer in self.out_layers:
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
-            
+        print(x.shape)
         x = x.transpose(1, 2)
-        
+        print(x.shape)
         x = self.proj_out(x)
-        
+        print(x.shape)
         return x
         
     

@@ -60,8 +60,9 @@ class SEEncoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
         for ith in range(n_layers):
+            n_res_blocks = 1 if ith == 0 else 2
             self.layers.append(
-                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(n_res_blocks=n_res_blocks, in_channels=in_channels, out_channels=conv_channels)
             )
             in_channels = conv_channels
         self.enc_out = []
@@ -95,9 +96,16 @@ class SEDecoder(nn.Module):
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))
         for ith in range(n_layers):
-            out_channels = 1 if ith == n_layers - 1 else conv_channels
+            
+            if ith == n_layers - 1:
+                n_res_blocks = 1
+                out_channels = 1
+            else:
+                n_res_blocks = 2
+                out_channels = conv_channels
+                
             self.layers.append(
-                SEDecoderLayer(in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(n_res_blocks=n_res_blocks, in_channels=conv_channels, out_channels=out_channels)
             )
             
     def forward(self, x, enc_out):
@@ -118,84 +126,96 @@ class SEDecoder(nn.Module):
     
     
 class SEEncoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, n_res_blocks, in_channels, out_channels):
         super().__init__()
         
-        self.conv1 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
-        self.conv2 = nn.Conv2d(
-            in_channels=out_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
-        self.conv3 = nn.Conv2d(
+        self.res_blocks = nn.ModuleList()
+        for _ in range(n_res_blocks):
+            self.res_blocks.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_channels=in_channels, 
+                        out_channels=out_channels, 
+                        kernel_size=3, 
+                        stride=1, 
+                        padding=1
+                    ),
+                    nn.BatchNorm2d(num_features=out_channels)
+                )
+            )
+            in_channels = out_channels
+        
+        self.downsampling = nn.Conv2d(
             in_channels=out_channels,
             out_channels=out_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
-        self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
+        self.norm = nn.BatchNorm2d(num_features=out_channels)
     
     def forward(self, x):
         # x: (b, t, d)
         
-        x = x + self.batchnorm1(self.conv1(x))
-        x = nn.functional.relu(x)
-        x = x + self.batchnorm2(self.conv2(x))
-        x = nn.functional.relu(x)
-        x = self.batchnorm3(self.conv3(x))
+        for layer in self.res_blocks:
+            x = nn.functional.relu(x + layer(x))
+        
+        x = self.norm(self.downsampling(x))
         x = nn.functional.relu(x)
 
         return x
     
     
 class SEDecoderLayer(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, n_res_blocks, in_channels, out_channels):
         super().__init__()
         
-        self.conv1 = nn.ConvTranspose2d(
+        self.upsampling = nn.ConvTranspose2d(
             in_channels=in_channels,
             out_channels=in_channels,
             kernel_size=4,
             stride=2,
             padding=1,
         )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv2 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=in_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv3 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
-        )
+        self.norm = nn.BatchNorm2d(num_features=in_channels)
         
+        self.res_blocks = nn.ModuleList()
+        for ith in range(n_res_blocks):
+            if ith < n_res_blocks - 1:
+                self.res_blocks.append(
+                    nn.Sequential(
+                        nn.Conv2d(
+                            in_channels=in_channels,
+                            out_channels=in_channels, 
+                            kernel_size=3,
+                            stride=1,
+                            padding=1,
+                        ),
+                        nn.BatchNorm2d(num_features=in_channels)
+                    )
+                )
+            else:
+                self.res_blocks.append(
+                    nn.Conv2d(
+                        in_channels=in_channels,
+                        out_channels=1, 
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        )
+                )
     
     def forward(self, x):
         # x: (b, c, t, d)
+        
+        x = self.norm(self.upsampling(x))
+        x = nn.functional.relu(x)
 
-        x = self.batchnorm1(self.conv1(x))
-        x = nn.functional.relu(x)
-        x = x + self.batchnorm2(self.conv2(x))
-        x = nn.functional.relu(x)
-        x = self.conv3(x)
+        for ith, layer in enumerate(self.res_blocks):
+            if ith < len(self.res_blocks) - 1:
+                x = nn.functional.relu(x + layer(x))
+            else:
+                x = layer(x)
         
         return x
         

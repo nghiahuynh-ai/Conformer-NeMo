@@ -170,7 +170,7 @@ class SEDecoderLayer(nn.Module):
             stride=2,
             padding=1,
         )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
+        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
         self.conv2 = nn.Conv2d(
             in_channels=in_channels, 
             out_channels=in_channels, 
@@ -178,7 +178,7 @@ class SEDecoderLayer(nn.Module):
             stride=1, 
             padding=1
         )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
+        self.batchnorm2 = nn.BatchNorm2d(num_features=in_channels)
         self.conv3 = nn.Conv2d(
             in_channels=in_channels, 
             out_channels=out_channels, 

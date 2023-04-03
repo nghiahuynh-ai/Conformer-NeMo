@@ -687,6 +687,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
+        self.processed_signal = processed_signal
+        
         if self.speech_enhance is not None:
             encoded, encoded_len = self.encoder(
                 audio_signal=processed_signal, 
@@ -721,6 +723,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             for ith, spec in enumerate(spec_clean):
                 torch.save(spec, f"spec_{ith}.pt")
+            for ith, spec in enumerate(self.processed_signal):
+                torch.save(spec, f"specnoise_{ith}.pt")
             for ith, spec in enumerate(spec_hat):
                 torch.save(spec, f"spechat_{ith}.pt")
             raise

@@ -32,6 +32,11 @@ class SpeechEnhance(nn.Module):
             dim_out=n_features,
         )
         
+        # for layer in self.modules():
+        #     if isinstance(layer, (nn.Conv2d, nn.ConvTranspose2d)):
+        #         torch.nn.init.xavier_uniform_(layer.weight, gain=0.05)
+        #         layer.bias.data.fill_(0.08)
+        
     def forward_encoder(self, x, length):
         length = calc_length(
             lengths=length,
@@ -122,11 +127,11 @@ class SEEncoderLayer(nn.Module):
         super().__init__()
         
         self.conv1 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
         )
         self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
         self.conv2 = nn.Conv2d(
@@ -138,23 +143,23 @@ class SEEncoderLayer(nn.Module):
         )
         self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
         self.conv3 = nn.Conv2d(
-            in_channels=out_channels,
-            out_channels=out_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
         )
         self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
     
     def forward(self, x):
         # x: (b, t, d)
         
-        x = self.batchnorm1(x + self.conv1(x))
-        x = nn.functional.relu(x)
-        x = self.batchnorm2(x + self.conv2(x))
-        x = nn.functional.relu(x)
-        x = self.batchnorm3(self.conv3(x))
-        x = nn.functional.relu(x)
+        x = self.conv1(x)
+        x = nn.functional.relu(self.batchnorm1(x))
+        x = x + self.conv2(x)
+        x = nn.functional.relu(self.batchnorm2(x))
+        x = x + self.conv3(x)
+        x = nn.functional.relu(self.batchnorm3(x))
 
         return x
     
@@ -163,12 +168,12 @@ class SEDecoderLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
         
-        self.conv1 = nn.ConvTranspose2d(
-            in_channels=in_channels,
-            out_channels=in_channels,
-            kernel_size=4,
-            stride=2,
-            padding=1,
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channels, 
+            out_channels=in_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
         )
         self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
         self.conv2 = nn.Conv2d(
@@ -179,22 +184,21 @@ class SEDecoderLayer(nn.Module):
             padding=1
         )
         self.batchnorm2 = nn.BatchNorm2d(num_features=in_channels)
-        self.conv3 = nn.Conv2d(
-            in_channels=in_channels, 
-            out_channels=out_channels, 
-            kernel_size=3, 
-            stride=1, 
-            padding=1
+        self.conv3 = nn.ConvTranspose2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
         )
-        
     
     def forward(self, x):
         # x: (b, c, t, d)
 
-        x = self.batchnorm1(self.conv1(x))
-        x = nn.functional.relu(x)
-        x = self.batchnorm2(x + self.conv2(x))
-        x = nn.functional.relu(x)
+        x = x + self.conv1(x)
+        x = nn.functional.relu(self.batchnorm1(x))
+        x = x + self.conv2(x)
+        x = nn.functional.relu(self.batchnorm2(x))
         x = self.conv3(x)
         
         return x

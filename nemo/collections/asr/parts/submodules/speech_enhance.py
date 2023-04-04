@@ -72,20 +72,16 @@ class SEEncoder(nn.Module):
         
         self.out_layers = nn.ModuleList()
         n_out_layers = int(math.log(dim_in // (scaling_factor * 5), 2))
-        in_channels = dim_in // scaling_factor * conv_channels
-        out_channels = in_channels // 2
         for ith in range(n_out_layers):
             self.out_layers.append(
-                nn.Conv1d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    stride=1,
+                nn.Conv2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=(3, 4),
+                    stride=(1, 2),
                     padding=1,
                 )
             )
-            in_channels = out_channels
-            out_channels = in_channels // 2
         
         self.enc_out = []
         self.proj_out = nn.Linear(5 * conv_channels, dim_out)
@@ -100,14 +96,12 @@ class SEEncoder(nn.Module):
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
 
-        b, c, t, d = x.shape
-        x = x.transpose(1, 2).reshape(b, -1, t)
-
         for layer in self.out_layers:
             x = nn.functional.relu(layer(x))
             self.enc_out = [x] + self.enc_out
-
-        x = x.transpose(1, 2)
+            
+        b, c, t, d = x.shape
+        x = x.transpose(1, 2).reshape(b, t, -1)
         x = self.proj_out(x)
 
         return x
@@ -122,20 +116,16 @@ class SEDecoder(nn.Module):
         
         self.in_layers = nn.ModuleList()
         n_in_layers = int(math.log(dim_out // (scaling_factor * 5), 2))
-        in_channels = conv_channels * 5
-        out_channels = in_channels * 2
         for ith in range(n_in_layers):
             self.in_layers.append(
-                nn.ConvTranspose1d(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    kernel_size=3,
-                    stride=1,
+                nn.ConvTranspose2d(
+                    in_channels=conv_channels,
+                    out_channels=conv_channels,
+                    kernel_size=(3, 4),
+                    stride=(1, 2),
                     padding=1,
                 )
             )
-            in_channels = out_channels
-            out_channels = in_channels * 2
         
         self.layers = nn.ModuleList()
         n_layers = int(math.log(scaling_factor, 2))

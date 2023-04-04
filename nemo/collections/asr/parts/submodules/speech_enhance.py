@@ -60,9 +60,9 @@ class SEEncoder(nn.Module):
         n_layers = int(math.log(scaling_factor, 2))
         in_channels = 1
         for ith in range(n_layers):
-            n_res_blocks = 1 if ith == 0 else 2
+            # n_res_blocks = 1 if ith == 0 else 2
             self.layers.append(
-                SEEncoderLayer(n_res_blocks=n_res_blocks, in_channels=in_channels, out_channels=conv_channels)
+                SEEncoderLayer(n_res_blocks=2, in_channels=in_channels, out_channels=conv_channels)
             )
             in_channels = conv_channels
         self.enc_out = []
@@ -98,14 +98,14 @@ class SEDecoder(nn.Module):
         for ith in range(n_layers):
             
             if ith == n_layers - 1:
-                n_res_blocks = 1
+                # n_res_blocks = 1
                 out_channels = 1
             else:
-                n_res_blocks = 2
+                # n_res_blocks = 2
                 out_channels = conv_channels
                 
             self.layers.append(
-                SEDecoderLayer(n_res_blocks=n_res_blocks, in_channels=conv_channels, out_channels=out_channels)
+                SEDecoderLayer(n_res_blocks=2, in_channels=conv_channels, out_channels=out_channels)
             )
             
     def forward(self, x, enc_out):

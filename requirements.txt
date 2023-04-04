@@ -1,7 +1,4 @@
-torch
-torchtext
 hydra-core 
-pytorch-lightning 
 huggingface-hub 
 wget 
 onnx 

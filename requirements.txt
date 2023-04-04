@@ -1,7 +1,9 @@
-torch
-torchtext
+torch == 1.12.0
+torchtext == 0.13.0
+torchvision == 0.13.0
+torchaudio == 0.12.0
+pytorch-lightning
 hydra-core 
-pytorch-lightning 
 huggingface-hub 
 wget 
 onnx 

@@ -467,6 +467,6 @@ class FilterbankFeatures(nn.Module):
             x = x**(1/self.mag_power)
         
         x = x.cpu().detach().numpy()
-        x = librosa.istft(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
+        x = librosa.griffinlim(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
         
         return x

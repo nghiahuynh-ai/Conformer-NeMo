@@ -399,8 +399,7 @@ class FilterbankFeatures(nn.Module):
         with torch.cuda.amp.autocast(enabled=False):
             x = self.stft(x)
 
-        print(x.shape)
-        print(x)
+        self.ab = x
         
         # torch returns real, imag; so convert to magnitude
         if not self.stft_conv:
@@ -415,6 +414,8 @@ class FilterbankFeatures(nn.Module):
                 if self._rng.random() < self.nb_augmentation_prob:
                     x[idx, self._nb_max_fft_bin :, :] = 0.0
 
+        torch.save(x, 'forward.pt')
+        
         # get power spectrum
         if self.mag_power != 1.0:
             x = x.pow(self.mag_power)
@@ -463,14 +464,13 @@ class FilterbankFeatures(nn.Module):
         if self.log:
             x = torch.exp(x)
             
-        # inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
-        # x = torch.matmul(inv_fb, x)
+        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
+        x = torch.matmul(inv_fb, x)
         
         if self.mag_power != 1.0:
             x = x**(1/self.mag_power)
-        
-        x = x.cpu().detach().numpy()
-        x = librosa.istft(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
+            
+        torch.save(x, 'backward.pt')
         
         x = librosa.effects.deemphasis(x, coef=self.preemph)
         

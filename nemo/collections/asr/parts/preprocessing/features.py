@@ -460,20 +460,12 @@ class FilterbankFeatures(nn.Module):
         if self.log:
             x = torch.exp(x)
             
-        # inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
-        # x = torch.matmul(inv_fb, x)
+        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
+        x = torch.matmul(inv_fb, x)
         
         if self.mag_power != 1.0:
             x = x**(1/self.mag_power)
             
-        x = torch.istft(
-            x,
-            n_fft=self.n_fft,
-            hop_length=self.hop_length,
-            win_length=self.win_length,
-            # center=True,
-            # window=self.window.to(dtype=torch.float),
-            # return_complex=False,
-        )
+        x = librosa.istft(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
         
         return x

@@ -471,9 +471,9 @@ class FilterbankFeatures(nn.Module):
             n_fft=self.n_fft,
             hop_length=self.hop_length,
             win_length=self.win_length,
-            center=True,
-            window=self.window.to(dtype=torch.float),
-            return_complex=False,
+            # center=True,
+            # window=self.window.to(dtype=torch.float),
+            # return_complex=False,
         )
         
         return x

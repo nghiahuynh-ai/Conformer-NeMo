@@ -493,7 +493,7 @@ class FilterbankFeatures(nn.Module):
         # x = tfm(x)
         
         x = librosa.griffinlim(
-            x,
+            x.cpu().detach().numpy(),
             hop_length=self.hop_length,
             win_length=self.win_length,
             n_fft=self.n_fft,

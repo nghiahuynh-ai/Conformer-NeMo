@@ -491,6 +491,8 @@ class FilterbankFeatures(nn.Module):
         
         x = tfm(x)
         
+        print(x)
+        
         # x = librosa.effects.deemphasis(x, coef=self.preemph)
         
         return x

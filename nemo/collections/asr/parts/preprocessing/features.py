@@ -469,6 +469,6 @@ class FilterbankFeatures(nn.Module):
         x = x.cpu().detach().numpy()
         x = librosa.istft(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
         
-        x = librosa.effects.deemphasis(x, coef=self.preemph)
+        # x = librosa.effects.deemphasis(x, coef=self.preemph)
         
         return x

@@ -455,15 +455,12 @@ class FilterbankFeatures(nn.Module):
     
     def inverse(self, x):
         if self.normalize:
-            print(x.shape)
-            print(self.norm[0].shape)
-            print(self.norm[1].shape)
             x = x * self.norm[1].unsqueeze(2) + self.norm[0].unsqueeze(2)
         
         if self.log:
             x = torch.exp(x)
             
-        inv_fb = torch.linalg.inv(self.fb.to(x.dtype))
+        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
         x = torch.matmul(inv_fb, x)
         
         if self.mag_power != 1.0:

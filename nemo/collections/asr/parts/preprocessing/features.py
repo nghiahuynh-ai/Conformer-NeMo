@@ -460,8 +460,8 @@ class FilterbankFeatures(nn.Module):
         if self.log:
             x = torch.exp(x)
             
-        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
-        x = torch.matmul(inv_fb, x)
+        # inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
+        # x = torch.matmul(inv_fb, x)
         
         if self.mag_power != 1.0:
             x = x**(1/self.mag_power)

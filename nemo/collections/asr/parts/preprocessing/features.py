@@ -487,7 +487,6 @@ class FilterbankFeatures(nn.Module):
             n_fft=self.n_fft,
             win_length=self.win_length,
             hop_length=self.hop_length,
-            window=self.window.to(dtype=torch.float),
         ).to(x.device)
         
         x = tfm(x)

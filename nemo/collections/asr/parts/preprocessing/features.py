@@ -457,8 +457,8 @@ class FilterbankFeatures(nn.Module):
         if self.normalize:
             x = x * self.norm[1].unsqueeze(2) + self.norm[0].unsqueeze(2)
         
-        # if self.log:
-        #     x = torch.exp(x)
+        if self.log:
+            x = torch.exp(x)
             
         # inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
         # x = torch.matmul(inv_fb, x)

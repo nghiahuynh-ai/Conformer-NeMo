@@ -43,6 +43,7 @@ import torch.nn.functional as F
 from librosa.util import tiny
 from torch.autograd import Variable
 from torch_stft import STFT
+import torchaudio
 
 from nemo.collections.asr.parts.preprocessing.perturb import AudioAugmentor
 from nemo.collections.asr.parts.preprocessing.segment import AudioSegment
@@ -398,8 +399,6 @@ class FilterbankFeatures(nn.Module):
         # disable autocast to get full range of stft values
         with torch.cuda.amp.autocast(enabled=False):
             x = self.stft(x)
-
-        self.ab = x
         
         # torch returns real, imag; so convert to magnitude
         if not self.stft_conv:
@@ -484,8 +483,16 @@ class FilterbankFeatures(nn.Module):
             
         torch.save(x, 'postmag.pt')
         
-        raise
+        tfm = torchaudio.transforms.GriffinLim(
+            n_fft=self.n_fft,
+            win_length=self.win_length,
+            hop_length=self.hop_length,
+            center=True,
+            window=self.window.to(dtype=torch.float),
+        ).to(x.device)
         
-        x = librosa.effects.deemphasis(x, coef=self.preemph)
+        x = tfm(x)
+        
+        # x = librosa.effects.deemphasis(x, coef=self.preemph)
         
         return x

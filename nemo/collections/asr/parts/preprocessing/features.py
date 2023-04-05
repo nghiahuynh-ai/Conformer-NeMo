@@ -43,7 +43,6 @@ import torch.nn.functional as F
 from librosa.util import tiny
 from torch.autograd import Variable
 from torch_stft import STFT
-import torchaudio
 
 from nemo.collections.asr.parts.preprocessing.perturb import AudioAugmentor
 from nemo.collections.asr.parts.preprocessing.segment import AudioSegment
@@ -461,19 +460,13 @@ class FilterbankFeatures(nn.Module):
         if self.log:
             x = torch.exp(x)
             
-        # inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
-        # x = torch.matmul(inv_fb, x)
+        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
+        x = torch.matmul(inv_fb, x)
         
-        # if self.mag_power != 1.0:
-        #     x = x**(1/self.mag_power)
+        if self.mag_power != 1.0:
+            x = x**(1/self.mag_power)
         
-        # x = x.cpu().detach().numpy()
-        tfm = torchaudio.transforms.GriffinLim(
-            n_fft=self.n_fft, 
-            hop_length=self.hop_length, 
-            win_length=self.win_length, 
-            power=self.mag_power,
-            ).to(x.device)
-        x = tfm(x)
+        x = x.cpu().detach().numpy()
+        x = librosa.griffinlim(x, hop_length=self.hop_length, win_length=self.win_length, n_fft=self.n_fft)
         
         return x

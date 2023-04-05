@@ -725,12 +725,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             sig = self.preprocessor.inverse(spec_clean)
             for ith, sig_i in enumerate(sig):
-                sig_i = sig_i.cpu().detach().numpy()
+                # sig_i = sig_i.cpu().detach().numpy()
                 sf.write(f'sig_{ith}.wav', sig_i, samplerate=16000)
                 
             sighat = self.preprocessor.inverse(spec_hat)
             for ith, sighat_i in enumerate(sighat):
-                sighat_i = sighat_i.cpu().detach().numpy()
+                # sighat_i = sighat_i.cpu().detach().numpy()
                 sf.write(f'sighat_{ith}.wav', sighat_i, samplerate=16000)
                 
             raise

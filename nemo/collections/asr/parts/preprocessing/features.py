@@ -472,6 +472,8 @@ class FilterbankFeatures(nn.Module):
             
         torch.save(x, 'backward.pt')
         
+        raise
+        
         x = librosa.effects.deemphasis(x, coef=self.preemph)
         
         return x

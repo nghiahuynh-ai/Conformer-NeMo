@@ -42,6 +42,7 @@ from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
 from nemo.collections.asr.parts.submodules.speech_enhance import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
+import soundfile as sf
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -722,10 +723,16 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             
-            for ith, spec in enumerate(spec_clean):
-                torch.save(spec, f"spec_{ith}.pt")
-            for ith, spec in enumerate(spec_hat):
-                torch.save(spec, f"spechat_{ith}.pt")
+            sig = self.preprocessor.inverse(spec_clean)
+            for ith, sig_i in enumerate(sig):
+                sig_i = sig_i.cpu().detach().numpy()
+                sf.write(f'sig_{ith}.wav', sig_i, samplerate=16000)
+                
+            sighat = self.preprocessor.inverse(spec_hat)
+            for ith, sighat_i in enumerate(sighat):
+                sighat_i = sighat_i.cpu().detach().numpy()
+                sf.write(f'sighat_{ith}.wav', sighat_i, samplerate=16000)
+                
             raise
             
             del spec_hat, spec_clean, spec_len

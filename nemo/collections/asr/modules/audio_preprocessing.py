@@ -276,6 +276,9 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
     def get_features(self, input_signal, length):
         return self.featurizer(input_signal, length)
     
+    def inverse(self, spec):
+        return self.featurizer.inverse(spec)
+    
     @property
     def filter_banks(self):
         return self.featurizer.filter_banks

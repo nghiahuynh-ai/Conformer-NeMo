@@ -458,7 +458,7 @@ class FilterbankFeatures(nn.Module):
             print(x.shape)
             print(self.norm[0].shape)
             print(self.norm[1].shape)
-            x = x * self.norm[1] + self.norm[0]
+            x = x * self.norm[1].unsqueeze(2) + self.norm[0].unsqueeze(2)
         
         if self.log:
             x = torch.exp(x)

@@ -455,6 +455,9 @@ class FilterbankFeatures(nn.Module):
     
     def inverse(self, x):
         if self.normalize:
+            print(x.shape)
+            print(self.norm[1].shape)
+            print(self.norm[2].shape)
             x = x * self.norm[1] + self.norm[0]
         
         if self.log:

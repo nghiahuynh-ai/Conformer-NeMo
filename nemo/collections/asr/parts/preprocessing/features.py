@@ -399,6 +399,9 @@ class FilterbankFeatures(nn.Module):
         with torch.cuda.amp.autocast(enabled=False):
             x = self.stft(x)
 
+        print(x.shape)
+        print(x)
+        
         # torch returns real, imag; so convert to magnitude
         if not self.stft_conv:
             # guard is needed for sqrt if grads are passed through

@@ -483,14 +483,21 @@ class FilterbankFeatures(nn.Module):
             
         # torch.save(x, 'postmag.pt')
         
-        tfm = torchaudio.transforms.GriffinLim(
-            n_fft=self.n_fft,
-            win_length=self.win_length,
-            hop_length=self.hop_length,
-            power=self.mag_power,
-        ).to(x.device)
+        # tfm = torchaudio.transforms.GriffinLim(
+        #     n_fft=self.n_fft,
+        #     win_length=self.win_length,
+        #     hop_length=self.hop_length,
+        #     power=self.mag_power,
+        # ).to(x.device)
         
-        x = tfm(x)
+        # x = tfm(x)
+        
+        x = librosa.griffinlim(
+            x,
+            hop_length=self.hop_length,
+            win_length=self.win_length,
+            n_fft=self.n_fft,
+        )
         
         print(x)
         

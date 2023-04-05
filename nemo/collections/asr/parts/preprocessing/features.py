@@ -473,7 +473,7 @@ class FilterbankFeatures(nn.Module):
             hop_length=self.hop_length, 
             win_length=self.win_length, 
             power=self.mag_power,
-            )
+            ).to(x.device)
         x = tfm(x)
         
         return x

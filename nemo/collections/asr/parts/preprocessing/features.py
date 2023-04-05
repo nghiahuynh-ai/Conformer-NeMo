@@ -478,15 +478,16 @@ class FilterbankFeatures(nn.Module):
         
         torch.save(x, 'postfb.pt')
         
-        if self.mag_power != 1.0:
-            x = x**(1/self.mag_power)
+        # if self.mag_power != 1.0:
+        #     x = x**(1/self.mag_power)
             
-        torch.save(x, 'postmag.pt')
+        # torch.save(x, 'postmag.pt')
         
         tfm = torchaudio.transforms.GriffinLim(
             n_fft=self.n_fft,
             win_length=self.win_length,
             hop_length=self.hop_length,
+            power=self.mag_power,
         ).to(x.device)
         
         x = tfm(x)

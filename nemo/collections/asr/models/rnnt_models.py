@@ -728,6 +728,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 sf.write(f'dump/sigclean_inv_{ith}.wav', sig, samplerate=16000)
             
             for ith, sig_noise in enumerate(perturbed_signal):
+                sig_noise = sig_noise.cpu().detach().numpy()
                 sf.write(f'dump/signoise_{ith}.wav', sig_noise, samplerate=16000)
                 
             spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)

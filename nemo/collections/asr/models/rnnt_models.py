@@ -723,6 +723,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             
+            os.mkdir('dump')
+            
             siginv = self.preprocessor.inverse(spec_clean)
             for ith, sig in enumerate(siginv):
                 sf.write(f'dump/sigclean_inv_{ith}.wav', sig, samplerate=16000)

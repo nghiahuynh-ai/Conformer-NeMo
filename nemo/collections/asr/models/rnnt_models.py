@@ -708,7 +708,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
             spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
-            del signal
+            # del signal
         else:
             perturbed_signal = signal
     
@@ -723,13 +723,21 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             
+            siginv = self.preprocessor.inverse(signal)
+            for ith, sig in enumerate(siginv):
+                sf.write(f'sigclean_inv_{ith}.wav', sig, samplerate=16000)
+            
             for ith, sig_noise in enumerate(perturbed_signal):
                 sig_noise = sig_noise.cpu().detach().numpy()
                 sf.write(f'signoise_{ith}.wav', sig_noise, samplerate=16000)
                 
+            spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)
+            signoiseinv = self.preprocessor.inverse(spec_noise)
+            for ith, signoiseinv_i in enumerate(signoiseinv):
+                sf.write(f'signoise_inv_{ith}.wav', signoiseinv_i, samplerate=16000)
+                
             sighat = self.preprocessor.inverse(spec_hat)
             for ith, sighat_i in enumerate(sighat):
-                # sighat_i = sighat_i.cpu().detach().numpy()
                 sf.write(f'sighat_{ith}.wav', sighat_i, samplerate=16000)
                 
             raise

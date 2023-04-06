@@ -684,8 +684,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=input_signal, length=input_signal_length,
             )
             
-        for ith, spec in enumerate(processed_signal):
-            torch.save(spec, f"specnoise_{ith}.pt")
+        # for ith, spec in enumerate(processed_signal):
+        #     torch.save(spec, f"specnoise_{ith}.pt")
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -723,12 +723,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             
-            siginv = self.preprocessor.inverse(signal)
+            siginv = self.preprocessor.inverse(spec_clean)
             for ith, sig in enumerate(siginv):
                 sf.write(f'dump/sigclean_inv_{ith}.wav', sig, samplerate=16000)
             
             for ith, sig_noise in enumerate(perturbed_signal):
-                sig_noise = sig_noise.cpu().detach().numpy()
                 sf.write(f'dump/signoise_{ith}.wav', sig_noise, samplerate=16000)
                 
             spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)

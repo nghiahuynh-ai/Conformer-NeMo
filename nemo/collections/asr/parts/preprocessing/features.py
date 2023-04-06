@@ -412,19 +412,13 @@ class FilterbankFeatures(nn.Module):
             for idx in range(x.shape[0]):
                 if self._rng.random() < self.nb_augmentation_prob:
                     x[idx, self._nb_max_fft_bin :, :] = 0.0
-
-        torch.save(x, 'premag.pt')
         
         # get power spectrum
         if self.mag_power != 1.0:
             x = x.pow(self.mag_power)
-        
-        torch.save(x, 'prefb.pt')
 
         # dot with filterbank energies
         x = torch.matmul(self.fb.to(x.dtype), x)
-        
-        torch.save(x, 'prelog.pt')
 
         # log features if required
         if self.log:
@@ -438,8 +432,6 @@ class FilterbankFeatures(nn.Module):
         # frame splicing if required
         if self.frame_splicing > 1:
             x = splice_frames(x, self.frame_splicing)
-            
-        torch.save(x, 'prenorm.pt')
 
         # normalize if required
         if self.normalize:
@@ -465,32 +457,12 @@ class FilterbankFeatures(nn.Module):
     def inverse(self, x):
         if self.normalize:
             x = x * self.norm[1].unsqueeze(2) + self.norm[0].unsqueeze(2)
-            
-        torch.save(x, 'postnorm.pt')
         
         if self.log:
             x = torch.exp(x)
             
-        torch.save(x, 'postlog.pt')
-            
         inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
         x = torch.matmul(inv_fb, x)
-        
-        torch.save(x, 'postfb.pt')
-        
-        # if self.mag_power != 1.0:
-        #     x = x**(1/self.mag_power)
-            
-        # torch.save(x, 'postmag.pt')
-        
-        # tfm = torchaudio.transforms.GriffinLim(
-        #     n_fft=self.n_fft,
-        #     win_length=self.win_length,
-        #     hop_length=self.hop_length,
-        #     power=self.mag_power,
-        # ).to(x.device)
-        
-        # x = tfm(x)
         
         x = librosa.griffinlim(
             x.cpu().detach().numpy(),

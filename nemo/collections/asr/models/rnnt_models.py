@@ -866,14 +866,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if not os.path.exists('dump'): 
                 os.mkdir('dump')
             
-            self.ith += 1
-            
             siginv = self.preprocessor.inverse(spec_clean)
-            for sig in siginv:
-                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
-                
             sighat = self.preprocessor.inverse(spec_hat)
-            for sighat_i in sighat:
+            
+            for sig, sighat_i in zip(siginv, sighat):
+                self.ith += 1
+                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
                 sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
 
         del signal

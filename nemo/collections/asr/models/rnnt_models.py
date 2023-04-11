@@ -857,6 +857,24 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        
+        if self.speech_enhance is not None:
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            
+            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            
+            os.mkdir('dump')
+            
+            self.ith += 1
+            
+            siginv = self.preprocessor.inverse(spec_clean)
+            for sig in siginv:
+                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
+                
+            sighat = self.preprocessor.inverse(spec_hat)
+            for sighat_i in sighat:
+                sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
+
         del signal
 
         tensorboard_logs = {}

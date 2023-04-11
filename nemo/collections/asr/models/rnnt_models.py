@@ -863,7 +863,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
             
-            os.mkdir('dump')
+            if not os.path.exists('dump'): 
+                os.mkdir('dump')
             
             self.ith += 1
             

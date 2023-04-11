@@ -89,6 +89,8 @@ model:
     manifest_filepath: ???
     sample_rate: ${model.sample_rate}
     batch_size: 16
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     shuffle: true
     num_workers: 8
     pin_memory: true
@@ -97,6 +99,8 @@ model:
     manifest_filepath: null
     sample_rate: ${model.sample_rate}
     batch_size: 16
+    hop_len: ${model.preprocessor.window_stride}
+    downsize_factor: ${model.speech_enhance.scaling_factor}
     shuffle: true
     num_workers: 8
     pin_memory: true

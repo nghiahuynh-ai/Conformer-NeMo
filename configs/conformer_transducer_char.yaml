@@ -50,6 +50,7 @@ model:
 
   speech_enhance:
     apply: true
+    epsilon: 1e-8
     scaling_factor: 8
     n_feats: ${model.preprocessor.features}
     conv_channels: ${model.encoder.d_model}

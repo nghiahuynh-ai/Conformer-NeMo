@@ -98,6 +98,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 asr_d_model=self._cfg.encoder.d_model,
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
+            
+            self.epsilon = self._cfg.speech_enhance.epsilon
 
         else:
             self.noise_mixer = None
@@ -719,62 +721,60 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             del spec_hat, spec_clean, spec_len
-    
-        tensorboard_logs = {'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-        
+            
         # During training, loss must be computed, so decoder forward is necessary
-        # decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
+        decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
 
-        # if hasattr(self, '_trainer') and self._trainer is not None:
-        #     log_every_n_steps = self._trainer.log_every_n_steps
-        #     sample_id = self._trainer.global_step
-        # else:
-        #     log_every_n_steps = 1
-        #     sample_id = batch_nb
+        if hasattr(self, '_trainer') and self._trainer is not None:
+            log_every_n_steps = self._trainer.log_every_n_steps
+            sample_id = self._trainer.global_step
+        else:
+            log_every_n_steps = 1
+            sample_id = batch_nb
 
-        # # If experimental fused Joint-Loss-WER is not used
-        # if not self.joint.fuse_loss_wer:
-        #     # Compute full joint and loss
-        #     joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
+        # If experimental fused Joint-Loss-WER is not used
+        if not self.joint.fuse_loss_wer:
+            # Compute full joint and loss
+            joint = self.joint(encoder_outputs=encoded, decoder_outputs=decoder)
             
-        #     loss_value = self.loss(
-        #         log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
-        #     )
+            loss_value = self.loss(
+                log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
+            )
 
-        #     if self.speech_enhance is None:
-        #         tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-        #     else:
-        #         tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            if self.speech_enhance is None:
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            else:
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
-        #     if (sample_id + 1) % log_every_n_steps == 0:
-        #         self.wer.update(encoded, encoded_len, transcript, transcript_len)
-        #         _, scores, words = self.wer.compute()
-        #         self.wer.reset()
-        #         tensorboard_logs.update({'training_batch_wer': scores.float() / words})
+            if (sample_id + 1) % log_every_n_steps == 0:
+                self.wer.update(encoded, encoded_len, transcript, transcript_len)
+                _, scores, words = self.wer.compute()
+                self.wer.reset()
+                tensorboard_logs.update({'training_batch_wer': scores.float() / words})
 
-        # else:
-        #     # If experimental fused Joint-Loss-WER is used
-        #     if (sample_id + 1) % log_every_n_steps == 0:
-        #         compute_wer = True
-        #     else:
-        #         compute_wer = False
+        else:
+            # If experimental fused Joint-Loss-WER is used
+            if (sample_id + 1) % log_every_n_steps == 0:
+                compute_wer = True
+            else:
+                compute_wer = False
 
-        #     # Fused joint step
-        #     loss_value, wer, _, _ = self.joint(
-        #         encoder_outputs=encoded,
-        #         decoder_outputs=decoder,
-        #         encoder_lengths=encoded_len,
-        #         transcripts=transcript,
-        #         transcript_lengths=transcript_len,
-        #         compute_wer=compute_wer,
-        #     )
-        #     if self.speech_enhance is None:
-        #         tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
-        #     else:
-        #         tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            # Fused joint step
+            loss_value, wer, _, _ = self.joint(
+                encoder_outputs=encoded,
+                decoder_outputs=decoder,
+                encoder_lengths=encoded_len,
+                transcripts=transcript,
+                transcript_lengths=transcript_len,
+                compute_wer=compute_wer,
+            )
+            if self.speech_enhance is None:
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+            else:
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
-        #     if compute_wer:
-        #         tensorboard_logs.update({'training_batch_wer': wer})
+            if compute_wer:
+                tensorboard_logs.update({'training_batch_wer': wer})
 
         # Log items
         self.log_dict(tensorboard_logs)
@@ -784,7 +784,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = loss_se
+            loss_value = self.epsilon * loss_value + loss_se
 
         return {'loss': loss_value}
 

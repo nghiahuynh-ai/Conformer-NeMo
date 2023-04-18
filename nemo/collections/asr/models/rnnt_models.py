@@ -703,7 +703,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
-            spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
+            # spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
             del signal
         else:
             perturbed_signal = signal
@@ -713,12 +713,12 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
-        # del signal
+        del perturbed_signal
         
-        if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
-            del spec_hat, spec_clean, spec_len
+        # if self.speech_enhance is not None:
+        #     spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+        #     loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
+        #     del spec_hat, spec_clean, spec_len
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -742,7 +742,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if self.speech_enhance is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if (sample_id + 1) % log_every_n_steps == 0:
                 self.wer.update(encoded, encoded_len, transcript, transcript_len)
@@ -769,7 +769,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             if self.speech_enhance is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if compute_wer:
                 tensorboard_logs.update({'training_batch_wer': wer})
@@ -781,8 +781,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
-        if self.speech_enhance is not None:
-            loss_value = loss_value + loss_se
+        # if self.speech_enhance is not None:
+        #     loss_value = loss_value + loss_se
 
         return {'loss': loss_value}
 

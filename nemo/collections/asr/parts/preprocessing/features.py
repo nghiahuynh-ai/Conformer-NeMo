@@ -43,6 +43,7 @@ import torch.nn.functional as F
 from librosa.util import tiny
 from torch.autograd import Variable
 from torch_stft import STFT
+import torchaudio
 
 from nemo.collections.asr.parts.preprocessing.perturb import AudioAugmentor
 from nemo.collections.asr.parts.preprocessing.segment import AudioSegment
@@ -65,7 +66,7 @@ def normalize_batch(x, seq_len, normalize_type):
             x_std[i, :] = x[i, :, : seq_len[i]].std(dim=1)
         # make sure x_std is not zero
         x_std += CONSTANT
-        return (x - x_mean.unsqueeze(2)) / x_std.unsqueeze(2)
+        return (x - x_mean.unsqueeze(2)) / x_std.unsqueeze(2), x_mean, x_std
     elif normalize_type == "all_features":
         x_mean = torch.zeros(seq_len.shape, dtype=x.dtype, device=x.device)
         x_std = torch.zeros(seq_len.shape, dtype=x.dtype, device=x.device)
@@ -74,13 +75,13 @@ def normalize_batch(x, seq_len, normalize_type):
             x_std[i] = x[i, :, : seq_len[i].item()].std()
         # make sure x_std is not zero
         x_std += CONSTANT
-        return (x - x_mean.view(-1, 1, 1)) / x_std.view(-1, 1, 1)
+        return (x - x_mean.view(-1, 1, 1)) / x_std.view(-1, 1, 1), x_mean, x_std
     elif "fixed_mean" in normalize_type and "fixed_std" in normalize_type:
         x_mean = torch.tensor(normalize_type["fixed_mean"], device=x.device)
         x_std = torch.tensor(normalize_type["fixed_std"], device=x.device)
-        return (x - x_mean.view(x.shape[0], x.shape[1]).unsqueeze(2)) / x_std.view(x.shape[0], x.shape[1]).unsqueeze(2)
+        return (x - x_mean.view(x.shape[0], x.shape[1]).unsqueeze(2)) / x_std.view(x.shape[0], x.shape[1]).unsqueeze(2), x_mean, x_std
     else:
-        return x
+        return x, 0.0, 0.0
 
 
 def splice_frames(x, frame_splicing):
@@ -398,7 +399,7 @@ class FilterbankFeatures(nn.Module):
         # disable autocast to get full range of stft values
         with torch.cuda.amp.autocast(enabled=False):
             x = self.stft(x)
-
+        
         # torch returns real, imag; so convert to magnitude
         if not self.stft_conv:
             # guard is needed for sqrt if grads are passed through
@@ -411,7 +412,7 @@ class FilterbankFeatures(nn.Module):
             for idx in range(x.shape[0]):
                 if self._rng.random() < self.nb_augmentation_prob:
                     x[idx, self._nb_max_fft_bin :, :] = 0.0
-
+        
         # get power spectrum
         if self.mag_power != 1.0:
             x = x.pow(self.mag_power)
@@ -434,7 +435,8 @@ class FilterbankFeatures(nn.Module):
 
         # normalize if required
         if self.normalize:
-            x = normalize_batch(x, seq_len, normalize_type=self.normalize)
+            x, mean, std = normalize_batch(x, seq_len, normalize_type=self.normalize)
+            self.norm = (mean, std)
 
         # mask to zero any values beyond seq_len in batch, pad to multiple of `pad_to` (for efficiency)
         max_len = x.size(-1)
@@ -451,3 +453,24 @@ class FilterbankFeatures(nn.Module):
                 x = nn.functional.pad(x, (0, pad_to - pad_amt), value=self.pad_value)
                 
         return x, seq_len
+    
+    def inverse(self, x):
+        if self.normalize:
+            x = x * self.norm[1].unsqueeze(2) + self.norm[0].unsqueeze(2)
+        
+        if self.log:
+            x = torch.exp(x)
+            
+        inv_fb = torch.linalg.pinv(self.fb.to(x.dtype))
+        x = torch.matmul(inv_fb, x)
+        
+        x = librosa.griffinlim(
+            x.cpu().detach().numpy(),
+            hop_length=self.hop_length,
+            win_length=self.win_length,
+            n_fft=self.n_fft,
+        )
+        
+        x = librosa.effects.deemphasis(x, coef=self.preemph)
+        
+        return x

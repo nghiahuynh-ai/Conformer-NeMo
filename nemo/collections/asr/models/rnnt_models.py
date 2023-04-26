@@ -42,6 +42,7 @@ from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
 from nemo.collections.asr.parts.submodules.speech_enhance import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
+import soundfile as sf
 
 
 class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
@@ -99,14 +100,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
             
-            self.rnnt_coef = self._cfg.speech_enhance.rnnt_coef
-            self.mse_coef = self._cfg.speech_enhance.mse_coef
+            self.ith = -1
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
-            self.rnnt_coef = None
-            self.mse_coef = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -687,6 +685,9 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+            
+        # for ith, spec in enumerate(processed_signal):
+        #     torch.save(spec, f"specnoise_{ith}.pt")
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -709,7 +710,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.speech_enhance is not None:
             perturbed_signal = self.noise_mixer(signal)
             spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
-            del signal
+            # del signal
         else:
             perturbed_signal = signal
     
@@ -723,6 +724,28 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self.speech_enhance is not None:
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
+            
+            os.mkdir('dump')
+            
+            siginv = self.preprocessor.inverse(spec_clean)
+            for ith, sig in enumerate(siginv):
+                sf.write(f'dump/sigclean_inv_{ith}.wav', sig, samplerate=16000)
+            
+            for ith, sig_noise in enumerate(perturbed_signal):
+                sig_noise = sig_noise.cpu().detach().numpy()
+                sf.write(f'dump/signoise_{ith}.wav', sig_noise, samplerate=16000)
+                
+            spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)
+            signoiseinv = self.preprocessor.inverse(spec_noise)
+            for ith, signoiseinv_i in enumerate(signoiseinv):
+                sf.write(f'dump/signoise_inv_{ith}.wav', signoiseinv_i, samplerate=16000)
+                
+            sighat = self.preprocessor.inverse(spec_hat)
+            for ith, sighat_i in enumerate(sighat):
+                sf.write(f'dump/sighat_{ith}.wav', sighat_i, samplerate=16000)
+                
+            raise
+            
             del spec_hat, spec_clean, spec_len
             
         # During training, loss must be computed, so decoder forward is necessary
@@ -787,7 +810,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
         if self.speech_enhance is not None:
-            loss_value = self.rnnt_coef * loss_value + self.mse_coef * loss_se
+            loss_value = loss_value + loss_se
 
         return {'loss': loss_value}
 
@@ -799,8 +822,26 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
-        del signal
+        
+        if self.speech_enhance is not None:
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            
+            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            
+            os.mkdir('dump')
+            
+            self.ith += 1
+            
+            siginv = self.preprocessor.inverse(spec_clean)
+            for sig in siginv:
+                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
+                
+            sighat = self.preprocessor.inverse(spec_hat)
+            for sighat_i in sighat:
+                sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
 
+        del signal
+        
         best_hyp_text, all_hyp_text = self.decoding.rnnt_decoder_predictions_tensor(
             encoder_output=encoded, encoded_lengths=encoded_len, return_hypotheses=False
         )
@@ -816,6 +857,23 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        
+        if self.speech_enhance is not None:
+            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+            
+            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+            
+            if not os.path.exists('dump'): 
+                os.mkdir('dump')
+            
+            siginv = self.preprocessor.inverse(spec_clean)
+            sighat = self.preprocessor.inverse(spec_hat)
+            
+            for sig, sighat_i in zip(siginv, sighat):
+                self.ith += 1
+                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
+                sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
+
         del signal
 
         tensorboard_logs = {}

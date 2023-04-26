@@ -686,8 +686,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=input_signal, length=input_signal_length,
             )
             
-        # for ith, spec in enumerate(processed_signal):
-        #     torch.save(spec, f"specnoise_{ith}.pt")
+        for ith, spec in enumerate(processed_signal):
+            torch.save(spec, f"specnoise_{ith}.pt")
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:

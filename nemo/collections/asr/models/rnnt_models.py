@@ -861,23 +861,23 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         else:
             encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
         
-        if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+        # if self.speech_enhance is not None:
+        #     spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             
-            spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
+        #     spec_clean, _ = self.preprocessor(input_signal=signal, length=signal_len)
             
-            if not os.path.exists('dump'): 
-                os.mkdir('dump')
+        #     if not os.path.exists('dump'): 
+        #         os.mkdir('dump')
             
-            siginv = self.preprocessor.inverse(spec_clean)
-            sighat = self.preprocessor.inverse(spec_hat)
+        #     siginv = self.preprocessor.inverse(spec_clean)
+        #     sighat = self.preprocessor.inverse(spec_hat)
             
-            for sig, sighat_i in zip(siginv, sighat):
-                self.ith += 1
-                sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
-                sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
+        #     for sig, sighat_i in zip(siginv, sighat):
+        #         self.ith += 1
+        #         sf.write(f'dump/sigclean_inv_{self.ith}.wav', sig, samplerate=16000)
+        #         sf.write(f'dump/sighat_{self.ith}.wav', sighat_i, samplerate=16000)
 
-        del signal
+        # del signal
 
         tensorboard_logs = {}
 

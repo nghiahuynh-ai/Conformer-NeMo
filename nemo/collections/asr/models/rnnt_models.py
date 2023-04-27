@@ -686,8 +686,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 input_signal=input_signal, length=input_signal_length,
             )
             
-        # for ith, spec in enumerate(processed_signal):
-        #     torch.save(spec, f"specnoise_{ith}.pt")
+        for ith, specnoise in enumerate(processed_signal):
+            torch.save(specnoise, f"specnoise_{ith}.pt")
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
@@ -727,25 +727,25 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             
             os.mkdir('dump')
             
-            for ith, sig in enumerate(signal):
-                sf.write(f'dump/sigclean_{ith}.wav', sig, samplerate=16000)
+            # for ith, sig in enumerate(signal):
+            #     sf.write(f'dump/sigclean_{ith}.wav', sig, samplerate=16000)
             
-            siginv = self.preprocessor.inverse(spec_clean)
-            for ith, sig in enumerate(siginv):
-                sf.write(f'dump/sigclean_inv_{ith}.wav', sig, samplerate=16000)
+            # siginv = self.preprocessor.inverse(spec_clean)
+            for ith, spec in enumerate(spec_clean):
+                sf.write(f'dump/specclean_{ith}.pt', spec, samplerate=16000)
             
-            for ith, sig_noise in enumerate(perturbed_signal):
-                sig_noise = sig_noise.cpu().detach().numpy()
-                sf.write(f'dump/signoise_{ith}.wav', sig_noise, samplerate=16000)
+            # for ith, sig_noise in enumerate(perturbed_signal):
+            #     sig_noise = sig_noise.cpu().detach().numpy()
+            #     sf.write(f'dump/signoise_{ith}.wav', sig_noise, samplerate=16000)
                 
-            spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)
-            signoiseinv = self.preprocessor.inverse(spec_noise)
-            for ith, signoiseinv_i in enumerate(signoiseinv):
-                sf.write(f'dump/signoise_inv_{ith}.wav', signoiseinv_i, samplerate=16000)
+            # spec_noise, _ = self.preprocessor(input_signal=perturbed_signal, length=signal_len)
+            # signoiseinv = self.preprocessor.inverse(spec_noise)
+            # for ith, signoiseinv_i in enumerate(signoiseinv):
+            #     sf.write(f'dump/signoise_inv_{ith}.wav', signoiseinv_i, samplerate=16000)
                 
-            sighat = self.preprocessor.inverse(spec_hat)
-            for ith, sighat_i in enumerate(sighat):
-                sf.write(f'dump/sighat_{ith}.wav', sighat_i, samplerate=16000)
+            # sighat = self.preprocessor.inverse(spec_hat)
+            for ith, spechat in enumerate(spec_hat):
+                sf.write(f'dump/sighat_{ith}.pt', spechat, samplerate=16000)
                 
             raise
             

@@ -34,6 +34,7 @@ class NoiseMixer:
             return noise[start:start + length]
         
         signal_length = signal.size(1)
+        noise_signal = signal.clone().detach()
         
         for idx in range(len(signal)):
             noise = get_noise(self.real_noise_corpus, signal_length)
@@ -41,21 +42,22 @@ class NoiseMixer:
 
             # calculate power of audio and noise
             snr = torch.randint(low=self.real_noise_snr[0], high=self.real_noise_snr[1], size=(1,)).to(signal.device)
-            signal_energy = torch.mean(signal[idx]**2)
+            signal_energy = torch.mean(noise_signal[idx]**2)
             noise_energy = torch.mean(noise**2)
             coef = torch.sqrt(10.0 ** (-snr/10) * signal_energy / noise_energy)
             signal_coef = torch.sqrt(1 / (1 + coef**2))
             noise_coef = torch.sqrt(coef**2 / (1 + coef**2))
-            signal[idx] = signal_coef * signal[idx] + noise_coef * noise
+            noise_signal[idx] = signal_coef * noise_signal[idx] + noise_coef * noise
             
         del noise, snr, signal_energy, noise_energy, coef, signal_coef, noise_coef
-        return signal
+        return noise_signal
     
     def _add_white_noise(self, signal):
+        noise_signal = signal.clone().detach()
         for idx in range(len(signal)):
             std = np.random.uniform(self.white_noise_std[0], self.white_noise_std[1])
             noise = np.random.normal(self.white_noise_mean, std, size=signal[idx].shape)
             noise = torch.from_numpy(noise).type(torch.FloatTensor)
-            signal[idx] = signal[idx] + noise.to(signal.device)
+            noise_signal[idx] = noise_signal[idx] + noise.to(signal.device)
         del noise
-        return signal
+        return noise_signal

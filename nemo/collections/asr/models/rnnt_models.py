@@ -685,8 +685,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
-
-        os.mkdir('dump')
+        if not os.path.exists('dump'):
+            os.mkdir('dump')
         for ith, specnoise in enumerate(processed_signal):
             torch.save(specnoise, f"dump/specnoise_{ith}.pt")
         

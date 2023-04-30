@@ -99,14 +99,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 conv_channels=self._cfg.speech_enhance.conv_channels,
             )
             
-            self.rnnt_coef = self._cfg.speech_enhance.rnnt_coef
-            self.mse_coef = self._cfg.speech_enhance.mse_coef
+            # self.rnnt_coef = self._cfg.speech_enhance.rnnt_coef
+            # self.mse_coef = self._cfg.speech_enhance.mse_coef
 
         else:
             self.noise_mixer = None
             self.speech_enhance = None
-            self.rnnt_coef = None
-            self.mse_coef = None
+            # self.rnnt_coef = None
+            # self.mse_coef = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -786,8 +786,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
+        # if self.speech_enhance is not None:
+        #     loss_value = self.rnnt_coef * loss_value + self.mse_coef * loss_se
+            
         if self.speech_enhance is not None:
-            loss_value = self.rnnt_coef * loss_value + self.mse_coef * loss_se
+            loss_value = loss_value + loss_se
 
         return {'loss': loss_value}
 

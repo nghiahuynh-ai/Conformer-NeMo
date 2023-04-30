@@ -75,7 +75,7 @@ class SEEncoder(nn.Module):
         x = x.unsqueeze(1)
         
         for layer in self.layers:
-            x = nn.functional.relu(layer(x))
+            x = layer(x)
             self.enc_out = [x] + self.enc_out
         
         b, c, t, d = x.shape
@@ -142,7 +142,7 @@ class SEEncoderLayer(nn.Module):
         # x: (b, t, d)
 
         x = nn.functional.relu(self.batchnorm1(self.conv1(x)))
-        x = nn.functional.glu(self.batchnorm2(self.conv2(x)))
+        x = nn.functional.glu(self.batchnorm2(self.conv2(x)), dim=1)
 
         return x
     
@@ -170,7 +170,7 @@ class SEDecoderLayer(nn.Module):
     def forward(self, x):
         # x: (b, c, t, d)
 
-        x = nn.functional.glu(self.batchnorm1(self.conv1(x)))
+        x = nn.functional.glu(self.batchnorm1(self.conv1(x)), dim=1)
         x = self.conv2(x)
         
         return x

@@ -131,12 +131,12 @@ class SEEncoderLayer(nn.Module):
         self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
         self.conv2 = nn.Conv2d(
             in_channels=out_channels, 
-            out_channels=out_channels * 2, 
+            out_channels=out_channels*2, 
             kernel_size=3, 
             stride=1, 
             padding=1
         )
-        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
+        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels*2)
     
     def forward(self, x):
         # x: (b, t, d)
@@ -158,7 +158,7 @@ class SEDecoderLayer(nn.Module):
             stride=1, 
             padding=1
         )
-        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels)
+        self.batchnorm1 = nn.BatchNorm2d(num_features=in_channels*2)
         self.conv2 = nn.ConvTranspose2d(
             in_channels=in_channels,
             out_channels=out_channels,

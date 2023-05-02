@@ -140,7 +140,7 @@ class ConvSubsampling(torch.nn.Module):
             
             in_channels = 1
             for _ in range(self._sampling_num):
-                self.layers.append(
+                layers.append(
                     SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
                 )
                 in_channels = conv_channels

@@ -720,11 +720,14 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
         # del signal
         
+        print('spec_clean: ', spec_clean.shape)
+        print('encoder: ', encoded.shape)
+        
         if self.speech_enhance is not None:
             spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
             loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
             del spec_hat, spec_clean, spec_len
-            
+        print('encoder: ', encoded.shape)
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
 

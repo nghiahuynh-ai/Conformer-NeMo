@@ -132,6 +132,19 @@ class ConvSubsampling(torch.nn.Module):
                     )
                 )
                 in_channels = conv_channels
+        elif subsampling == 'subencoder':
+            self._padding = 1
+            self._stride = 2
+            self._kernel_size = 4
+            self._ceil_mode = False
+            
+            in_channels = 1
+            for _ in range(self._sampling_num):
+                self.layers.append(
+                    SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+                )
+                in_channels = conv_channels
+            
         else:
             raise ValueError(f"Not valid sub-sampling: {subsampling}!")
 
@@ -180,8 +193,82 @@ class ResNetBlock(torch.nn.Module):
         x = self.batchnorm2(x)
         x = self.activation(x)
         return x
-        
 
+
+class SEEncoder(nn.Module):
+    def __init__(self, scaling_factor, conv_channels, dim_in, dim_out):
+        super().__init__()
+        
+        self.layers = nn.ModuleList()
+        n_layers = int(math.log(scaling_factor, 2))
+        in_channels = 1
+        for _ in range(n_layers):
+            self.layers.append(
+                SEEncoderLayer(in_channels=in_channels, out_channels=conv_channels)
+            )
+            in_channels = conv_channels
+        self.enc_out = []
+        
+        self.proj_out = nn.Linear(int(dim_in / scaling_factor) * conv_channels, dim_out)
+            
+    def forward(self, x):
+        # x: (b, t, d)
+        
+        self.enc_out.clear()
+        x = x.unsqueeze(1)
+        
+        for layer in self.layers:
+            x = nn.functional.relu(layer(x))
+            self.enc_out = [x] + self.enc_out
+        
+        b, c, t, d = x.shape
+        x = x.transpose(1, 2).reshape(b, t, -1)
+        x = self.proj_out(x)
+        
+        return x
+           
+class SEEncoderLayer(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        
+        self.conv1 = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=4,
+            stride=2,
+            padding=1,
+        )
+        self.batchnorm1 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv2 = nn.Conv2d(
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
+        )
+        self.batchnorm2 = nn.BatchNorm2d(num_features=out_channels)
+        self.conv3 = nn.Conv2d(
+            in_channels=out_channels, 
+            out_channels=out_channels, 
+            kernel_size=3, 
+            stride=1, 
+            padding=1
+        )
+        self.batchnorm3 = nn.BatchNorm2d(num_features=out_channels)
+    
+    def forward(self, x):
+        # x: (b, t, d)
+        
+        x = self.conv1(x)
+        x = nn.functional.relu(self.batchnorm1(x))
+        x = x + self.conv2(x)
+        x = nn.functional.relu(self.batchnorm2(x))
+        x = x + self.conv3(x)
+        x = nn.functional.relu(self.batchnorm3(x))
+
+        return x
+    
+    
 def calc_length(lengths, padding, kernel_size, stride, ceil_mode, repeat_num=1):
     """ Calculates the output length of a Tensor passed through a convolution or max pooling layer"""
     add_pad: float = (padding * 2) - kernel_size

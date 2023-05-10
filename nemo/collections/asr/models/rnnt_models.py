@@ -960,6 +960,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             'sample_rate': self.preprocessor._sample_rate,
             'labels': self.joint.vocabulary,
             'batch_size': batch_size,
+            'hop_len': self._cfg.preprocessor.window_stride,
+            'downsize_factor': self._cfg.speech_enhance.scaling_factor,
             'trim_silence': False,
             'shuffle': False,
             'num_workers': config.get('num_workers', min(batch_size, os.cpu_count() - 1)),

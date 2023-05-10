@@ -290,6 +290,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.encoder.freeze()
             self.decoder.freeze()
             self.joint.freeze()
+            
+            if self.speech_enhance is not None:
+                self.speech_enhance.encoder.freeze()
+                self.speech_enhance.decoder.freeze()
+            
             logging_level = logging.get_verbosity()
             logging.set_verbosity(logging.WARNING)
             # Work in tmp directory - will store manifest file there
@@ -311,6 +316,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     encoded, encoded_len = self.forward(
                         input_signal=test_batch[0].to(device), input_signal_length=test_batch[1].to(device)
                     )
+                    
+                    if self.speech_enhance is not None:
+                        spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
+                        
+                    
                     best_hyp, all_hyp = self.decoding.rnnt_decoder_predictions_tensor(
                         encoded,
                         encoded_len,

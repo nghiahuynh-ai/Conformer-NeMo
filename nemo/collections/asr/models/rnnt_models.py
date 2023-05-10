@@ -25,6 +25,7 @@ import torch.nn as nn
 from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Trainer
 from tqdm.auto import tqdm
+import soundfile as sf
 
 from nemo.core.classes import Typing, typecheck
 from nemo.collections.asr.data import audio_to_text_dataset
@@ -248,6 +249,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         return_hypotheses: bool = False,
         partial_hypothesis: Optional[List['Hypothesis']] = None,
         num_workers: int = 0,
+        reconstruct=False,
+        filename=None,
     ) -> (List[str], Optional[List['Hypothesis']]):
         """
         Uses greedy decoding to transcribe audio files. Use this method for debugging and prototyping.
@@ -317,10 +320,18 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                         input_signal=test_batch[0].to(device), input_signal_length=test_batch[1].to(device)
                     )
                     
-                    if self.speech_enhance is not None:
+                    if not os.path.exists('output'):
+                            os.mkdir('output')
+                            
+                    if self.speech_enhance is not None and reconstruct:
                         spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-                        
-                    
+                        siginv = self.preprocessor.inverse(spec_hat)
+                        sf.write(f'output/{filename}_hat.wav', siginv, samplerate=16000)
+                    else:
+                        spec_clean, _ = self.preprocessor(input_signal=test_batch[0].to(device), length=test_batch[1].to(device))
+                        siginv = self.preprocessor.inverse(spec_clean)
+                        sf.write(f'output/{filename}_orig.wav', siginv, samplerate=16000)
+
                     best_hyp, all_hyp = self.decoding.rnnt_decoder_predictions_tensor(
                         encoded,
                         encoded_len,

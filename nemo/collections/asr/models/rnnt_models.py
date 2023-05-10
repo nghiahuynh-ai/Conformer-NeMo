@@ -295,8 +295,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             self.joint.freeze()
             
             if self.speech_enhance is not None:
-                self.speech_enhance.encoder.freeze()
-                self.speech_enhance.decoder.freeze()
+                for param in self.speech_enhance.encoder.parameters():
+                    param.requires_grad = False
+                for param in self.speech_enhance.decoder.parameters():
+                    param.requires_grad = False
             
             logging_level = logging.get_verbosity()
             logging.set_verbosity(logging.WARNING)
@@ -358,6 +360,13 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 self.encoder.unfreeze()
                 self.decoder.unfreeze()
                 self.joint.unfreeze()
+                
+                if self.speech_enhance is not None:
+                    for param in self.speech_enhance.encoder.parameters():
+                        param.requires_grad = True
+                    for param in self.speech_enhance.decoder.parameters():
+                        param.requires_grad = True
+                        
         return hypotheses, all_hypotheses
 
     def change_vocabulary(self, new_vocabulary: List[str], decoding_cfg: Optional[DictConfig] = None):

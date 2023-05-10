@@ -328,11 +328,11 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                     if self.speech_enhance is not None and reconstruct:
                         spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
                         siginv = self.preprocessor.inverse(spec_hat)
-                        sf.write(f'output/{filename}_hat.wav', siginv, samplerate=16000)
+                        sf.write(f'output/{filename}_hat.wav', np.ravel(siginv), samplerate=16000)
                     else:
                         spec_clean, _ = self.preprocessor(input_signal=test_batch[0].to(device), length=test_batch[1].to(device))
                         siginv = self.preprocessor.inverse(spec_clean)
-                        sf.write(f'output/{filename}_orig.wav', siginv, samplerate=16000)
+                        sf.write(f'output/{filename}_orig.wav', np.ravel(siginv), samplerate=16000)
 
                     best_hyp, all_hyp = self.decoding.rnnt_decoder_predictions_tensor(
                         encoded,

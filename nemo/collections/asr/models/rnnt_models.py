@@ -706,21 +706,25 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
-        if self.denoising is not None:
+        if self.noise_mixer is not None:
             noisy_signal = self.noise_mixer(signal)
         else:
             noisy_signal = None
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=noisy_signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=signal, processed_signal_length=signal_len)
         else:
-            enc_outs = self.forward(input_signal=noisy_signal, input_signal_length=signal_len)
-            if self.denoising is not None:
-                encoded, encoded_len, denoising_loss = enc_outs
+            if self.noise_mixer is not None:
+                encoded, encoded_len, denoising_loss = self.forward(
+                    input_signal=signal, 
+                    input_signal_length=signal_len,
+                    input_noisy_signal=noisy_signal,
+                )
+                del noisy_signal
             else:
-                encoded, encoded_len = enc_outs
-        del signal, noisy_signal
+                encoded, encoded_len = self.forward(input_signal=signal, input_signal_length=signal_len)
+        del signal
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)

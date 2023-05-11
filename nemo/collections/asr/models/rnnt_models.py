@@ -753,7 +753,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
             )
 
-            if self.denoising is None:
+            if self.noise_mixer is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'se_loss': denoising_loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
@@ -780,7 +780,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 transcript_lengths=transcript_len,
                 compute_wer=compute_wer,
             )
-            if self.denoising is None:
+            if self.noise_mixer is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
                 tensorboard_logs = {'train_loss': loss_value, 'se_loss': denoising_loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
@@ -795,7 +795,7 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
-        if self.denoising is not None:
+        if self.noise_mixer is not None:
             loss_value = (1 - self.loss_ratio) * loss_value + self.loss_ratio * denoising_loss
 
         return {'loss': loss_value}

@@ -40,7 +40,7 @@ from nemo.core.classes.common import PretrainedModelInfo, typecheck
 from nemo.core.neural_types import AcousticEncodedRepresentation, AudioSignal, LengthsType, NeuralType, SpectrogramType
 from nemo.utils import logging
 from nemo.utils.export_utils import augment_filename
-from nemo.collections.asr.parts.submodules.speech_enhance import SpeechEnhance
+from nemo.collections.asr.parts.submodules.denoising import SpeechEnhance
 from nemo.collections.asr.parts.submodules.noise import NoiseMixer
 
 
@@ -84,29 +84,25 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         self.decoder = EncDecRNNTModel.from_config_dict(self.cfg.decoder)
         self.joint = EncDecRNNTModel.from_config_dict(self.cfg.joint)
         
-        if hasattr(self.cfg, 'speech_enhance') and self._cfg.speech_enhance.apply:
+        if hasattr(self.cfg, 'denoising') and self._cfg.denoising.apply:
             self.noise_mixer = NoiseMixer(
-                real_noise_filepath=self._cfg.speech_enhance.real_noise.filepath,
-                real_noise_snr=self._cfg.speech_enhance.real_noise.snr,
-                white_noise_mean=self._cfg.speech_enhance.white_noise.mean,
-                white_noise_std=self._cfg.speech_enhance.white_noise.std,
+                real_noise_filepath=self._cfg.denoising.real_noise.filepath,
+                real_noise_snr=self._cfg.denoising.real_noise.snr,
+                white_noise_mean=self._cfg.denoising.white_noise.mean,
+                white_noise_std=self._cfg.denoising.white_noise.std,
             )
+
+            if self._cfg.denoising.n_utilized_blocks <= self._cfg.encoder.n_layers:
+                self.n_utilized_blocks = self._cfg.denoising.n_utilized_blocks
+            else:
+                raise ValueError(f'n_utilized_blocks ({self._cfg.denoising.n_utilized_blocks}) must be less than n_layers ({self._cfg.encoder.n_layers})')
             
-            self.speech_enhance = SpeechEnhance(
-                scaling_factor=self._cfg.speech_enhance.scaling_factor,
-                n_features=self._cfg.speech_enhance.n_feats,
-                asr_d_model=self._cfg.encoder.d_model,
-                conv_channels=self._cfg.speech_enhance.conv_channels,
-            )
-            
-            self.rnnt_coef = self._cfg.speech_enhance.rnnt_coef
-            self.mse_coef = self._cfg.speech_enhance.mse_coef
+            self.loss_ratio = self._cfg.denoising.loss_ratio
 
         else:
             self.noise_mixer = None
-            self.speech_enhance = None
-            self.rnnt_coef = None
-            self.mse_coef = None
+            self.n_utilized_blocks = None
+            self.loss_ratio = None
 
         # Setup RNNT Loss
         loss_name, loss_kwargs = self.extract_rnnt_loss_cfg(self.cfg.get("loss", None))
@@ -622,30 +618,35 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
 
         self._test_dl = self._setup_dataloader_from_config(config=test_data_config)
 
-    @property
-    def input_types(self) -> Optional[Dict[str, NeuralType]]:
-        if hasattr(self.preprocessor, '_sample_rate'):
-            input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
-        else:
-            input_signal_eltype = AudioSignal()
+    # @property
+    # def input_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     if hasattr(self.preprocessor, '_sample_rate'):
+    #         input_signal_eltype = AudioSignal(freq=self.preprocessor._sample_rate)
+    #     else:
+    #         input_signal_eltype = AudioSignal()
 
-        return {
-            "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
-            "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-            "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
-            "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
-        }
+    #     return {
+    #         "input_signal": NeuralType(('B', 'T'), input_signal_eltype, optional=True),
+    #         "input_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #         "processed_signal": NeuralType(('B', 'D', 'T'), SpectrogramType(), optional=True),
+    #         "processed_signal_length": NeuralType(tuple('B'), LengthsType(), optional=True),
+    #     }
 
-    @property
-    def output_types(self) -> Optional[Dict[str, NeuralType]]:
-        return {
-            "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
-            "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
-        }
+    # @property
+    # def output_types(self) -> Optional[Dict[str, NeuralType]]:
+    #     return {
+    #         "outputs": NeuralType(('B', 'D', 'T'), AcousticEncodedRepresentation()),
+    #         "encoded_lengths": NeuralType(tuple('B'), LengthsType()),
+    #     }
 
     @typecheck()
     def forward(
-        self, input_signal=None, input_signal_length=None, processed_signal=None, processed_signal_length=None
+        self, 
+        input_signal=None, 
+        input_signal_length=None, 
+        input_noisy_signal=None,
+        processed_signal=None, 
+        processed_signal_length=None
     ):
         """
         Forward pass of the model. Note that for RNNT Models, the forward pass of the model is a 3 step process,
@@ -687,43 +688,39 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
             processed_signal, processed_signal_length = self.preprocessor(
                 input_signal=input_signal, length=input_signal_length,
             )
+            
+        if input_noisy_signal is not None:
+            noisy_signal, _ = self.preprocessor(
+                input_signal=input_noisy_signal, length=input_signal_length,
+            )
         
         # Spec augment is not applied during evaluation/testing
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
-        if self.speech_enhance is not None:
-            encoded, encoded_len = self.encoder(
-                audio_signal=processed_signal, 
-                length=processed_signal_length,
-                pre_encode=self.speech_enhance)
-        else:
-            encoded, encoded_len = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        enc_outs = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         
-        return encoded, encoded_len
+        return enc_outs
 
     # PTL-specific methods
     def training_step(self, batch, batch_nb):
         signal, signal_len, transcript, transcript_len = batch
         
-        if self.speech_enhance is not None:
-            perturbed_signal = self.noise_mixer(signal)
-            spec_clean, spec_len = self.preprocessor(input_signal=signal, length=signal_len)
-            del signal
+        if self.denoising is not None:
+            noisy_signal = self.noise_mixer(signal)
         else:
-            perturbed_signal = signal
+            noisy_signal = None
     
         # forward() only performs encoder forward
         if isinstance(batch, DALIOutputs) and batch.has_processed_signal:
-            encoded, encoded_len = self.forward(processed_signal=perturbed_signal, processed_signal_length=signal_len)
+            encoded, encoded_len = self.forward(processed_signal=noisy_signal, processed_signal_length=signal_len)
         else:
-            encoded, encoded_len = self.forward(input_signal=perturbed_signal, input_signal_length=signal_len)
-        # del signal
-        
-        if self.speech_enhance is not None:
-            spec_hat = self.speech_enhance.forward_decoder(encoded.transpose(1, 2))
-            loss_se = self.speech_enhance.forward_loss(spec_clean, spec_hat, spec_len)
-            del spec_hat, spec_clean, spec_len
+            enc_outs = self.forward(input_signal=noisy_signal, input_signal_length=signal_len)
+            if self.denoising is not None:
+                encoded, encoded_len, denoising_loss = enc_outs
+            else:
+                encoded, encoded_len = enc_outs
+        del signal, noisy_signal
             
         # During training, loss must be computed, so decoder forward is necessary
         decoder, target_length, states = self.decoder(targets=transcript, target_length=transcript_len)
@@ -744,10 +741,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 log_probs=joint, targets=transcript, input_lengths=encoded_len, target_lengths=target_length
             )
 
-            if self.speech_enhance is None:
+            if self.denoising is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': denoising_loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if (sample_id + 1) % log_every_n_steps == 0:
                 self.wer.update(encoded, encoded_len, transcript, transcript_len)
@@ -771,10 +768,10 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
                 transcript_lengths=transcript_len,
                 compute_wer=compute_wer,
             )
-            if self.speech_enhance is None:
+            if self.denoising is None:
                 tensorboard_logs = {'train_loss': loss_value, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             else:
-                tensorboard_logs = {'train_loss': loss_value, 'se_loss': loss_se, 'learning_rate': self._optimizer.param_groups[0]['lr']}
+                tensorboard_logs = {'train_loss': loss_value, 'se_loss': denoising_loss, 'learning_rate': self._optimizer.param_groups[0]['lr']}
             
             if compute_wer:
                 tensorboard_logs.update({'training_batch_wer': wer})
@@ -786,8 +783,8 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if self._optim_normalize_joint_txu:
             self._optim_normalize_txu = [encoded_len.max(), transcript_len.max()]
             
-        if self.speech_enhance is not None:
-            loss_value = self.rnnt_coef * loss_value + self.mse_coef * loss_se
+        if self.denoising is not None:
+            loss_value = (1 - self.loss_ratio) * loss_value + self.loss_ratio * denoising_loss
 
         return {'loss': loss_value}
 

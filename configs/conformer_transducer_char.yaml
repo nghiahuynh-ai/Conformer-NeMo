@@ -48,19 +48,16 @@ model:
     "y", "ý", "ỳ", "ỷ", "ỹ", "ỵ",
     "z"]
 
-  speech_enhance:
+  denoising:
     apply: true
-    scaling_factor: 8
-    rnnt_coef: 1
-    mse_coef: 1
-    n_feats: ${model.preprocessor.features}
-    conv_channels: ${model.encoder.d_model}
+    n_utilized_blocks: 8 
+    loss_ratio: 0.2 # 0 < se_loss_ratio < 1
     real_noise:
       filepath: null 
-      snr: [0, 5] # signal to noise ratio bounds
+      snr: [0, 20] # signal to noise ratio bounds
     white_noise:
       mean: 0.0 
-      std: [0.0, 0.05] # std bounds
+      std: [0.005, 0.02] # std bounds
 
   model_defaults:
     enc_hidden: ${model.encoder.d_model}
@@ -77,8 +74,6 @@ model:
     trim_silence: false
     max_duration: 16.7 # it is set for LibriSpeech, you may need to update it for your dataset
     min_duration: 0.1
-    hop_len: ${model.preprocessor.window_stride}
-    downsize_factor: ${model.speech_enhance.scaling_factor}
     # tarred datasets
     is_tarred: false
     tarred_audio_filepaths: null

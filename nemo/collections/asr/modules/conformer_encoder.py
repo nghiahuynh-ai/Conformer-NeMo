@@ -248,12 +248,12 @@ class ConformerEncoder(NeuralModule, Exportable):
         self.pos_enc.extend_pe(max_audio_length, device)
 
     @typecheck()
-    def forward(self, audio_signal, length=None, pre_encode=None):
+    def forward(self, audio_signal, length=None, noisy_signal=None, n_utilized_blocks=1):
         self.update_max_seq_length(seq_length=audio_signal.size(2), device=audio_signal.device)
-        return self.forward_for_export(audio_signal=audio_signal, length=length, pre_encode=pre_encode)
+        return self.forward_for_export(audio_signal=audio_signal, length=length, noisy_signal=noisy_signal, n_utilized_blocks=n_utilized_blocks)
 
     @typecheck()
-    def forward_for_export(self, audio_signal, length, pre_encode=None):
+    def forward_for_export(self, audio_signal, length, noisy_signal=None, n_utilized_blocks=1):
         max_audio_length: int = audio_signal.size(-1)
 
         if max_audio_length > self.max_audio_length:
@@ -265,26 +265,24 @@ class ConformerEncoder(NeuralModule, Exportable):
             )
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
+        if noisy_signal is not None:
+            noisy_signal = torch.transpose(noisy_signal, 1, 2)
 
-        # if isinstance(self.pre_encode, ConvSubsampling):
-        #     audio_signal, length = self.pre_encode(audio_signal, length)
-        #     # print('conformer block: ', length)
-        # else:
-        #     audio_signal = self.pre_encode(audio_signal)
-
-        if self.pre_encode is not None:
-            if isinstance(self.pre_encode, ConvSubsampling):
-                audio_signal, length = self.pre_encode(audio_signal, length)
-            else:
-                audio_signal = self.pre_encode(audio_signal)
+        if isinstance(self.pre_encode, ConvSubsampling):
+            audio_signal, length = self.pre_encode(audio_signal, length)
+            if noisy_signal is not None:
+                noisy_signal, _ = self.pre_encode(noisy_signal, length)
         else:
-            audio_signal, length = pre_encode.forward_encoder(audio_signal, length)
+            audio_signal = self.pre_encode(audio_signal)
+            if noisy_signal is not None:
+                noisy_signal = self.pre_encode(noisy_signal)
             
         audio_signal, pos_emb = self.pos_enc(audio_signal)
+        
         # adjust size
         max_audio_length = audio_signal.size(1)
+        
         # Create the self-attention and padding masks
-
         pad_mask = self.make_pad_mask(max_audio_length, length)
         att_mask = pad_mask.unsqueeze(1).repeat([1, max_audio_length, 1])
         att_mask = torch.logical_and(att_mask, att_mask.transpose(1, 2))
@@ -301,11 +299,19 @@ class ConformerEncoder(NeuralModule, Exportable):
 
         for lth, layer in enumerate(self.layers):
             audio_signal = layer(x=audio_signal, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
+            if noisy_signal is not None:
+                if lth < n_utilized_blocks:
+                    noisy_signal = layer(x=noisy_signal, att_mask=att_mask, pos_emb=pos_emb, pad_mask=pad_mask)
+                if lth == n_utilized_blocks - 1:
+                    denoising_loss = nn.functional.mse_loss(noisy_signal, audio_signal)
 
         if self.out_proj is not None:
             audio_signal = self.out_proj(audio_signal)
 
         audio_signal = torch.transpose(audio_signal, 1, 2)
+        
+        if noisy_signal is not None:
+            return audio_signal, length, denoising_loss
         return audio_signal, length
 
     def update_max_seq_length(self, seq_length: int, device):

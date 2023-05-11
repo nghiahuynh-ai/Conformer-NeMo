@@ -698,7 +698,15 @@ class EncDecRNNTModel(ASRModel, ASRModuleMixin, Exportable):
         if (self.spec_augmentation is not None) and self.training:
             processed_signal = self.spec_augmentation(input_spec=processed_signal, length=processed_signal_length)
         
-        enc_outs = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
+        if input_noisy_signal is not None:
+            enc_outs = self.encoder(
+                audio_signal=processed_signal, 
+                length=processed_signal_length, 
+                noisy_signal=noisy_signal,
+                n_utilized_blocks=self.n_utilized_blocks,
+            )
+        else:
+            enc_outs = self.encoder(audio_signal=processed_signal, length=processed_signal_length)
         
         return enc_outs
 
